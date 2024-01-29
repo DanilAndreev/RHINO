@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <map>
+#include <cassert>
+
 namespace SCAR {
     enum class ArchivePSOType : uint16_t {
         Compute,
