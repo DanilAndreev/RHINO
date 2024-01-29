@@ -74,6 +74,8 @@ namespace SCAR {
                 }
                 recordType = ReadItem<RecordType>(cursor);
             }
+            // Trailing RecordType item is 4 bytes aligned.
+            cursor += 2;
 
             const auto* trailBinarySizeMarker = reinterpret_cast<const uint32_t*>(cursor + totalStorageSize);
             if (*trailBinarySizeMarker != *headerBinarySizeMarker) {

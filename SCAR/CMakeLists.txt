@@ -14,6 +14,8 @@ set(HeaderFiles
 set(SourceFiles
         source/libMain.cpp
         source/archiver/PSOArchiver.cpp
+        source/Compiler.cpp
+        source/Compiler.h
 )
 
 if(APPLE)
@@ -30,6 +32,7 @@ target_precompile_headers(SCARs PRIVATE source/pch.h)
 # SCAR CLI
 add_executable(SCAR EXCLUDE_FROM_ALL cli/SCARCLI.cpp)
 target_link_libraries(SCAR PRIVATE SCARs)
+target_include_directories(SCAR PRIVATE external/include)
 
 # SCAR Reflect
 add_executable(SCARReflect EXCLUDE_FROM_ALL cli/SCARReflect.cpp)
