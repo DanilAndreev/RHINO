@@ -31,22 +31,21 @@ namespace SCAR {
 
     class PSOArchiver {
         //                                              VERSION                BINARY SIZE
-        constexpr uint32_t ARCHIVE_HEADER_SIZE = sizeof(SerializedVersion) + sizeof(uint32_t);
+        static constexpr uint32_t ARCHIVE_HEADER_SIZE = sizeof(SerializedVersion) + sizeof(uint32_t);
         //                                         BINARY SIZE
-        constexpr uint32_t ARCHIVE_FOOTER_SIZE = sizeof(uint32_t);
-
+        static constexpr uint32_t ARCHIVE_FOOTER_SIZE = sizeof(uint32_t);
     public:
-        void AddRecord(ArchiveTable::RecordType t, ArchiveTable::Flags flags, void* data, uint32_t dataSize) noexcept;
+        void AddRecord(ArchiveTable::RecordType t, ArchiveTable::Flags flags, const void* data, uint32_t dataSize) noexcept;
         template<class T>
-        void AddRecord(ArchiveTable::RecordType t, ArchiveTable::Flags flags, const std::vector<T> data) noexcept {
+        void AddRecord(ArchiveTable::RecordType t, ArchiveTable::Flags flags, const std::vector<T>& data) noexcept {
             AddRecord(t, flags, data.data(), data.size() * sizeof(T));
         }
-        std::unique_ptr<uint8_t> Archive() noexcept;
+        ArchiveBinary Archive() noexcept;
     private:
         [[nodiscard]] uint32_t CalculateArchiveTableSize() const noexcept;
         [[nodiscard]] uint32_t CalculateArchiveBinarySize() const noexcept;
     private:
         std::map<ArchiveTable::RecordType, ArchiveTable::Record> m_Table{};
-        std::vector<uint8_t> m_Storage{};
+        std::vector<char> m_Storage{};
     };
 } // namespace SCAR

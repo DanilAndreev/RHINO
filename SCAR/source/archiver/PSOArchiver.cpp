@@ -1,5 +1,7 @@
 #include "PSOArchiver.h"
-#include "SCARVersion.h"
+
+
+#include <ranges>
 
 namespace SCAR {
     /**
@@ -16,11 +18,11 @@ namespace SCAR {
     }
 
     SCAR_FORCEINLINE size_t WriteChunk(uint8_t* cursor, void* data, size_t sizeInBytes) noexcept {
-        memcpy(cursor, &data, sizeInBytes);
+        memcpy(cursor, data, sizeInBytes);
         return sizeInBytes;
     }
 
-    void PSOArchiver::AddRecord(ArchiveTable::RecordType type, ArchiveTable::Flags flags, void* data,
+    void PSOArchiver::AddRecord(ArchiveTable::RecordType type, ArchiveTable::Flags flags, const void* data,
                                 uint32_t dataSize) noexcept {
         if (m_Table.contains(type)) {
             assert(0);
@@ -33,7 +35,7 @@ namespace SCAR {
         memcpy(cursor, data, dataSize);
     }
 
-    std::unique_ptr<uint8_t> PSOArchiver::Archive() noexcept {
+    ArchiveBinary PSOArchiver::Archive() noexcept {
         const uint32_t binarySize = CalculateArchiveBinarySize();
         auto result = std::make_unique<uint8_t[]>(binarySize);
         uint8_t* cursor = result.get();
@@ -44,11 +46,13 @@ namespace SCAR {
 
         assert(cursor == result.get() + ARCHIVE_HEADER_SIZE);
 
-        for (const auto& [recordType, record]: m_Table) {
+        for (const auto& record: m_Table | std::views::values) {
             ArchiveTable::Record resolvedRecord = record;
             resolvedRecord.dataStartOffset += ARCHIVE_HEADER_SIZE + CalculateArchiveTableSize();
             cursor += WriteItem(cursor, resolvedRecord);
         }
+        auto tableTrail = static_cast<uint32_t>(ArchiveTable::RecordType::TableEnd);
+        cursor += WriteItem(cursor, tableTrail);
         assert(cursor == result.get() + ARCHIVE_HEADER_SIZE + CalculateArchiveTableSize());
 
         cursor += WriteChunk(cursor, m_Storage.data(), m_Storage.size());
@@ -56,7 +60,7 @@ namespace SCAR {
         cursor += WriteItem(cursor, binarySize);
 
         assert(cursor == result.get() + binarySize);
-        return result;
+        return {result.release(), binarySize};
     }
 
     uint32_t PSOArchiver::CalculateArchiveTableSize() const noexcept {

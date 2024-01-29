@@ -1,5 +1,8 @@
 #pragma once
 
+#include <SCARVersion.h>
+#include <SCAR.h>
+
 #include <cstdint>
 #include <string>
 #include <vector>
