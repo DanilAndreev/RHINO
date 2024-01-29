@@ -1,7 +1,10 @@
+cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH RHINO_REPOSITORY_ROOT)
+
 set(InterfaceHeaderFiles
         include/SCARVersion.h
         include/SCAR.h
-        )
+        include/SCARUnarchiver.h
+)
 
 set(HeaderFiles
         source/archiver/PSOArchiver.h
@@ -20,6 +23,7 @@ else()
 endif()
 
 target_include_directories(SCARs PUBLIC include)
+target_include_directories(SCARs PUBLIC ${RHINO_REPOSITORY_ROOT}/Runtime/include)
 target_include_directories(SCARs PRIVATE source)
 target_precompile_headers(SCARs PRIVATE source/pch.h)
 

@@ -5,7 +5,7 @@
 namespace SCAR {
     ArchiveBinary Compile() noexcept {
         using namespace ArchiveTable;
-        PSOArchiver archiver{};
+        PSOArchiver archiver{ArchivePSOType::Compute, ArchivePSOLang::DXIL};
 
         std::string psoData = "Hello darkness my old friend. I've come to talk with you again.";
 
