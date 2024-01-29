@@ -24,12 +24,19 @@ namespace SCAR {
         std::set<std::string> defines;
     };
 
-    class ICompilationStep {
+    class CompilationChain {
     public:
-        virtual ~ICompilationStep() noexcept = default;
+        virtual ~CompilationChain() noexcept;
+
+    public:
+        bool Run(const CompileSettings& settings, const ChainSettings& chSettings, ChainContext& context) noexcept;
+        CompilationChain* SetNext(CompilationChain* next) noexcept;
+        [[nodiscard]] CompilationChain* GetNext() const noexcept;
 
     public:
         virtual bool Execute(const CompileSettings& settings, const ChainSettings& chSettings,
                              ChainContext& context) noexcept = 0;
+    private:
+        CompilationChain* m_Next = nullptr;
     };
 } // namespace SCAR

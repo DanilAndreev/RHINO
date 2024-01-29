@@ -9,21 +9,29 @@ set(InterfaceHeaderFiles
 set(HeaderFiles
         source/pch.h
 
-        source/Compiler.h
-        source/ICompilationStep.h
+        source/CompilationChain.h
+        source/ICompilationPipeline.h
 
         source/steps/HlslToDxilStep.h
 
+        source/pipelines/ILComputeCompilationPipeline.h
+
         source/archiver/PSOArchiver.h
+        source/serializers/SerializeRootSignature.h
         )
 
 set(SourceFiles
         source/libMain.cpp
-        source/Compiler.cpp
+
+        source/CompilationChain.cpp
 
         source/steps/HlslToDxilStep.cpp
 
         source/archiver/PSOArchiver.cpp
+
+        source/pipelines/ILComputeCompilationPipeline.cpp
+
+        source/serializers/SerializeRootSignature.cpp
 )
 
 if(APPLE)

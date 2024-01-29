@@ -32,6 +32,10 @@ namespace SCAR {
         PSOAssembly,
         VSAssembly,
         PSAssembly,
+
+        CSAssembly,
+
+        RootSignature,
     };
 
     struct Record {
