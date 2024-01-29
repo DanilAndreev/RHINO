@@ -1,5 +1,3 @@
 
 
-extern "C" Compile() {
-
-}
+extern "C" Compile() {}

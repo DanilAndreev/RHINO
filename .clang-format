@@ -8,7 +8,7 @@ AlignConsecutiveDeclarations: false
 AlignOperands: true
 AlignTrailingComments: false
 AlwaysBreakTemplateDeclarations: Yes
-BraceWrapping: 
+BraceWrapping:
   AfterCaseLabel: false
   AfterClass: false
   AfterControlStatement: false
@@ -29,7 +29,7 @@ BreakBeforeBraces: Custom
 BreakConstructorInitializers: AfterColon
 ColumnLimit: 120
 ContinuationIndentWidth: 8
-IncludeCategories: 
+IncludeCategories:
   - Regex: '^<.*'
     Priority: 1
   - Regex: '^".*'
@@ -48,4 +48,5 @@ SpaceAfterTemplateKeyword: false
 SpaceBeforeRangeBasedForLoopColon: false
 SpacesInAngles: false
 TabWidth: 4
+PointerAlignment: Left
 ...
