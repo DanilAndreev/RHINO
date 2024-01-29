@@ -7,21 +7,54 @@ set(InterfaceHeaderFiles
 )
 
 set(HeaderFiles
-        source/archiver/PSOArchiver.h
         source/pch.h
+
+        source/Compiler.h
+        source/ICompilationStep.h
+
+        source/steps/HlslToDxilStep.h
+
+        source/archiver/PSOArchiver.h
         )
 
 set(SourceFiles
         source/libMain.cpp
-        source/archiver/PSOArchiver.cpp
         source/Compiler.cpp
-        source/Compiler.h
+
+        source/steps/HlslToDxilStep.cpp
+
+        source/archiver/PSOArchiver.cpp
 )
 
 if(APPLE)
+    add_library(SCARs STATIC ${InterfaceHeaderFiles} ${HeaderFiles} ${SourceFiles})
 
+    add_custom_command(TARGET SCARs POST_BUILD
+            COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath "@executable_path" $<TARGET_FILE:SCARs> || echo)
+
+    # DXC
+    target_include_directories(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/include)
+    target_link_libraries(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/lib/libdxcompiler.dylib)
+    target_compile_definitions(SCARs PUBLIC __EMULATE_UUID)
+
+    # Install
+    install(FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/lib/libdxcompiler.3.7.dylib
+            TYPE BIN
+    )
 else()
     add_library(SCARs STATIC ${InterfaceHeaderFiles} ${HeaderFiles} ${SourceFiles})
+
+    # DXC
+    target_include_directories(SCARs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/inc)
+    target_link_libraries(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/lib/dxcompiler.lib)
+
+    # Install
+    install(FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/bin/dxcompiler.dll
+            ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/bin/dxil.dll
+            ${CMAKE_CURRENT_SOURCE_DIR}/external/FXC/bin/d3dcompiler_47.dll
+            TYPE BIN)
 endif()
 
 target_include_directories(SCARs PUBLIC include)
