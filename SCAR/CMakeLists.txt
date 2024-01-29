@@ -17,10 +17,11 @@ if(APPLE)
 
 else()
     add_library(SCARs STATIC ${InterfaceHeaderFiles} ${HeaderFiles} ${SourceFiles})
-    add_executable(SCAR EXCLUDE_FROM_ALL source/cliMain.cpp)
-    target_link_libraries(SCAR PRIVATE SCARs)
 endif()
 
 target_include_directories(SCARs PUBLIC include)
 target_include_directories(SCARs PRIVATE source)
 target_precompile_headers(SCARs PRIVATE source/pch.h)
+
+add_executable(SCAR EXCLUDE_FROM_ALL cli/SCARCLI.cpp)
+target_link_libraries(SCAR PRIVATE SCARs)
