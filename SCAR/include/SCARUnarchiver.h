@@ -55,7 +55,7 @@ namespace SCAR {
             uint32_t totalStorageSize = 0;
             while (*recordType != RecordType::TableEnd) {
                 Record record{*recordType};
-                switch (recordType) {
+                switch (*recordType) {
                     case RecordType::PSOAssembly:
                     case RecordType::VSAssembly:
                     case RecordType::PSAssembly:
@@ -83,7 +83,7 @@ namespace SCAR {
     private:
         template<class T>
         static inline const T* ReadItem(const uint8_t*& cursor) noexcept {
-            T* result = reinterpret_cast<const T*>(cursor);
+            const T* result = reinterpret_cast<const T*>(cursor);
             cursor += sizeof(T);
             return result;
         }
