@@ -16,7 +16,7 @@ namespace SCAR {
         chSettings.stage = ChainStageTarget::Compute;
 
         ChainContext context{};
-        bool status = m_CompilationChain->Execute(settings, chSettings, context);
+        bool status = m_CompilationChain->Run(settings, chSettings, context);
         uint8_t* shaderModuleAssembly = context.data.release();
         if (!status) {
             delete shaderModuleAssembly;

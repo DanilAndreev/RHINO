@@ -1,6 +1,10 @@
 #include "HlslToDxilStep.h"
 
+#ifdef __clang__
+#include <Support/WinAdapter.h>
+#else
 #include <Windows.h>
+#endif
 #include <dxcapi.h>
 
 
@@ -154,5 +158,6 @@ namespace SCAR {
         context.dataLength = outObject->GetBufferSize();
         context.data.reset(new uint8_t[context.dataLength]);
         memcpy(context.data.get(), outObject->GetBufferPointer(), context.dataLength * sizeof(uint8_t));
+        return true;
     }
 } // namespace SCAR

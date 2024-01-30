@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 
 #define RHINO_DECLARE_BITMASK_ENUM(enumType)    \
     enumType operator&(enumType a, enumType b); \

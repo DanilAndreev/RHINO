@@ -19,7 +19,7 @@ namespace SCAR {
         return sizeInBytes;
     }
 
-    PSOArchiver::PSOArchiver(ArchivePSOType type, ArchivePSOLang lang) noexcept : m_PSOInfo(type, lang) {}
+    PSOArchiver::PSOArchiver(ArchivePSOType type, ArchivePSOLang lang) noexcept : m_PSOInfo{type, lang} {}
 
     void PSOArchiver::AddRecord(RecordType type, RecordFlags flags, const void* data,
                                 uint32_t dataSize) noexcept {
