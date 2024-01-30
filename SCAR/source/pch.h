@@ -14,6 +14,7 @@
 #include <memory>
 #include <cassert>
 #include <fstream>
+#include <ranges>
 
 #if WIN32
 #define SCAR_FORCEINLINE __forceinline

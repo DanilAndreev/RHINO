@@ -1,7 +1,5 @@
 #include "PSOArchiver.h"
 
-#include <ranges>
-
 namespace SCAR {
     /**
      * \brief Writes typed data item to address.

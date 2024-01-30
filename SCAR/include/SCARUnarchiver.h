@@ -1,8 +1,9 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <map>
-#include <cassert>
+#include <vector>
 
 namespace SCAR {
     enum class ArchivePSOType : uint16_t {
@@ -43,6 +44,11 @@ namespace SCAR {
         RecordFlags flags;
         const uint8_t* data;
         uint32_t dataSize;
+    };
+
+    struct PSORootSignatureDesc {
+        size_t spacesCount = 0;
+        const RHINO::DescriptorSpaceDesc* spacesDescs = nullptr;
     };
 
     class ArchiveReader {
@@ -90,9 +96,29 @@ namespace SCAR {
         }
         const bool HasRecord(RecordType recordType) noexcept { return m_Table.contains(recordType); };
         const Record& GetRecord(RecordType recordType) const noexcept { return m_Table.at(recordType); }
+        const std::map<RecordType, Record>& GetTable() const noexcept { return m_Table; }
         [[nodiscard]] const void* GetArchiveBinary() const noexcept { return m_Archive; }
+        [[nodiscard]] const SerializedVersion& GetVersion() const noexcept { return *m_Version; }
+        [[nodiscard]] const ArchivePSOLang& GetPSOLang() const noexcept { return *m_PSOLang; }
+        [[nodiscard]] const ArchivePSOType& GetPSOType() const noexcept { return *m_PSOType; }
 
 #ifdef SCAR_RHINO_ADDONS
+        [[nodiscard]] std::vector<RHINO::DescriptorSpaceDesc> CreateRootSignatureView() const noexcept {
+            const uint8_t* start = GetRecord(RecordType::RootSignature).data;
+            const auto rootSignature = reinterpret_cast<const SCAR::PSORootSignatureDesc*>(start);
+            const auto spacesOffset = reinterpret_cast<size_t>(rootSignature->spacesDescs);
+            const auto* serializedSpacesDescs =
+                    reinterpret_cast<const RHINO::DescriptorSpaceDesc*>(start + spacesOffset);
+
+            std::vector<RHINO::DescriptorSpaceDesc> spacesDescs{rootSignature->spacesCount};
+            for (size_t space = 0; space < rootSignature->spacesCount; ++space) {
+                spacesDescs[space] = serializedSpacesDescs[space];
+                const auto rangesOffset = reinterpret_cast<size_t>(spacesDescs[space].rangeDescs);
+                spacesDescs[space].rangeDescs =
+                        reinterpret_cast<const RHINO::DescriptorRangeDesc*>(start + rangesOffset);
+            }
+            return spacesDescs;
+        }
 #endif
 
     private:

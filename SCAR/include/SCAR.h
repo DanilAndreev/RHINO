@@ -10,11 +10,6 @@ namespace SCAR {
         uint32_t archiveSizeInBytes = 0;
     };
 
-    struct PSORootSignatureDesc {
-        size_t spacesCount = 0;
-        const RHINO::DescriptorSpaceDesc* spacesDescs = nullptr;
-    };
-
     struct CompileSettings {
         size_t optimizationLevel = 3;
         ArchivePSOLang psoLang = {};

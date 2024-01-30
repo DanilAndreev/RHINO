@@ -7,21 +7,6 @@
 
 
 namespace RHINO::SCARTools {
-    std::vector<DescriptorSpaceDesc> CreateRootSignatureView(const uint8_t* start) {
-        const auto rootSignature = reinterpret_cast<const SCAR::PSORootSignatureDesc*>(start);
-
-        const auto spacesOffset = reinterpret_cast<size_t>(rootSignature->spacesDescs);
-        const auto* serializedSpacesDescs = reinterpret_cast<const DescriptorSpaceDesc*>(start + spacesOffset);
-
-        std::vector<DescriptorSpaceDesc> spacesDescs{rootSignature->spacesCount};
-        for (size_t space = 0; space < rootSignature->spacesCount; ++space) {
-            spacesDescs[space] = serializedSpacesDescs[space];
-            const auto rangesOffset = reinterpret_cast<size_t>(spacesDescs[space].rangeDescs);
-            spacesDescs[space].rangeDescs = reinterpret_cast<const DescriptorRangeDesc*>(start + rangesOffset);
-        }
-        return spacesDescs;
-    }
-
     SCARComputePSOArchiveView::SCARComputePSOArchiveView(const void* archive, uint32_t sizeInBytes,
                                                          const char* debugName) noexcept {
         SCAR::ArchiveReader reader{archive, sizeInBytes};
@@ -41,8 +26,7 @@ namespace RHINO::SCARTools {
         m_Desc.CS.bytecode = cs.data;
         m_Desc.CS.bytecodeSize = cs.dataSize;
 
-        const SCAR::Record rootSignature = reader.GetRecord(SCAR::RecordType::RootSignature);
-        m_RootSignatureView = CreateRootSignatureView(rootSignature.data);
+        m_RootSignatureView = reader.CreateRootSignatureView();
         m_Desc.spacesCount = m_RootSignatureView.size();
         m_Desc.spacesDescs = m_RootSignatureView.data();
 
