@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
     rootSignature.spacesDescs = spaces;
 
     settings.rootSignature = &rootSignature;
-    settings.psoLang = SCAR::ArchivePSOLang::DXIL;
+    settings.psoLang = SCAR::ArchivePSOLang::MetalLib;
     settings.psoType = SCAR::ArchivePSOType::Compute;
 
     outFilepath = "out.scar";
