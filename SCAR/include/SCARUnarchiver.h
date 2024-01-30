@@ -90,6 +90,9 @@ namespace SCAR {
         const Record& GetRecord(RecordType recordType) const noexcept { return m_Table.at(recordType); }
         [[nodiscard]] const void* GetArchiveBinary() const noexcept { return m_Archive; }
 
+#ifdef SCAR_RHINO_ADDONS
+#endif
+
     private:
         template<class T>
         static inline const T* ReadItem(const uint8_t*& cursor) noexcept {

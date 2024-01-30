@@ -48,6 +48,8 @@ set(SourceFiles
         source/D3D12/D3D12CommandList.h
         source/DebugLayer/DebugLayer.cpp
         source/DebugLayer/DebugLayer.h
+        source/SCARTools/SCARComputePSOArchiveView.cpp
+        source/SCARTools/SCARComputePSOArchiveView.h
 )
 
 if(APPLE)
@@ -68,5 +70,6 @@ else()
 endif()
 # set_source_files_properties(${HeaderFiles} PROPERTIES HEADER_FILE_ONLY TRUE)
 target_precompile_headers(RHINO PRIVATE source/pch.h)
+target_include_directories(RHINO PRIVATE ${RHINO_REPOSITORY_ROOT}/SCAR/include)
 target_include_directories(RHINO PUBLIC include)
 target_include_directories(RHINO PUBLIC source)

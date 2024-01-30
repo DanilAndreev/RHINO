@@ -6,6 +6,7 @@
 namespace SCAR {
     ILComputeCompilationPipeline::ILComputeCompilationPipeline(CompilationChain* chain) noexcept :
         m_CompilationChain(chain) {}
+
     ArchiveBinary ILComputeCompilationPipeline::Execute(const CompileSettings& settings) noexcept {
         assert(m_CompilationChain != nullptr);
 

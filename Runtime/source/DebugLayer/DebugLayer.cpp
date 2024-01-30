@@ -87,17 +87,25 @@ namespace RHINO::DebugLayer {
                 const bool isSampler = desc.spacesDescs[space].rangeDescs[0].rangeType == DescriptorRangeType::Sampler;
                 for (size_t range = 0; range < desc.spacesDescs[space].rangeDescCount; ++range) {
                     if (desc.spacesDescs[space].rangeDescs[0].rangeType != DescriptorRangeType::Sampler && isSampler) {
-                        DB("Invalid descriptor range type. You can either SRV/UAV/CBV or Sampler per descriptor space. Space ["s + std::to_string(space) + "] range ["s + std::to_string(range) + "]");
+                        DB("Invalid descriptor range type. You can either SRV/UAV/CBV or Sampler per descriptor space. Space ["s +
+                           std::to_string(space) + "] range ["s + std::to_string(range) + "]");
                     }
                 }
-            } else {
-                DB("Invalid descriptor space descriptor ranges count. At least one descriptor range per descriptor space is mandatory. Space ["s + std::to_string(space) + "]");
+            }
+            else {
+                DB("Invalid descriptor space descriptor ranges count. At least one descriptor range per descriptor space is mandatory. Space ["s +
+                   std::to_string(space) + "]");
             }
         }
 
         auto* meta = new ComputePSOMeta{DLResourceType::ComputePSO, desc.debugName};
         m_ResourcesMeta[result] = DebugMetadata{.meta = meta};
 
+        return result;
+    }
+    ComputePSO* DebugLayer::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
+                                                  const char* debugName) noexcept {
+        auto* result = m_Wrapped->CompileSCARComputePSO(scar, sizeInBytes, debugName);
         return result;
     }
 
@@ -150,9 +158,9 @@ namespace RHINO::DebugLayer {
         delete static_cast<BufferMeta*>(m_ResourcesMeta[buffer].meta);
         m_ResourcesMeta.erase(buffer);
     }
-
-    Texture2D* DebugLayer::CreateTexture2D() noexcept {
-        auto* result = m_Wrapped->CreateTexture2D();
+    Texture2D* DebugLayer::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
+                                           ResourceUsage usage, const char* name) noexcept {
+        auto* result = m_Wrapped->CreateTexture2D(dimensions, mips, format, usage, name);
 
         auto* meta = new Texture2DMeta{DLResourceType::Texture2D, ""};
         m_ResourcesMeta[result] = DebugMetadata{.meta = meta};

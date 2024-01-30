@@ -5,6 +5,8 @@
 #include "VulkanCommandList.h"
 #include "VulkanDescriptorHeap.h"
 
+#include "SCARTools/SCARComputePSOArchiveView.h"
+
 namespace RHINO::APIVulkan {
 
 
@@ -114,7 +116,8 @@ namespace RHINO::APIVulkan {
         spaceLayouts.resize(desc.spacesCount);
         for (size_t space = 0; space < desc.spacesCount; ++space) {
             const DescriptorSpaceDesc& spaceDesc = desc.spacesDescs[space];
-            result->heapOffsetsBySpaces[space] = std::make_pair(spaceDesc.rangeDescs[0].rangeType, spaceDesc.offsetInDescriptorsFromTableStart);
+            result->heapOffsetsBySpaces[space] =
+                    std::make_pair(spaceDesc.rangeDescs[0].rangeType, spaceDesc.offsetInDescriptorsFromTableStart);
 
             std::vector<VkDescriptorSetLayoutBinding> bindings{};
             bindings.resize(topBindingPerSpace[space]);
@@ -122,11 +125,14 @@ namespace RHINO::APIVulkan {
             bool isSamplerSpace = spaceDesc.rangeDescs[0].rangeType == DescriptorRangeType::Sampler;
             if (isSamplerSpace) {
                 for (uint32_t i = 0; i < bindings.size(); ++i) {
-                    bindings[i] = VkDescriptorSetLayoutBinding{i, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
+                    bindings[i] = VkDescriptorSetLayoutBinding{i, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
+                                                               VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
                 }
-            } else {
+            }
+            else {
                 for (uint32_t i = 0; i < bindings.size(); ++i) {
-                    bindings[i] = VkDescriptorSetLayoutBinding{i, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
+                    bindings[i] = VkDescriptorSetLayoutBinding{i, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, 1,
+                                                               VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
                 }
             }
 
@@ -139,12 +145,16 @@ namespace RHINO::APIVulkan {
             }
 
             static const VkDescriptorType ALLTypes[6] = {
-                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                     VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,       VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
             static const VkDescriptorType CBVTypes[1] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
-            static const VkDescriptorType SRVTypes[3] = {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
-            static const VkDescriptorType UAVTypes[3] = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+            static const VkDescriptorType SRVTypes[3] = {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+                                                         VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                                                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+            static const VkDescriptorType UAVTypes[3] = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                                         VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+                                                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
 
             std::vector<VkMutableDescriptorTypeListEXT> mutableDescriptorTypeLists{};
             mutableDescriptorTypeLists.resize(bindings.size());
@@ -152,24 +162,29 @@ namespace RHINO::APIVulkan {
                 if (rangeTypeByBinding.contains(i)) {
                     switch (rangeTypeByBinding[i]) {
                         case DescriptorRangeType::CBV:
-                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(CBVTypes), CBVTypes};
+                            mutableDescriptorTypeLists[i] =
+                                    VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(CBVTypes), CBVTypes};
                             break;
                         case DescriptorRangeType::SRV:
-                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(SRVTypes), SRVTypes};
+                            mutableDescriptorTypeLists[i] =
+                                    VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(SRVTypes), SRVTypes};
                             break;
                         case DescriptorRangeType::UAV:
-                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(UAVTypes), UAVTypes};
+                            mutableDescriptorTypeLists[i] =
+                                    VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(UAVTypes), UAVTypes};
                             break;
                         case DescriptorRangeType::Sampler:
                             mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{0, nullptr};
                             break;
                     }
-                } else {
+                }
+                else {
                     mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(ALLTypes), ALLTypes};
                 }
             }
 
-            VkMutableDescriptorTypeCreateInfoEXT mutableDescriptorTypeCreateInfoExt{VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT};
+            VkMutableDescriptorTypeCreateInfoEXT mutableDescriptorTypeCreateInfoExt{
+                    VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT};
             mutableDescriptorTypeCreateInfoExt.mutableDescriptorTypeListCount = mutableDescriptorTypeLists.size();
             mutableDescriptorTypeCreateInfoExt.pMutableDescriptorTypeLists = mutableDescriptorTypeLists.data();
 
@@ -188,7 +203,7 @@ namespace RHINO::APIVulkan {
         layoutInfo.pSetLayouts = spaceLayouts.data();
         vkCreatePipelineLayout(m_Device, &layoutInfo, m_Alloc, &result->layout);
 
-        for (VkDescriptorSetLayout layout : spaceLayouts) {
+        for (VkDescriptorSetLayout layout: spaceLayouts) {
             vkDestroyDescriptorSetLayout(m_Device, layout, m_Alloc);
         }
 
@@ -210,6 +225,17 @@ namespace RHINO::APIVulkan {
         createInfo.layout = result->layout;
         vkCreateComputePipelines(m_Device, VK_NULL_HANDLE, 1, &createInfo, m_Alloc, &result->PSO);
         return result;
+    }
+
+    ComputePSO* VulkanBackend::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
+                                                     const char* debugName) noexcept {
+        //TODO: check lang
+        const SCARTools::SCARComputePSOArchiveView view{scar, sizeInBytes, debugName};
+        if (!view.IsValid()) {
+            return nullptr;
+        }
+        return CompileComputePSO(view.GetDesc());
+
     }
 
     void VulkanBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {
@@ -283,7 +309,8 @@ namespace RHINO::APIVulkan {
         vkUnmapMemory(m_Device, vulkanBuffer->memory);
     }
 
-    Texture2D* VulkanBackend::CreateTexture2D() noexcept {
+    Texture2D* VulkanBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
+                                              ResourceUsage usage, const char* name) noexcept {
         return nullptr;
     }
 

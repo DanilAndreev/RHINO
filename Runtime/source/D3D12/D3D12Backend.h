@@ -17,6 +17,8 @@ namespace RHINO::APID3D12 {
         RTPSO* CompileRTPSO(const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
+        ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
+                                          const char* debugName) noexcept final;
         void ReleaseComputePSO(ComputePSO* pso) noexcept final;
 
     public:
