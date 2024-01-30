@@ -67,6 +67,8 @@ namespace SCAR {
                     case RecordType::PSOAssembly:
                     case RecordType::VSAssembly:
                     case RecordType::PSAssembly:
+                    case RecordType::CSAssembly:
+                    case RecordType::RootSignature:
                         record.flags = *ReadItem<RecordFlags>(cursor);
                         record.data = m_Archive + *ReadItem<uint32_t>(cursor);
                         record.dataSize = *ReadItem<uint32_t>(cursor);
