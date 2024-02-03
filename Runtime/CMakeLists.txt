@@ -54,10 +54,10 @@ set(SourceFiles
 
 if(APPLE)
     message("RHINO AVAILABLE APIs: Metal.")
-    add_library(RHINO ${SourceFiles} ${HeaderFiles} ${ObjCHeaderFiles} ${ObjCSourceFiles} ${InterfaceHeaderFiles})
+    add_library(RHINO STATIC ${SourceFiles} ${HeaderFiles} ${ObjCHeaderFiles} ${ObjCSourceFiles} ${InterfaceHeaderFiles})
     set_source_files_properties(${ObjCHeaderFiles} PROPERTIES HEADER_FILE_ONLY TRUE)
-    target_compile_options(RHINO PUBLIC -fmodules -std=c++20)
     target_compile_definitions(RHINO PRIVATE ENABLE_API_METAL=1)
+    target_include_directories(RHINO PRIVATE external/include)
 else()
     message("RHINO AVAILABLE APIs: Vulkan, D3D12.")
     add_library(RHINO ${SourceFiles} ${HeaderFiles} ${InterfaceHeaderFiles})

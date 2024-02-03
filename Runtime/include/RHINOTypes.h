@@ -1,13 +1,13 @@
 #pragma once
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
-#define RHINO_DECLARE_BITMASK_ENUM(enumType)    \
-    enumType operator&(enumType a, enumType b); \
-    enumType operator|(enumType a, enumType b); \
-    bool operator||(bool a, enumType b);        \
-    bool operator&&(bool a, enumType b);        \
+#define RHINO_DECLARE_BITMASK_ENUM(enumType)                                                                           \
+    enumType operator&(enumType a, enumType b);                                                                        \
+    enumType operator|(enumType a, enumType b);                                                                        \
+    bool operator||(bool a, enumType b);                                                                               \
+    bool operator&&(bool a, enumType b);                                                                               \
     bool operator!(enumType a);
 
 namespace RHINO {
@@ -68,12 +68,7 @@ namespace RHINO {
         Count,
     };
 
-    enum class DescriptorRangeType {
-        CBV,
-        SRV,
-        UAV,
-        Sampler
-    };
+    enum class DescriptorRangeType { CBV, SRV, UAV, Sampler };
 
     enum class ResourceType {
         Buffer,
@@ -170,6 +165,6 @@ namespace RHINO {
         virtual void WriteSRV(const WriteTexture3DSRVDesc& desc) noexcept = 0;
         virtual void WriteUAV(const WriteTexture3DSRVDesc& desc) noexcept = 0;
     };
-}// namespace RHINO
+} // namespace RHINO
 
 RHINO_DECLARE_BITMASK_ENUM(RHINO::ResourceUsage);

@@ -2,6 +2,9 @@
 
 #ifdef ENABLE_API_METAL
 
+#import <Metal/Metal.h>
+#import <Foundation/Foundation.h>
+
 namespace RHINO::APIMetal {
     class MetalTexture2D;
     class MetalBackend : public RHINOInterface {
