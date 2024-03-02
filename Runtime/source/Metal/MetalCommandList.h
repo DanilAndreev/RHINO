@@ -21,5 +21,6 @@ namespace RHINO::APIMetal {
         void SetComputePSO(ComputePSO* pso) noexcept final;
         void SetRTPSO(RTPSO* pso) noexcept final;
         void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept final;
+        void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept override;
     };
 } // namespace RHINO::APIMetal

@@ -60,4 +60,19 @@ namespace RHINO::APIMetal {
             [encoder setBuffer:metalCBVSRVUAVHeap->m_ArgBuf offset:0 atIndex:kIRArgumentBufferBindPoint];
         }
     }
+
+    void MetalCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset,
+                                      size_t size) noexcept {
+        auto srcBuffer = static_cast<MetalBuffer*>(src);
+        auto dstBuffer = static_cast<MetalBuffer*>(dst);
+        id<MTLBlitCommandEncoder> encoder = [cmd blitCommandEncoder];
+
+        [encoder copyFromBuffer:srcBuffer->buffer
+                   sourceOffset:srcOffset
+                       toBuffer: dstBuffer->buffer
+                destinationOffset:dstOffset
+                             size:size];
+        [encoder endEncoding];
+
+    }
 } // namespace RHINO::APIMetal
