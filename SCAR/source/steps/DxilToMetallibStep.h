@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef __clang__
+
 #include "CompilationChain.h"
 
 namespace SCAR {
@@ -9,3 +11,5 @@ namespace SCAR {
                      ChainContext& context) noexcept final;
     };
 } // namespace SCAR
+
+#endif // __clang__

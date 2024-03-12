@@ -1,3 +1,5 @@
+#ifdef __clang__
+
 #include "DxilToMetallibStep.h"
 
 #include <metal_irconverter/metal_irconverter.h>
@@ -110,3 +112,5 @@ namespace SCAR {
         return true;
     }
 } // namespace SCAR
+
+#endif // __clang__
