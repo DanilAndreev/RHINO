@@ -6,6 +6,7 @@
 #include "ICompilationPipeline.h"
 #include "pipelines/ILComputeCompilationPipeline.h"
 #include "steps/HlslToDxilStep.h"
+#include "steps/DxilToMetallibStep.h"
 
 namespace SCAR {
     CompilationChain* ConstructCompilationChain(ArchivePSOLang lang) noexcept {
@@ -18,7 +19,9 @@ namespace SCAR {
                 return new HlslToDxilStep{};
             }
             case ArchivePSOLang::MetalLib: {
-                return nullptr;
+                auto* chainHead = new HlslToDxilStep{};
+                chainHead->SetNext(new DxilToMetallibStep{});
+                return chainHead;
             }
             default:
                 return nullptr;

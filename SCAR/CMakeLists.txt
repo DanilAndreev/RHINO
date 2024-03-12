@@ -32,6 +32,8 @@ set(SourceFiles
         source/pipelines/ILComputeCompilationPipeline.cpp
 
         source/serializers/SerializeRootSignature.cpp
+        source/steps/DxilToMetallibStep.cpp
+        source/steps/DxilToMetallibStep.h
 )
 
 if(APPLE)
@@ -41,9 +43,13 @@ if(APPLE)
             COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath "@executable_path" $<TARGET_FILE:SCARs> || echo)
 
     # DXC
-    target_include_directories(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/include)
+    target_include_directories(SCARs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/include)
     target_link_libraries(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/lib/libdxcompiler.dylib)
-    target_compile_definitions(SCARs PUBLIC __EMULATE_UUID)
+    target_compile_definitions(SCARs PRIVATE __EMULATE_UUID)
+
+    # metal-shaderconverter
+    target_include_directories(SCARs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external/metal-shaderconverter/osx/include)
+    target_link_libraries(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/metal-shaderconverter/osx/lib/libmetalirconverter.dylib)
 
     # Install
     install(FILES

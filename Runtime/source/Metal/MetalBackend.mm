@@ -1,12 +1,11 @@
 #ifdef ENABLE_API_METAL
 
-#import <Metal/Metal.h>
-
-#import "MetalBackendTypes.h"
 #include "MetalBackend.h"
-#include "MetalDescriptorHeap.h"
+#import "MetalBackendTypes.h"
 #include "MetalCommandList.h"
+#include "MetalDescriptorHeap.h"
 
+#include <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 namespace RHINO::APIMetal {
     void MetalBackend::Initialize() noexcept {
@@ -14,28 +13,72 @@ namespace RHINO::APIMetal {
         m_AsyncComputeQueue = [m_Device newCommandQueue];
         m_CopyQueue = [m_Device newCommandQueue];
     }
-    void MetalBackend::Release() noexcept {
+
+    void MetalBackend::Release() noexcept {}
+
+    RTPSO* APIMetal::MetalBackend::CompileRTPSO(const RTPSODesc& desc) noexcept { return nullptr; }
+
+    void MetalBackend::ReleaseRTPSO(RTPSO* pso) noexcept {}
+
+    ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
+        auto* result = new MetalComputePSO{};
+
+        result->spaceDescs.resize(desc.spacesCount);
+        for (size_t space = 0; space < desc.spacesCount; ++space) {
+            result->spaceDescs[space] = desc.spacesDescs[space];
+            auto* rangeDescsStart = &(*result->rangeDescsStorage.rbegin()) + 1;
+            for (size_t i = 0; i < desc.spacesDescs[space].rangeDescCount; ++i) {
+                result->rangeDescsStorage.push_back(desc.spacesDescs[space].rangeDescs[i]);
+            }
+            result->spaceDescs[space].rangeDescs = rangeDescsStart;
+        }
+
+        NSError* error = nil;
+        auto emptyHandler = ^{};
+
+        dispatch_data_t dispatchData = dispatch_data_create(desc.CS.bytecode, desc.CS.bytecodeSize,
+                                                            dispatch_get_main_queue(), emptyHandler);
+        id<MTLLibrary> lib = [m_Device newLibraryWithData:dispatchData error:&error];
+        if (!lib || error) {
+            //TODO: show error.
+            return nullptr;
+        }
+
+        NSString* functionName = [NSString stringWithUTF8String:desc.debugName];
+        id<MTLFunction> shaderModule = [lib newFunctionWithName:functionName];
+
+        MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
+        descriptor.computeFunction = shaderModule;
+
+        auto handler = ^(id<MTLComputePipelineState> pso,
+                         MTLComputePipelineReflection* r, NSError* e) {
+          if (error) {
+              // error = e;
+              assert(0);
+              //TODO: assign to outer scope.
+          } else {
+              result->pso = pso;
+          }
+        };
+
+        [m_Device newComputePipelineStateWithDescriptor:descriptor
+                                                options:0
+                                      completionHandler:handler];
+        return result;
     }
 
-    RTPSO* APIMetal::MetalBackend::CompileRTPSO(const RTPSODesc& desc) noexcept {
-        return nullptr;
-    }
-    void MetalBackend::ReleaseRTPSO(RTPSO* pso) noexcept {
-    }
-    ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
-        return nullptr;
-    }
-    void MetalBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {
-    }
-    MetalBuffer* MetalBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept {
+    void MetalBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {}
+
+    MetalBuffer* MetalBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage,
+                                            size_t structuredStride, const char* name) noexcept {
         auto* result = new MetalBuffer{};
-        result->buffer = [m_Device newBufferWithLength:size options: 0];
+        result->buffer = [m_Device newBufferWithLength:size options:0];
         [result->buffer setLabel:[NSString stringWithUTF8String:name]];
         return result;
     }
-    void MetalBackend::ReleaseBuffer(Buffer* buffer) noexcept {
-        delete buffer;
-    }
+
+    void MetalBackend::ReleaseBuffer(Buffer* buffer) noexcept { delete buffer; }
+
     MetalTexture2D* MetalBackend::CreateTexture2D() noexcept {
         auto* result = new MetalTexture2D{};
         MTLTextureDescriptor* descriptor = [[MTLTextureDescriptor alloc] init];
@@ -43,41 +86,21 @@ namespace RHINO::APIMetal {
         result->texture = [m_Device newTextureWithDescriptor:descriptor];
         return result;
     }
-    void MetalBackend::ReleaseTexture2D(Texture2D* texture) noexcept {
-        delete texture;
-    }
-    DescriptorHeap* MetalBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept {
+
+    void MetalBackend::ReleaseTexture2D(Texture2D* texture) noexcept { delete texture; }
+
+    DescriptorHeap* MetalBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount,
+                                                       const char* name) noexcept {
         auto* result = new MetalDescriptorHeap{};
 
         result->resources.resize(descriptorsCount);
 
-        MTLArgumentDescriptor* arg = [MTLArgumentDescriptor argumentDescriptor];
-        arg.index = 0;
-        arg.access = MTLArgumentAccessReadOnly;
-        switch (type) {
-            case DescriptorHeapType::Sampler:
-                arg.dataType = MTLDataTypeSampler;
-            case DescriptorHeapType::RTV:
-            case DescriptorHeapType::DSV:
-            case DescriptorHeapType::SRV_CBV_UAV:
-                arg.dataType = MTLDataTypePointer;
-        }
-
-        result->encoder = [m_Device newArgumentEncoderWithArguments:@[arg]];
-        result->argBuf = [m_Device newBufferWithLength:result->encoder.encodedLength*descriptorsCount
-                                                       options:0];
-        [result->argBuf setLabel:[NSString stringWithUTF8String:name]];
-
-        // TO WRITE
-/*
-        [result->encoder setArgumentBuffer:result->argBuf offset:i * result->encoder.encodedLength];
-        [result->encoder setBuffer:target offset:0 atIndex:0];
-*/
-
+        result->m_ArgBuf = [m_Device newBufferWithLength:result->encoder.encodedLength * descriptorsCount options:0];
+        [result->m_ArgBuf setLabel:[NSString stringWithUTF8String:name]];
         return result;
     }
-    void MetalBackend::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {
-    }
+
+    void MetalBackend::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {}
 
     CommandList* MetalBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new MetalCommandList{};
@@ -85,13 +108,10 @@ namespace RHINO::APIMetal {
         return result;
     }
 
-    void MetalBackend::ReleaseCommandList(CommandList* commandList) noexcept {
-        delete commandList;
-    }
+    void MetalBackend::ReleaseCommandList(CommandList* commandList) noexcept { delete commandList; }
 
-    void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {
-    }
+    void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {}
 
-}// namespace RHINO::APIMetal
+} // namespace RHINO::APIMetal
 
-#endif// ENABLE_API_METAL
+#endif // ENABLE_API_METAL

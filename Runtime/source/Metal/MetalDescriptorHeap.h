@@ -9,14 +9,13 @@ namespace RHINO::APIMetal {
 
     class MetalDescriptorHeap : public DescriptorHeap {
     public:
-        id<MTLBuffer> argBuf = nil;
-        id<MTLArgumentEncoder> encoder = nil;
+        id<MTLBuffer> m_ArgBuf = nil;
         std::vector<id<MTLResource>> resources{};
 
     public:
-        void WriteSRV(const WriteBufferSRVDesc& desc) noexcept final;
-        void WriteUAV(const WriteBufferSRVDesc& desc) noexcept final;
-        void WriteCBV(const WriteBufferSRVDesc& desc) noexcept final;
+        void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept final;
+        void WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept final;
+        void WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept final;
 
         void WriteSRV(const WriteTexture2DSRVDesc& desc) noexcept final;
         void WriteUAV(const WriteTexture2DSRVDesc& desc) noexcept final;

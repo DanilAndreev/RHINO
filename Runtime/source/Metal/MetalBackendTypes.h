@@ -18,6 +18,16 @@ namespace RHINO::APIMetal {
     class MetalRTPSO : public RTPSO {
     public:
     };
+
+    class MetalComputePSO : public ComputePSO {
+    public:
+        id<MTLComputePipelineState> pso = nil;
+
+        // ROOT SIGNATURE
+        std::vector<DescriptorSpaceDesc> spaceDescs{};
+        // Just vector with all root signature ranges stored. Read by space from  spaceDescs.
+        std::vector<DescriptorRangeDesc> rangeDescsStorage{};
+    };
 }// namespace RHINO::APIMetal
 
 #endif// ENABLE_API_METAL
