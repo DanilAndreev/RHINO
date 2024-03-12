@@ -27,6 +27,7 @@ namespace RHINO::APIVulkan {
 #ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
             VK_KHR_SURFACE_EXTENSION_NAME,
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #endif
         };
 
