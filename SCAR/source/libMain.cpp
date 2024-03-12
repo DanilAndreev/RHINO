@@ -18,11 +18,13 @@ namespace SCAR {
             case ArchivePSOLang::DXIL: {
                 return new HlslToDxilStep{};
             }
+#ifdef __clang__
             case ArchivePSOLang::MetalLib: {
                 auto* chainHead = new HlslToDxilStep{};
                 chainHead->SetNext(new DxilToMetallibStep{});
                 return chainHead;
             }
+#endif // __clang__
             default:
                 return nullptr;
         }
