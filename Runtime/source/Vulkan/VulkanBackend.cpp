@@ -27,7 +27,6 @@ namespace RHINO::APIVulkan {
 #ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
             VK_KHR_SURFACE_EXTENSION_NAME,
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #endif
         };
 
@@ -81,8 +80,11 @@ namespace RHINO::APIVulkan {
         VkDeviceCreateInfo deviceInfo{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
         deviceInfo.pNext = &deviceFeatures2;
         const char* deviceExtensions[] = {
-                VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
-                VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
+            VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
+            VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
+#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#endif // RHINO_VULKAN_DEBUG_SWAPCHAIN
         };
         deviceInfo.enabledExtensionCount = RHINO_ARR_SIZE(deviceExtensions);
         deviceInfo.ppEnabledExtensionNames = deviceExtensions;
