@@ -7,9 +7,13 @@
 
 #include "SCARTools/SCARComputePSOArchiveView.h"
 
+#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
+HWND g_RHINO_HWND = NULL;
+HINSTANCE g_RHINO_HInstance = NULL;
+#endif
+
+
 namespace RHINO::APIVulkan {
-
-
     void VulkanBackend::Initialize() noexcept {
         VkApplicationInfo appInfo{VK_STRUCTURE_TYPE_APPLICATION_INFO};
         appInfo.apiVersion = VK_API_VERSION_1_3;
@@ -18,9 +22,18 @@ namespace RHINO::APIVulkan {
         appInfo.pApplicationName = "RHINO";
         appInfo.pEngineName = "RHINO";
 
+        const char* instanceExts[] = {
+            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
+            VK_KHR_SURFACE_EXTENSION_NAME,
+            VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#endif
+        };
+
         VkInstanceCreateInfo instanceInfo{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
         instanceInfo.pApplicationInfo = &appInfo;
-        instanceInfo.enabledExtensionCount = 0;
+        instanceInfo.enabledExtensionCount = RHINO_ARR_SIZE(instanceExts);
+        instanceInfo.ppEnabledExtensionNames = instanceExts;
         instanceInfo.enabledLayerCount = 0;
         RHINO_VKS(vkCreateInstance(&instanceInfo, m_Alloc, &m_Instance));
 
@@ -76,7 +89,6 @@ namespace RHINO::APIVulkan {
         deviceInfo.pQueueCreateInfos = queueInfos;
         RHINO_VKS(vkCreateDevice(m_PhysicalDevice, &deviceInfo, m_Alloc, &m_Device));
 
-
         m_DefaultQueueFamIndex = queueInfos[0].queueFamilyIndex;
         m_AsyncComputeQueueFamIndex = queueInfos[1].queueFamilyIndex;
         m_CopyQueueFamIndex = queueInfos[2].queueFamilyIndex;
@@ -87,6 +99,49 @@ namespace RHINO::APIVulkan {
         vkGetDeviceQueue(m_Device, m_CopyQueueFamIndex, 0, &m_CopyQueue);
 
         LoadVulkanAPI(m_Instance, vkGetInstanceProcAddr);
+
+#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
+        {
+            assert(g_RHINO_HWND);
+            assert(g_RHINO_HInstance);
+            VkWin32SurfaceCreateInfoKHR surfaceCreateInfoKhr{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
+            surfaceCreateInfoKhr.hwnd = g_RHINO_HWND;
+            surfaceCreateInfoKhr.hinstance = g_RHINO_HInstance;
+
+            VkSurfaceKHR surface;
+            RHINO_VKS(vkCreateWin32SurfaceKHR(m_Instance, &surfaceCreateInfoKhr, m_Alloc, &surface));
+            VkBool32 surfaceIsSupported;
+            vkGetPhysicalDeviceSurfaceSupportKHR(m_PhysicalDevice, m_DefaultQueueFamIndex, surface, &surfaceIsSupported);
+            assert(surfaceIsSupported && "Surface is not supported by device.");
+            VkSurfaceCapabilitiesKHR surfaceCapabilities;
+            RHINO_VKS(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, surface, &surfaceCapabilities));
+
+            uint32_t formatsCount;
+            std::vector<VkSurfaceFormatKHR> availableFormats;
+            RHINO_VKS(vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatsCount, nullptr));
+            availableFormats.resize(formatsCount);
+            RHINO_VKS(vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatsCount, availableFormats.data()));
+            VkSurfaceFormatKHR surfaceFormat = availableFormats.front();
+
+            VkSwapchainCreateInfoKHR swapchainCreateInfoKhr{VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
+            swapchainCreateInfoKhr.surface = surface;
+            swapchainCreateInfoKhr.minImageCount = surfaceCapabilities.minImageCount;
+            swapchainCreateInfoKhr.imageFormat = surfaceFormat.format;
+            swapchainCreateInfoKhr.imageColorSpace = surfaceFormat.colorSpace;
+            swapchainCreateInfoKhr.imageExtent = surfaceCapabilities.currentExtent;
+            swapchainCreateInfoKhr.imageArrayLayers = 1;
+            swapchainCreateInfoKhr.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            swapchainCreateInfoKhr.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            swapchainCreateInfoKhr.queueFamilyIndexCount = 0;
+            swapchainCreateInfoKhr.pQueueFamilyIndices = nullptr;
+            swapchainCreateInfoKhr.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+            swapchainCreateInfoKhr.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+            swapchainCreateInfoKhr.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+            swapchainCreateInfoKhr.clipped = VK_TRUE;
+            swapchainCreateInfoKhr.oldSwapchain = VK_NULL_HANDLE;
+            RHINO_VKS(vkCreateSwapchainKHR(m_Device, &swapchainCreateInfoKhr, m_Alloc, &m_Swapchain));
+        }
+#endif
     }
 
     void VulkanBackend::Release() noexcept {
@@ -415,6 +470,19 @@ namespace RHINO::APIVulkan {
         vkQueueSubmit(m_DefaultQueue, 1, &submitInfo, VK_NULL_HANDLE);
 
         vkDeviceWaitIdle(m_Device);//TODO: REMOVE
+
+#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
+        VkResult swapchainStatus = VK_SUCCESS;
+        VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+        presentInfo.waitSemaphoreCount = 0;
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = &m_Swapchain;
+        presentInfo.pImageIndices = &m_SwapchainCurrentImage;
+        presentInfo.pResults = &swapchainStatus;
+
+        RHINO_VKS(vkQueuePresentKHR(m_DefaultQueue, &presentInfo));
+        RHINO_VKS(swapchainStatus);
+#endif RHINO_VULKAN_DEBUG_SWAPCHAIN
     }
 
     uint32_t VulkanBackend::SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) noexcept {

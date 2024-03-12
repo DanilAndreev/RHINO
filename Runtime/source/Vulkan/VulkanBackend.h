@@ -60,6 +60,11 @@ namespace RHINO::APIVulkan {
         uint32_t m_CopyQueueFamIndex = 0;
 
         VkAllocationCallbacks* m_Alloc = nullptr;
+
+        // DEBUG
+        VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
+        // std::vector<VkSemaphore> m_SwapchainSemaphores{};
+        uint32_t m_SwapchainCurrentImage = 0;
     };
 }// namespace RHINO::APIVulkan
 

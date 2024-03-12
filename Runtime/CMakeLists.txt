@@ -68,6 +68,14 @@ else()
     target_include_directories(RHINO PRIVATE ${Vulkan_INCLUDE_DIRS})
     target_link_libraries(RHINO PRIVATE Vulkan::Vulkan)
 endif()
+
+# --------------------------------------------- DEBUG MACRO ------------------------------------------------------------
+if(RHINO_VULKAN_DEBUG_SWAPCHAIN)
+    target_compile_definitions(RHINO PRIVATE RHINO_VULKAN_DEBUG_SWAPCHAIN=1 VK_USE_PLATFORM_WIN32_KHR=1)
+
+endif()
+# ------------------------------------------- END DEBUG MACRO ----------------------------------------------------------
+
 # set_source_files_properties(${HeaderFiles} PROPERTIES HEADER_FILE_ONLY TRUE)
 target_precompile_headers(RHINO PRIVATE source/pch.h)
 target_include_directories(RHINO PRIVATE ${RHINO_REPOSITORY_ROOT}/SCAR/include)
