@@ -31,7 +31,9 @@ set(ObjCHeaderFiles
 set(ObjCSourceFiles
         source/Metal/MetalBackend.mm
         source/Metal/MetalDescriptorHeap.mm
-        source/Metal/MetalCommandList.mm)
+        source/Metal/MetalCommandList.mm
+        source/Metal/IRShaderCompilerRuntimeImplementation.mm
+)
 
 set(SourceFiles
         source/main.cpp
@@ -56,8 +58,10 @@ if(APPLE)
     message("RHINO AVAILABLE APIs: Metal.")
     add_library(RHINO STATIC ${SourceFiles} ${HeaderFiles} ${ObjCHeaderFiles} ${ObjCSourceFiles} ${InterfaceHeaderFiles})
     set_source_files_properties(${ObjCHeaderFiles} PROPERTIES HEADER_FILE_ONLY TRUE)
+    set_property(TARGET RHINO APPEND_STRING PROPERTY COMPILE_FLAGS "-fobjc-arc")
     target_compile_definitions(RHINO PRIVATE ENABLE_API_METAL=1)
     target_include_directories(RHINO PRIVATE external/include)
+    target_link_libraries(RHINO PRIVATE "-framework Metal" "-framework Foundation")
 else()
     message("RHINO AVAILABLE APIs: Vulkan, D3D12.")
     add_library(RHINO ${SourceFiles} ${HeaderFiles} ${InterfaceHeaderFiles})

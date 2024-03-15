@@ -1,5 +1,6 @@
 #include "MetalCommandList.h"
-#include <metal_irconverter_runtime/metal_irconverter_runtime.h>
+
+#import <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 namespace RHINO::APIMetal {
     void MetalCommandList::Dispatch(const DispatchDesc& desc) noexcept {

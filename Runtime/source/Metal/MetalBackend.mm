@@ -5,7 +5,9 @@
 #include "MetalCommandList.h"
 #include "MetalDescriptorHeap.h"
 
-#include <metal_irconverter_runtime/metal_irconverter_runtime.h>
+#import <SCARTools/SCARComputePSOArchiveView.h>
+
+#import <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 namespace RHINO::APIMetal {
     void MetalBackend::Initialize() noexcept {
@@ -69,7 +71,7 @@ namespace RHINO::APIMetal {
 
     void MetalBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {}
 
-    MetalBuffer* MetalBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage,
+    Buffer* MetalBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage,
                                             size_t structuredStride, const char* name) noexcept {
         auto* result = new MetalBuffer{};
         result->buffer = [m_Device newBufferWithLength:size options:0];
@@ -79,7 +81,8 @@ namespace RHINO::APIMetal {
 
     void MetalBackend::ReleaseBuffer(Buffer* buffer) noexcept { delete buffer; }
 
-    MetalTexture2D* MetalBackend::CreateTexture2D() noexcept {
+    Texture2D* MetalBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
+                                             ResourceUsage usage, const char* name) noexcept {
         auto* result = new MetalTexture2D{};
         MTLTextureDescriptor* descriptor = [[MTLTextureDescriptor alloc] init];
 
@@ -95,7 +98,9 @@ namespace RHINO::APIMetal {
 
         result->resources.resize(descriptorsCount);
 
-        result->m_ArgBuf = [m_Device newBufferWithLength:result->encoder.encodedLength * descriptorsCount options:0];
+//        result->m_ArgBuf = [m_Device newBufferWithLength:result->encoder.encodedLength * descriptorsCount options:0];
+        result->m_ArgBuf = [m_Device newBufferWithLength:sizeof(IRDescriptorTableEntry) * descriptorsCount
+                                                 options:MTLResourceStorageModeShared];
         [result->m_ArgBuf setLabel:[NSString stringWithUTF8String:name]];
         return result;
     }
@@ -112,6 +117,24 @@ namespace RHINO::APIMetal {
 
     void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {}
 
+    ComputePSO* MetalBackend::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
+                                                    const char* debugName) noexcept {
+        //TODO: check lang
+        const SCARTools::SCARComputePSOArchiveView view{scar, sizeInBytes, debugName};
+        if (!view.IsValid()) {
+            return nullptr;
+        }
+        return CompileComputePSO(view.GetDesc());
+    }
+
+    void* MetalBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
+        auto* metalBuffer = static_cast<MetalBuffer*>(buffer);
+        return metalBuffer->buffer.contents;
+    }
+
+    void MetalBackend::UnmapMemory(Buffer* buffer) noexcept {
+        // NOOP
+    }
 } // namespace RHINO::APIMetal
 
 #endif // ENABLE_API_METAL

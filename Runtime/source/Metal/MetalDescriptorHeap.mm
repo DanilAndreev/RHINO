@@ -1,7 +1,7 @@
 #include "MetalDescriptorHeap.h"
 #include "MetalBackendTypes.h"
 
-#include <metal_irconverter_runtime/metal_irconverter_runtime.h>
+#import <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 namespace RHINO::APIMetal {
     void MetalDescriptorHeap::WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept {
