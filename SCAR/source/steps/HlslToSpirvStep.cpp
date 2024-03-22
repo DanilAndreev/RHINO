@@ -1,11 +1,10 @@
-#include "HlslToDxilStep.h"
-
+#include "HlslToSpirvStep.h"
 
 #include "DXCCommon.hpp"
 
 namespace SCAR {
-    bool HlslToDxilStep::Execute(const CompileSettings& settings, const ChainSettings& chSettings,
-                                 ChainContext& context) noexcept {
+    bool HlslToSpirvStep::Execute(const CompileSettings& settings, const ChainSettings& chSettings,
+                                  ChainContext& context) noexcept {
         std::ifstream shaderStream{chSettings.shaderFilepath};
         if (!shaderStream.is_open()) {
             using namespace std::string_literals;
@@ -22,9 +21,10 @@ namespace SCAR {
         DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
         auto includeHandler = std::make_shared<CustomIncludeHandler>();
 
-        const wchar_t* blobName = L"result.dxil";
+        const wchar_t* blobName = L"result.spirv";
         std::vector<std::wstring> args = GenerateBasicDXCArgs(settings, chSettings, context, blobName);
-        args.emplace_back(L"-all_resources_bound");
+        args.emplace_back(L"-spirv");
+        args.emplace_back(L"-no-warnings");
 
         DxcBuffer sourceBuffer{};
         sourceBuffer.Ptr = sourceBlob->GetBufferPointer();

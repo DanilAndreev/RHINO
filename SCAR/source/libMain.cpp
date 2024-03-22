@@ -5,15 +5,15 @@
 #include "CompilationChain.h"
 #include "ICompilationPipeline.h"
 #include "pipelines/ILComputeCompilationPipeline.h"
-#include "steps/HlslToDxilStep.h"
 #include "steps/DxilToMetallibStep.h"
+#include "steps/HlslToDxilStep.h"
+#include "steps/HlslToSpirvStep.h"
 
 namespace SCAR {
     CompilationChain* ConstructCompilationChain(ArchivePSOLang lang) noexcept {
         switch (lang) {
             case ArchivePSOLang::SPIRV: {
-
-                return nullptr;
+                return new HlslToSpirvStep{};
             }
             case ArchivePSOLang::DXIL: {
                 return new HlslToDxilStep{};

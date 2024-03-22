@@ -13,6 +13,9 @@ set(HeaderFiles
         source/ICompilationPipeline.h
 
         source/steps/HlslToDxilStep.h
+        source/steps/DxilToMetallibStep.h
+        source/steps/HlslToSpirvStep.h
+        source/steps/DXCCommon.hpp
 
         source/pipelines/ILComputeCompilationPipeline.h
 
@@ -26,14 +29,14 @@ set(SourceFiles
         source/CompilationChain.cpp
 
         source/steps/HlslToDxilStep.cpp
+        source/steps/DxilToMetallibStep.cpp
+        source/steps/HlslToSpirvStep.cpp
 
         source/archiver/PSOArchiver.cpp
 
         source/pipelines/ILComputeCompilationPipeline.cpp
 
         source/serializers/SerializeRootSignature.cpp
-        source/steps/DxilToMetallibStep.cpp
-        source/steps/DxilToMetallibStep.h
 )
 
 if(APPLE)
