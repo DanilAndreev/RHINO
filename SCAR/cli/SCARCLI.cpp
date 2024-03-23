@@ -53,7 +53,8 @@ int main(int argc, char* argv[]) {
 
     // -------------------------- START TESTS
     const RHINO::DescriptorRangeDesc space0rd[] = {
-        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 0, 2},
+        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 0, 1},
+        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 1, 1},
     };
 
     const RHINO::DescriptorRangeDesc space1rd[] = {

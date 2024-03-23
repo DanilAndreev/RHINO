@@ -1,5 +1,6 @@
 #include "HlslToSpirvStep.h"
 
+#include <system_error>
 #include "DXCCommon.hpp"
 
 namespace SCAR {
@@ -32,8 +33,12 @@ namespace SCAR {
         sourceBuffer.Encoding = 0;
 
         IDxcResult* result;
-        compiler->Compile(&sourceBuffer, ArgsWCHARView(args).data(), args.size(), includeHandler.get(),
-                          IID_PPV_ARGS(&result));
+        HRESULT hr = compiler->Compile(&sourceBuffer, ArgsWCHARView(args).data(), args.size(), includeHandler.get(),
+                                       IID_PPV_ARGS(&result));
+        if (hr != S_OK) {
+            context.errors.emplace_back(std::system_category().message(hr));
+            return false;
+        }
 
         IDxcBlobUtf8* errors{};
         result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
