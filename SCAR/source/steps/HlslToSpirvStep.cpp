@@ -66,6 +66,10 @@ namespace SCAR {
         }
         IDxcBlob* outObject{};
         result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&outObject), &outNameWide);
+        if (!outObject->GetBufferSize()) {
+            context.errors.emplace_back("DXC exited with no output object [out object length 0].\n");
+            return false;
+        }
 
         context.dataLength = outObject->GetBufferSize();
         context.data.reset(new uint8_t[context.dataLength]);
