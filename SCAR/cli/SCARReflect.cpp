@@ -103,16 +103,19 @@ void PrintRootSignature(const SCAR::ArchiveReader& reader, size_t indent = 0) no
 }
 
 int main(int argc, char* argv[]) {
+    std::filesystem::path archiveFilepath;
+
     CLI::App app{"RHINO Shader Compiler-Archiver Reflection utility.", "SCARReflect"};
     try {
-        app.positionals_at_end();
+        app.add_option("filepath", archiveFilepath, "SCAR archive filepath")->required();
         app.parse(argc, argv);
     }
     catch (std::exception& error) {
         std::cerr << "RHIPSOCompiler CLI usage error:\n" << error.what() << std::endl;
+        return 1;
     }
 
-    std::ifstream inFile{"out.scar", std::ifstream::binary | std::ifstream::ate};
+    std::ifstream inFile{archiveFilepath, std::ifstream::binary | std::ifstream::ate};
     if (!inFile.is_open()) {
         std::cerr << "Failed to open file: "
                   << "" << std::endl;

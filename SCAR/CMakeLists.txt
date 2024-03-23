@@ -84,6 +84,11 @@ add_executable(SCAR EXCLUDE_FROM_ALL cli/SCARCLI.cpp)
 target_link_libraries(SCAR PRIVATE SCARs)
 target_include_directories(SCAR PRIVATE external/include)
 
+# SCAR Dump
+add_executable(SCARDump EXCLUDE_FROM_ALL cli/SCARDump.cpp)
+target_link_libraries(SCARDump PRIVATE SCARs)
+target_include_directories(SCARDump PRIVATE external/include)
+
 # SCAR Reflect
 add_executable(SCARReflect EXCLUDE_FROM_ALL cli/SCARReflect.cpp)
 target_link_libraries(SCARReflect PRIVATE SCARs)
