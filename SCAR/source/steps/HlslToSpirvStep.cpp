@@ -25,6 +25,8 @@ namespace SCAR {
         const wchar_t* blobName = L"result.spirv";
         std::vector<std::wstring> args = GenerateBasicDXCArgs(settings, chSettings, context, blobName);
         args.emplace_back(L"-spirv");
+        args.emplace_back(L"-fspv-flatten-resource-arrays");
+        args.emplace_back(L"-fspv-target-env='vulkan1.3'");
         args.emplace_back(L"-no-warnings");
 
         DxcBuffer sourceBuffer{};
