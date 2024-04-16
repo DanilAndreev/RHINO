@@ -30,7 +30,7 @@ namespace RHINO::APIVulkan {
         VkPipeline PSO = VK_NULL_HANDLE;
         VkShaderModule shaderModule = VK_NULL_HANDLE;
         VkPipelineLayout layout = VK_NULL_HANDLE;
-        std::map<size_t, std::pair<DescriptorRangeType, size_t>> heapOffsetsBySpaces{};
+        std::map<size_t, std::pair<DescriptorRangeType, size_t>> heapOffsetsInDescriptorsBySpaces{};
     };
 }// namespace RHINO::APIVulkan
 

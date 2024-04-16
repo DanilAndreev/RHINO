@@ -3,6 +3,7 @@
 #include "VulkanCommandList.h"
 #include "VulkanAPI.h"
 #include "VulkanDescriptorHeap.h"
+#include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
     void VulkanCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
@@ -24,13 +25,20 @@ namespace RHINO::APIVulkan {
 
     void VulkanCommandList::SetComputePSO(ComputePSO* pso) noexcept {
         auto* vulkanPSO = static_cast<VulkanComputePSO*>(pso);
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
-        for (auto [space, spaceInfo] : vulkanPSO->heapOffsetsBySpaces) {
+        for (auto [space, spaceInfo] : vulkanPSO->heapOffsetsInDescriptorsBySpaces) {
             uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
             VkDeviceSize offset = spaceInfo.second;
+            switch (spaceInfo.first) {
+                case DescriptorRangeType::Sampler:
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, descriptorProps);
+                    break;
+                default:
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, descriptorProps);
+            }
             EXT::vkCmdSetDescriptorBufferOffsetsEXT(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->layout,
                                                     space, 1, &bufferIndex, &offset);
         }
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
     }
 
     void VulkanCommandList::SetRTPSO(RTPSO* pso) noexcept {
@@ -48,7 +56,7 @@ namespace RHINO::APIVulkan {
             auto* vulkanSamplerHeap = static_cast<VulkanDescriptorHeap*>(SamplerHeap);
             VkDescriptorBufferBindingInfoEXT bindingSampler{VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT};
             bindingSampler.address = vulkanSamplerHeap->heapGPUStartHandle;
-            bindingSampler.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
+            bindingSampler.usage = VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
             bindings[1] = bindingSampler;
         }
         EXT::vkCmdBindDescriptorBuffersEXT(cmd, SamplerHeap ? 2 : 1, bindings);

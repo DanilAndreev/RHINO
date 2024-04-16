@@ -11,15 +11,21 @@ set(HeaderFiles
         source/Utils/Common.h
         source/Utils/PlatformBase.h
 
+        source/DebugLayer/DebugLayer.h
+
         source/Vulkan/VulkanBackend.h
         source/Vulkan/VulkanBackendTypes.h
         source/Vulkan/VulkanAPI.h
         source/Vulkan/VulkanDescriptorHeap.h
         source/Vulkan/VulkanCommandList.h
+        source/Vulkan/VulkanUtils.h
 
         source/D3D12/D3D12Backend.h
         source/D3D12/D3D12BackendTypes.h
         source/D3D12/D3D12DescriptorHeap.h
+        source/D3D12/D3D12CommandList.h
+
+        source/SCARTools/SCARComputePSOArchiveView.h
 )
 
 set(ObjCHeaderFiles
@@ -39,6 +45,8 @@ set(SourceFiles
         source/main.cpp
         source/RHINOTypesImpl.cpp
 
+        source/DebugLayer/DebugLayer.cpp
+
         source/Vulkan/VulkanBackend.cpp
         source/Vulkan/VulkanAPI.cpp
         source/Vulkan/VulkanDescriptorHeap.cpp
@@ -47,11 +55,8 @@ set(SourceFiles
         source/D3D12/D3D12Backend.cpp
         source/D3D12/D3D12DescriptorHeap.cpp
         source/D3D12/D3D12CommandList.cpp
-        source/D3D12/D3D12CommandList.h
-        source/DebugLayer/DebugLayer.cpp
-        source/DebugLayer/DebugLayer.h
+
         source/SCARTools/SCARComputePSOArchiveView.cpp
-        source/SCARTools/SCARComputePSOArchiveView.h
 )
 
 if(APPLE)

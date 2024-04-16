@@ -17,6 +17,8 @@ namespace RHINO::APIVulkan {
     public:
         VkCommandBuffer cmd = VK_NULL_HANDLE;
         VkCommandPool pool = VK_NULL_HANDLE; //TODO: move to rhi.
+
+        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps = {};
     };
 }// namespace RHINO::APIVulkan
 

@@ -43,7 +43,6 @@ namespace RHINO::APIVulkan {
     private:
         uint32_t SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) noexcept;
         void SelectQueues(VkDeviceQueueCreateInfo queueInfos[3], uint32_t* infosCount) noexcept;
-        size_t CalculateDescriptorHandleIncrementSize(DescriptorHeapType heapType,  const VkPhysicalDeviceDescriptorBufferPropertiesEXT& descriptorProps) noexcept;
     private:
         static VkDescriptorType ToDescriptorType(DescriptorType type) noexcept;
         static VkBufferUsageFlags ToBufferUsage(ResourceUsage usage) noexcept;

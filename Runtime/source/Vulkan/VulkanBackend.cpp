@@ -4,6 +4,7 @@
 #include "VulkanAPI.h"
 #include "VulkanCommandList.h"
 #include "VulkanDescriptorHeap.h"
+#include "VulkanUtils.h"
 
 #include "SCARTools/SCARComputePSOArchiveView.h"
 
@@ -174,7 +175,7 @@ namespace RHINO::APIVulkan {
         spaceLayouts.resize(desc.spacesCount);
         for (size_t space = 0; space < desc.spacesCount; ++space) {
             const DescriptorSpaceDesc& spaceDesc = desc.spacesDescs[space];
-            result->heapOffsetsBySpaces[space] =
+            result->heapOffsetsInDescriptorsBySpaces[space] =
                     std::make_pair(spaceDesc.rangeDescs[0].rangeType, spaceDesc.offsetInDescriptorsFromTableStart);
 
             std::vector<VkDescriptorSetLayoutBinding> bindings{};
@@ -253,6 +254,12 @@ namespace RHINO::APIVulkan {
             setLayoutCreateInfo.pBindings = bindings.data();
 
             vkCreateDescriptorSetLayout(m_Device, &setLayoutCreateInfo, m_Alloc, &spaceLayouts[space]);
+
+//            VkDeviceSize debugSize = 0;
+//            EXT::vkGetDescriptorSetLayoutSizeEXT(m_Device, spaceLayouts[space], &debugSize);
+//            VkDeviceSize debugOffset = 0;
+//            EXT::vkGetDescriptorSetLayoutBindingOffsetEXT(m_Device, spaceLayouts[space], 2u, &debugOffset);
+//            std::cout << "Set " << space << " size: " << debugSize << " off: " << debugOffset << std::endl;
         }
 
         VkPipelineLayoutCreateInfo layoutInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
@@ -388,11 +395,15 @@ namespace RHINO::APIVulkan {
 
         result->descriptorHandleIncrementSize = CalculateDescriptorHandleIncrementSize(type, descriptorProps);
 
-        result->heapSize = result->descriptorHandleIncrementSize * descriptorsCount;
+        // TODO: 256 is just a magic number for 3080TI. For some reason descriptorProps.descriptorBufferOffsetAlignment != 256. Research valid parameter for this one.
+        result->heapSize = RHINO_CEIL_TO_MULTIPLE_OF(result->descriptorHandleIncrementSize * descriptorsCount, 256);
 
         VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         heapCreateInfo.flags = 0;
         heapCreateInfo.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        if (type == DescriptorHeapType::Sampler) {
+            heapCreateInfo.usage |= VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT;
+        }
         heapCreateInfo.size = result->heapSize;
         heapCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         vkCreateBuffer(m_Device, &heapCreateInfo, m_Alloc, &result->heap);
@@ -434,6 +445,13 @@ namespace RHINO::APIVulkan {
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         //TODO: add command list target queue;
         auto* result = new VulkanCommandList{};
+
+        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
+        VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+        props.pNext = &descriptorProps;
+        vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &props);
+        result->descriptorProps = descriptorProps;
+
         VkCommandPoolCreateInfo poolCreateInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
         poolCreateInfo.queueFamilyIndex = m_DefaultQueueFamIndex;
         vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &result->pool);
@@ -497,17 +515,6 @@ namespace RHINO::APIVulkan {
             }
         }
         return std::numeric_limits<uint32_t>::max();
-    }
-
-    size_t VulkanBackend::CalculateDescriptorHandleIncrementSize(DescriptorHeapType heapType, const VkPhysicalDeviceDescriptorBufferPropertiesEXT& descriptorProps) noexcept {
-        switch (heapType) {
-            case DescriptorHeapType::SRV_CBV_UAV:
-                return std::max(descriptorProps.uniformBufferDescriptorSize, std::max(descriptorProps.storageBufferDescriptorSize, std::max(descriptorProps.storageImageDescriptorSize, descriptorProps.sampledImageDescriptorSize)));
-            case DescriptorHeapType::Sampler:
-                return descriptorProps.samplerDescriptorSize;
-            default:
-                return 0;
-        }
     }
 
     void VulkanBackend::SelectQueues(VkDeviceQueueCreateInfo queueInfos[3], uint32_t* infosCount) noexcept {
