@@ -10,6 +10,13 @@ namespace SCAR {
         uint32_t archiveSizeInBytes = 0;
     };
 
+    struct CompilationResult {
+        ArchiveBinary archive;
+        bool success = false;
+        const char* warningsStr = nullptr;
+        const char* errorsStr = nullptr;
+    };
+
     struct CompileSettings {
         size_t optimizationLevel = 3;
         ArchivePSOLang psoLang = {};
@@ -22,5 +29,6 @@ namespace SCAR {
         PSORootSignatureDesc* rootSignature = nullptr;
     };
 
-    ArchiveBinary Compile(const CompileSettings* settings) noexcept;
+    CompilationResult Compile(const CompileSettings* settings) noexcept;
+    void ReleaseCompilationResult(CompilationResult result) noexcept;
 } // namespace SCAR

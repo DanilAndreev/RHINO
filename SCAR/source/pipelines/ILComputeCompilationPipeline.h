@@ -9,7 +9,8 @@ namespace SCAR {
         explicit ILComputeCompilationPipeline(CompilationChain* chain) noexcept;
 
     public:
-        ArchiveBinary Execute(const CompileSettings& settings) noexcept final;
+        ArchiveBinary Execute(const CompileSettings& settings, std::vector<std::string>& errors,
+                              std::vector<std::string>& warnings) noexcept final;
 
     private:
         CompilationChain* m_CompilationChain = nullptr;

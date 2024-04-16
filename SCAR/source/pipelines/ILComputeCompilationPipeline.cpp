@@ -7,7 +7,8 @@ namespace SCAR {
     ILComputeCompilationPipeline::ILComputeCompilationPipeline(CompilationChain* chain) noexcept :
         m_CompilationChain(chain) {}
 
-    ArchiveBinary ILComputeCompilationPipeline::Execute(const CompileSettings& settings) noexcept {
+    ArchiveBinary ILComputeCompilationPipeline::Execute(const CompileSettings& settings, std::vector<std::string>& errors,
+                                                        std::vector<std::string>& warnings) noexcept {
         assert(m_CompilationChain != nullptr);
 
         ChainSettings chSettings{};
@@ -18,6 +19,10 @@ namespace SCAR {
         ChainContext context{};
         bool status = m_CompilationChain->Run(settings, chSettings, context);
         uint8_t* shaderModuleAssembly = context.data.release();
+
+        errors.insert(errors.begin(), context.errors.cbegin(), context.errors.cend());
+        warnings.insert(warnings.begin(), context.warnings.cbegin(), context.warnings.cend());
+
         if (!status) {
             delete shaderModuleAssembly;
             return {nullptr, 0};

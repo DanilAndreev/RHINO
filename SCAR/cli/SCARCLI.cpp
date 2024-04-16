@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
 
     // -------------------------- START TESTS
     const RHINO::DescriptorRangeDesc space0rd[] = {
-        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 0, 1},
-        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 1, 1},
+        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 0, 2},
+//        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 1, 1},
     };
 
     const RHINO::DescriptorRangeDesc space1rd[] = {
@@ -77,15 +77,24 @@ int main(int argc, char* argv[]) {
 
     //----------------------------END TESTS
 
-    const SCAR::ArchiveBinary res = SCAR::Compile(&settings);
+    const SCAR::CompilationResult res = SCAR::Compile(&settings);
 
-    if (!outFilepath.empty()) {
-        std::ofstream out{outFilepath, std::ios::binary};
-        out.write(static_cast<const char*>(res.data), res.archiveSizeInBytes);
-        out.close();
-    } else {
-        //TODO: print to STDOUT in b64 format
+    if (res.success) {
+        if (!outFilepath.empty()) {
+            std::ofstream out{outFilepath, std::ios::binary};
+            out.write(static_cast<const char*>(res.archive.data), res.archive.archiveSizeInBytes);
+            out.close();
+        } else {
+            //TODO: print to STDOUT in b64 format
+        }
     }
-    free(res.data);
+    if (res.warningsStr) {
+        std::cout << res.warningsStr << std::endl;
+    }
+    if (res.errorsStr) {
+        std::cerr << res.errorsStr << std::endl;
+    }
+    SCAR::ReleaseCompilationResult(res);
+
     return 0;
 }
