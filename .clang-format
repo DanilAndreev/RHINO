@@ -27,7 +27,7 @@ BraceWrapping:
   SplitEmptyNamespace: true
 BreakBeforeBraces: Custom
 BreakConstructorInitializers: AfterColon
-ColumnLimit: 120
+ColumnLimit: 140
 ContinuationIndentWidth: 8
 IncludeCategories:
   - Regex: '^<.*'

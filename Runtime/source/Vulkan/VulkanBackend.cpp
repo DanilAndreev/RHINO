@@ -203,34 +203,22 @@ namespace RHINO::APIVulkan {
                 }
             }
 
-            static const VkDescriptorType ALLTypes[6] = {
-                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                    VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,       VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
-            static const VkDescriptorType CBVTypes[1] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
-            static const VkDescriptorType SRVTypes[3] = {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-                                                         VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                                                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
-            static const VkDescriptorType UAVTypes[3] = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                                         VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-                                                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
-
             std::vector<VkMutableDescriptorTypeListEXT> mutableDescriptorTypeLists{};
             mutableDescriptorTypeLists.resize(bindings.size());
             for (size_t i = 0; i < bindings.size(); ++i) {
                 if (rangeTypeByBinding.contains(i)) {
                     switch (rangeTypeByBinding[i]) {
                         case DescriptorRangeType::CBV:
-                            mutableDescriptorTypeLists[i] =
-                                    VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(CBVTypes), CBVTypes};
+                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::CBVTypes),
+                                                                                           VulkanDescriptorHeap::CBVTypes};
                             break;
                         case DescriptorRangeType::SRV:
-                            mutableDescriptorTypeLists[i] =
-                                    VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(SRVTypes), SRVTypes};
+                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::SRVTypes),
+                                                                                           VulkanDescriptorHeap::SRVTypes};
                             break;
                         case DescriptorRangeType::UAV:
-                            mutableDescriptorTypeLists[i] =
-                                    VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(UAVTypes), UAVTypes};
+                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::UAVTypes),
+                                                                                           VulkanDescriptorHeap::UAVTypes};
                             break;
                         case DescriptorRangeType::Sampler:
                             mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{0, nullptr};
@@ -238,7 +226,8 @@ namespace RHINO::APIVulkan {
                     }
                 }
                 else {
-                    mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(ALLTypes), ALLTypes};
+                    mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::CDBSRVUAVTypes),
+                                                                                   VulkanDescriptorHeap::CDBSRVUAVTypes};
                 }
             }
 
@@ -395,7 +384,9 @@ namespace RHINO::APIVulkan {
 
         result->descriptorHandleIncrementSize = CalculateDescriptorHandleIncrementSize(type, descriptorProps);
 
-        // TODO: 256 is just a magic number for 3080TI. For some reason descriptorProps.descriptorBufferOffsetAlignment != 256. Research valid parameter for this one.
+        // TODO: 256 is just a magic number for RTX 3080TI.
+        //  For some reason descriptorProps.descriptorBufferOffsetAlignment != 256.
+        //  Research valid parameter for this one.
         result->heapSize = RHINO_CEIL_TO_MULTIPLE_OF(result->descriptorHandleIncrementSize * descriptorsCount, 256);
 
         VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};

@@ -7,6 +7,19 @@
 namespace RHINO::APIVulkan {
     class VulkanDescriptorHeap final : public DescriptorHeap {
     public:
+        static constexpr VkDescriptorType CDBSRVUAVTypes[6] = {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,       VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+        static constexpr VkDescriptorType CBVTypes[1] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
+        static constexpr VkDescriptorType SRVTypes[3] = {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+                                                                   VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                                                                   VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+        static constexpr VkDescriptorType UAVTypes[3] = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                                                   VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+                                                                   VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+
+    public:
         void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept final;
         void WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept final;
         void WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept final;
@@ -28,6 +41,6 @@ namespace RHINO::APIVulkan {
         VkDevice device = VK_NULL_HANDLE;
     };
 
-}// namespace RHINO::APIVulkan
+} // namespace RHINO::APIVulkan
 
-#endif// ENABLE_API_VULKAN
+#endif // ENABLE_API_VULKAN
