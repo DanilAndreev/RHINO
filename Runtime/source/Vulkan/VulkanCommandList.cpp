@@ -25,6 +25,7 @@ namespace RHINO::APIVulkan {
 
     void VulkanCommandList::SetComputePSO(ComputePSO* pso) noexcept {
         auto* vulkanPSO = static_cast<VulkanComputePSO*>(pso);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
         for (auto [space, spaceInfo] : vulkanPSO->heapOffsetsInDescriptorsBySpaces) {
             uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
             VkDeviceSize offset = spaceInfo.second;
@@ -38,7 +39,6 @@ namespace RHINO::APIVulkan {
             EXT::vkCmdSetDescriptorBufferOffsetsEXT(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->layout,
                                                     space, 1, &bufferIndex, &offset);
         }
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
     }
 
     void VulkanCommandList::SetRTPSO(RTPSO* pso) noexcept {
