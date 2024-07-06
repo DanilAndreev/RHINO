@@ -101,25 +101,44 @@ namespace RHINO::APID3D12 {
     void D3D12Backend::Release() noexcept {}
 
     RTPSO* D3D12Backend::CompileRTPSO(const RTPSODesc& desc) noexcept {
-        // raytracing sampe (D3D12RaytracingSimpleLightning.cpp:306)
-        D3D12_DXIL_LIBRARY_DESC dxilLibDesc{};
-        // dxilLibDesc.pExports = ;
-        // dxilLibDesc.NumExports = ;
-        // dxilLibDesc.DXILLibrary.BytecodeLength = ;
-        // dxilLibDesc.DXILLibrary.pShaderBytecode = ;
-        //
-        //
-        // D3D12_HIT_GROUP_DESC hitGroupDesc{};
-        // hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-        // hitGroupDesc.IntersectionShaderImport = L"Intersection shader entry";
-        // hitGroupDesc.ClosestHitShaderImport = L"Clothest hit shader entry";
-        // hitGroupDesc.AnyHitShaderImport = L"Any hit shader entry";
-        // hitGroupDesc.HitGroupExport = L"Export name";
-        //
-        // D3D12_RAYTRACING_SHADER_CONFIG rtShaderConfig{};
-        // rtShaderConfig.
+        auto* result = new D3D12RTPSO{};
 
-        return nullptr;
+        // raytracing sampe (D3D12RaytracingSimpleLightning.cpp:306)
+        D3D12_EXPORT_DESC exportDesc{};
+        exportDesc.Name = L"MyExportName";
+
+        D3D12_DXIL_LIBRARY_DESC dxilLibDesc{};
+        dxilLibDesc.pExports = &exportDesc;
+        dxilLibDesc.NumExports = 1;
+        dxilLibDesc.DXILLibrary.BytecodeLength = ;
+        dxilLibDesc.DXILLibrary.pShaderBytecode = ;
+
+        D3D12_HIT_GROUP_DESC hitGroupDesc{};
+        hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+        hitGroupDesc.IntersectionShaderImport = L"Intersection shader entry";
+        hitGroupDesc.ClosestHitShaderImport = L"Clothest hit shader entry";
+        hitGroupDesc.AnyHitShaderImport = L"Any hit shader entry";
+        hitGroupDesc.HitGroupExport = L"Export name";
+
+        D3D12_RAYTRACING_SHADER_CONFIG rtShaderConfig{};
+        rtShaderConfig.MaxPayloadSizeInBytes = 0; // TODO: for example pixel color or etc.
+        rtShaderConfig.MaxAttributeSizeInBytes = 0; // TODO: for example barycentrics or smth
+
+        D3D12_RAYTRACING_PIPELINE_CONFIG rtPipelineConfig{};
+        rtPipelineConfig.MaxTraceRecursionDepth = 1;
+
+        std::vector<D3D12_STATE_SUBOBJECT> subobjects{};
+        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &hitGroupDesc});
+        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &rtShaderConfig});
+        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &rtPipelineConfig});
+        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &dxilLibDesc});
+
+        D3D12_STATE_OBJECT_DESC stateDesc{};
+        stateDesc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+        stateDesc.NumSubobjects = subobjects.size();
+        stateDesc.pSubobjects = subobjects.data();
+        m_Device->CreateStateObject(&stateDesc, IID_PPV_ARGS(&result->PSO));
+        return result;
     }
 
     void D3D12Backend::ReleaseRTPSO(RTPSO* pso) noexcept { delete pso; }

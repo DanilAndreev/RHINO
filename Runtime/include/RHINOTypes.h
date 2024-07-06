@@ -22,6 +22,8 @@ namespace RHINO {
     class BLAS;
     class TLAS;
 
+    class Fence;
+
     enum class TextureFormat {
         R32G32B32A32_FLOAT,
         R32G32B32A32_UINT,

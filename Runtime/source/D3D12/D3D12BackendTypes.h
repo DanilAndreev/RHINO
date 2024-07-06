@@ -32,12 +32,22 @@ namespace RHINO::APID3D12 {
 
     class D3D12RTPSO : public RTPSO {
     public:
+        ID3D12StateObject* PSO = nullptr;
     };
 
     class D3D12ComputePSO : public ComputePSO {
     public:
         ID3D12RootSignature* rootSignature = nullptr;
         ID3D12PipelineState* PSO = nullptr;
+    };
+
+    class D3D12FenceInternal {
+        ID3D12Fence* fence = nullptr;
+        
+    };
+
+    class D3D12Fence : public Fence {
+        std::shared_ptr<D3D12FenceInternal> fenceInternal;
     };
 }// namespace RHINO::APID3D12
 

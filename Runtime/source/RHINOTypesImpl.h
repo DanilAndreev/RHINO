@@ -11,4 +11,6 @@ namespace RHINO {
 
     class RTPSO {};
     class ComputePSO {};
+
+    class Fence {};
 }
