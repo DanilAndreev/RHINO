@@ -4,6 +4,7 @@
 #include "D3D12BackendTypes.h"
 #include "D3D12DescriptorHeap.h"
 #include "D3D12Converters.h"
+#include "D3D12Utils.h"
 
 namespace RHINO::APID3D12 {
     void D3D12CommandList::Dispatch(const DispatchDesc& desc) noexcept {
@@ -11,15 +12,15 @@ namespace RHINO::APID3D12 {
     }
     void D3D12CommandList::DispatchRays() noexcept {
         D3D12_DISPATCH_RAYS_DESC dispatchRaysDesc{};
-        dispatchRaysDesc.RayGenerationShaderRecord.StartAddress =GetRayGenShader();
-        dispatchRaysDesc.RayGenerationShaderRecord.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        dispatchRaysDesc.MissShaderTable.StartAddress = GetMissShaderTable();
-        dispatchRaysDesc.MissShaderTable.SizeInBytes = 1 * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        dispatchRaysDesc.HitGroupTable.StartAddress = GetHitGroupTable();
-        dispatchRaysDesc.HitGroupTable.SizeInBytes = 1 * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        dispatchRaysDesc.Width = backbufferWidth;
-        dispatchRaysDesc.Height = backbufferHeight;
-        dispatchRaysDesc.Depth = 1;
+        // dispatchRaysDesc.RayGenerationShaderRecord.StartAddress = GetRayGenShader();
+        // dispatchRaysDesc.RayGenerationShaderRecord.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        // dispatchRaysDesc.MissShaderTable.StartAddress = GetMissShaderTable();
+        // dispatchRaysDesc.MissShaderTable.SizeInBytes = 1 * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        // dispatchRaysDesc.HitGroupTable.StartAddress = GetHitGroupTable();
+        // dispatchRaysDesc.HitGroupTable.SizeInBytes = 1 * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        // dispatchRaysDesc.Width = backbufferWidth;
+        // dispatchRaysDesc.Height = backbufferHeight;
+        // dispatchRaysDesc.Depth = 1;
 
 
         cmd->DispatchRays(&dispatchRaysDesc);
@@ -56,12 +57,14 @@ namespace RHINO::APID3D12 {
         }
     }
 
-    BLAS* D3D12CommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset) noexcept {
+    BLAS* D3D12CommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
+                                      const char* name) noexcept {
         auto* indexBuffer = static_cast<D3D12Buffer*>(desc.indexBuffer);
         auto* vertexBuffer = static_cast<D3D12Buffer*>(desc.vertexBuffer);
         auto* transform = static_cast<D3D12Buffer*>(desc.transformBuffer);
         auto* scratch = static_cast<D3D12Buffer*>(scratchBuffer);
 
+        auto result = new D3D12BLAS{};
 
         D3D12_GPU_VIRTUAL_ADDRESS trnsfrmAddr = transform ? transform->buffer->GetGPUVirtualAddress() + desc.transformBufferStartOffset : 0;
         D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES};
@@ -86,22 +89,50 @@ namespace RHINO::APID3D12 {
         device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
 
         size_t ASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        {
+            D3D12_HEAP_PROPERTIES heapProperties{};
+            heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+            heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+            heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
+            D3D12_RESOURCE_DESC resourceDesc{};
+            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+            resourceDesc.Alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
+            resourceDesc.Width = ASSize;
+            resourceDesc.Height = 1;
+            resourceDesc.DepthOrArraySize = 1;
+            resourceDesc.MipLevels = 1;
+            resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+            resourceDesc.SampleDesc.Count = 1;
+            resourceDesc.SampleDesc.Quality = 0;
+
+            RHINO_D3DS(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                       D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&result->buffer)));
+            RHINO_GPU_DEBUG(SetDebugName(result->buffer, name));
+        }
 
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC buildDesc = {};
-        buildDesc.DestAccelerationStructureData = destination;
+        buildDesc.DestAccelerationStructureData = result->buffer->GetGPUVirtualAddress();
         buildDesc.Inputs = inputsDesc;
         buildDesc.ScratchAccelerationStructureData = scratch->buffer->GetGPUVirtualAddress() + scratchBufferStartOffset;
 
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC postBuildInfoDesc = {};
-        postBuildInfoDesc.DestBuffer = postBuildDataBuffer;
-        postBuildInfoDesc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE;
+        //TODO: retrieve compacted size and repack
+        // D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC postBuildInfoDesc = {};
+        // postBuildInfoDesc.DestBuffer = postBuildDataBuffer;
+        // postBuildInfoDesc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE;
+        // cmd->BuildRaytracingAccelerationStructure(&buildDesc, 1, &postBuildInfoDesc);
 
-        cmd->BuildRaytracingAccelerationStructure(&buildDesc, 1, &postBuildInfoDesc);
+        cmd->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
+        return result;
     }
 
-    TLAS* D3D12CommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset) noexcept {
+    TLAS* D3D12CommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
+                                      const char* name) noexcept {
         auto* scratch = static_cast<D3D12Buffer*>(scratchBuffer);
+
+        auto result = new D3D12TLAS{};
+
+        std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instancesDesc{desc.blasInstancesCount};
 
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc{};
         inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
@@ -110,12 +141,39 @@ namespace RHINO::APID3D12 {
         inputsDesc.NumDescs = desc.blasInstancesCount;
         inputsDesc.InstanceDescs = blasInstances;
 
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+        device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
+
+        size_t ASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        {
+            D3D12_HEAP_PROPERTIES heapProperties{};
+            heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+            heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+            heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+            D3D12_RESOURCE_DESC resourceDesc{};
+            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+            resourceDesc.Alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
+            resourceDesc.Width = ASSize;
+            resourceDesc.Height = 1;
+            resourceDesc.DepthOrArraySize = 1;
+            resourceDesc.MipLevels = 1;
+            resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+            resourceDesc.SampleDesc.Count = 1;
+            resourceDesc.SampleDesc.Quality = 0;
+
+            RHINO_D3DS(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                       D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&result->buffer)));
+            RHINO_GPU_DEBUG(SetDebugName(result->buffer, name));
+        }
+
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC buildDesc = {};
-        buildDesc.DestAccelerationStructureData = destination;
+        buildDesc.DestAccelerationStructureData = result->buffer->GetGPUVirtualAddress();
         buildDesc.Inputs = inputsDesc;
         buildDesc.ScratchAccelerationStructureData = scratch->buffer->GetGPUVirtualAddress() + scratchBufferStartOffset;
 
         cmd->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
+        return result;
     }
 }// namespace RHINO::APID3D12
 

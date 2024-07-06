@@ -1,4 +1,5 @@
 #pragma once
+#include "RHINOTypesImpl.h"
 
 #ifdef ENABLE_API_D3D12
 
@@ -17,6 +18,16 @@ namespace RHINO::APID3D12 {
         ID3D12Resource* texture = nullptr;
         D3D12_RESOURCE_DESC desc;
         void* mapped = nullptr;
+    };
+
+    class D3D12BLAS : public BLAS {
+    public:
+        ID3D12Resource* buffer = nullptr;
+    };
+
+    class D3D12TLAS : public TLAS {
+    public:
+        ID3D12Resource* buffer = nullptr;
     };
 
     class D3D12RTPSO : public RTPSO {

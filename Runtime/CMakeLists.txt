@@ -23,6 +23,7 @@ set(HeaderFiles
         source/D3D12/D3D12Backend.h
         source/D3D12/D3D12BackendTypes.h
         source/D3D12/D3D12Converters.h
+        source/D3D12/D3D12Utils.h
         source/D3D12/D3D12DescriptorHeap.h
         source/D3D12/D3D12CommandList.h
 

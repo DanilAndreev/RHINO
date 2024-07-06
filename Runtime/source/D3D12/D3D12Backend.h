@@ -42,7 +42,6 @@ namespace RHINO::APID3D12 {
         void SubmitCommandList(CommandList* cmd) noexcept final;
 
     private:
-        void SetDebugName(ID3D12DeviceChild* resource, const std::string& name) noexcept;
         ID3D12RootSignature* CreateRootSignature(size_t spacesCount, const DescriptorSpaceDesc* spaces) noexcept;
 
     private:

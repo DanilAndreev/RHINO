@@ -4,21 +4,12 @@
 #include "D3D12CommandList.h"
 #include "D3D12Converters.h"
 #include "D3D12DescriptorHeap.h"
+#include "D3D12Utils.h"
 
 #include "SCARTools/SCARComputePSOArchiveView.h"
 
 #pragma comment(lib, "dxguid.lib")
 #include <dxgi.h>
-
-
-#ifdef _DEBUG
-#define RHINO_D3DS(expr) assert(expr == S_OK)
-#define RHINO_GPU_DEBUG(expr) expr
-#else
-#define RHINO_D3DS(expr) expr
-#define RHINO_GPU_DEBUG(expr)
-#endif
-
 
 namespace RHINO::APID3D12 {
     using namespace std::string_literals;
@@ -112,21 +103,21 @@ namespace RHINO::APID3D12 {
     RTPSO* D3D12Backend::CompileRTPSO(const RTPSODesc& desc) noexcept {
         // raytracing sampe (D3D12RaytracingSimpleLightning.cpp:306)
         D3D12_DXIL_LIBRARY_DESC dxilLibDesc{};
-        dxilLibDesc.pExports = ;
-        dxilLibDesc.NumExports = ;
-        dxilLibDesc.DXILLibrary.BytecodeLength = ;
-        dxilLibDesc.DXILLibrary.pShaderBytecode = ;
-
-
-        D3D12_HIT_GROUP_DESC hitGroupDesc{};
-        hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-        hitGroupDesc.IntersectionShaderImport = L"Intersection shader entry";
-        hitGroupDesc.ClosestHitShaderImport = L"Clothest hit shader entry";
-        hitGroupDesc.AnyHitShaderImport = L"Any hit shader entry";
-        hitGroupDesc.HitGroupExport = L"Export name";
-
-        D3D12_RAYTRACING_SHADER_CONFIG rtShaderConfig{};
-        rtShaderConfig.
+        // dxilLibDesc.pExports = ;
+        // dxilLibDesc.NumExports = ;
+        // dxilLibDesc.DXILLibrary.BytecodeLength = ;
+        // dxilLibDesc.DXILLibrary.pShaderBytecode = ;
+        //
+        //
+        // D3D12_HIT_GROUP_DESC hitGroupDesc{};
+        // hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+        // hitGroupDesc.IntersectionShaderImport = L"Intersection shader entry";
+        // hitGroupDesc.ClosestHitShaderImport = L"Clothest hit shader entry";
+        // hitGroupDesc.AnyHitShaderImport = L"Any hit shader entry";
+        // hitGroupDesc.HitGroupExport = L"Export name";
+        //
+        // D3D12_RAYTRACING_SHADER_CONFIG rtShaderConfig{};
+        // rtShaderConfig.
 
         return nullptr;
     }
@@ -389,10 +380,6 @@ namespace RHINO::APID3D12 {
         HANDLE event = CreateEventA(nullptr, true, false, "DefaultQueueCompletion");
         m_DefaultQueueFence->SetEventOnCompletion(m_CopyQueueFenceLastVal, event);
         WaitForSingleObject(event, INFINITE);
-    }
-
-    void D3D12Backend::SetDebugName(ID3D12DeviceChild* resource, const std::string& name) noexcept {
-        resource->SetPrivateData(WKPDID_D3DDebugObjectName, name.length(), name.c_str());
     }
 
     ID3D12RootSignature* D3D12Backend::CreateRootSignature(size_t spacesCount,
