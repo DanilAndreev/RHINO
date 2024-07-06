@@ -5,8 +5,11 @@
 #include "RHINOTypes.h"
 
 namespace RHINO::APID3D12 {
+    class D3D12Backend;
+
     class D3D12CommandList : public CommandList {
     public:
+        ID3D12Device5* device = nullptr;
         ID3D12CommandAllocator* allocator = nullptr;
         ID3D12GraphicsCommandList4* cmd = nullptr;
     public:
@@ -19,8 +22,8 @@ namespace RHINO::APID3D12 {
         void Draw() noexcept final;
 
     public:
-        BLAS* BuildBLAS(const BLASDesc& desc) noexcept;
-        TLAS* BuildTLAS(const TLASDesc& desc) noexcept;
+        BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset) noexcept;
+        TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset) noexcept;
 
     };
 }// namespace RHINO::APID3D12

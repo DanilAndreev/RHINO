@@ -36,8 +36,8 @@ namespace RHINO::APID3D12 {
         void ReleaseCommandList(CommandList* commandList) noexcept final;
 
     public:
-        void GetBLASRequirements(size_t& outScratchSize, size_t& outBLASSize) noexcept;
-        void GetTLASRequirements(size_t& outScratchSize, size_t& outTLASSize) noexcept;
+        ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept;
+        ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept;
     public:
         void SubmitCommandList(CommandList* cmd) noexcept final;
 

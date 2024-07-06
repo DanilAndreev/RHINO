@@ -2,6 +2,7 @@
 
 #include "D3D12Backend.h"
 #include "D3D12CommandList.h"
+#include "D3D12Converters.h"
 #include "D3D12DescriptorHeap.h"
 
 #include "SCARTools/SCARComputePSOArchiveView.h"
@@ -310,6 +311,7 @@ namespace RHINO::APID3D12 {
     CommandList* D3D12Backend::AllocateCommandList(const char* name) noexcept {
         auto* result = new D3D12CommandList{};
 
+        result->device = m_Device;
         RHINO_D3DS(m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&result->allocator)));
         RHINO_D3DS(m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, result->allocator, nullptr,
                                                IID_PPV_ARGS(&result->cmd)));
@@ -329,7 +331,7 @@ namespace RHINO::APID3D12 {
         delete d3d12CommandList;
     }
 
-    void D3D12Backend::GetBLASRequirements(size_t& outScratchSize, size_t& outBLASSize) noexcept {
+    ASPrebuildInfo D3D12Backend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
         // GetRaytracingAccelerationStructurePrebuildInfo may check pointers for null values for calculating sizes but not accessing data by
         // these pointers. So we can pass dummy not null pointers to tell D3D12 that we are about to pass real pointers during the build.
         // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-getraytracingaccelerationstructureprebuildinfo
@@ -338,13 +340,13 @@ namespace RHINO::APID3D12 {
         D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
         geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
         geometryDesc.Triangles.IndexBuffer = dummyNotNullPointer;
-        geometryDesc.Triangles.IndexCount = indexCount;
-        geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;
+        geometryDesc.Triangles.IndexCount = desc.indexCount;
+        geometryDesc.Triangles.IndexFormat = Convert::ToDXGIFormat(desc.indexFormat);
         geometryDesc.Triangles.Transform3x4 = 0;
-        geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-        geometryDesc.Triangles.VertexCount = vertexCount;
+        geometryDesc.Triangles.VertexFormat = Convert::ToDXGIFormat(desc.vertexFormat);
+        geometryDesc.Triangles.VertexCount = desc.vertexCount;
         geometryDesc.Triangles.VertexBuffer.StartAddress = dummyNotNullPointer;
-        geometryDesc.Triangles.VertexBuffer.StrideInBytes = vertexStride;
+        geometryDesc.Triangles.VertexBuffer.StrideInBytes = desc.vertexStride;
 
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
         inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
@@ -355,26 +357,26 @@ namespace RHINO::APID3D12 {
         inputsDesc.pGeometryDescs = &geometryDesc;
 
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
-
         m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
 
-        outScratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
-        outBLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
-
+        auto scratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        auto BLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        return {scratchSize, BLASSize};
     }
-    void D3D12Backend::GetTLASRequirements(size_t& outScratchSize, size_t& outTLASSize) noexcept {
+
+    ASPrebuildInfo D3D12Backend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
+        inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
         inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
         inputsDesc.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-        inputsDesc.NumDescs = blasInstanceCount;
-        inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        inputsDesc.NumDescs = desc.blasInstancesCount;
 
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
-
         m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
 
-        outScratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
-        outTLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        auto scratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        auto BLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        return {scratchSize, BLASSize};
     }
 
     void D3D12Backend::SubmitCommandList(CommandList* cmd) noexcept {

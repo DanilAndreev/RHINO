@@ -2,6 +2,8 @@
 
 #ifdef ENABLE_API_D3D12
 
+#include "RHINOTypes.h"
+
 namespace RHINO::APID3D12 {
     class D3D12Buffer : public Buffer {
     public:

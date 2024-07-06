@@ -131,6 +131,11 @@ namespace RHINO {
         size_t dimensionsZ;
     };
 
+    struct ASPrebuildInfo {
+        size_t scratchBufferSizeInBytes;
+        size_t MaxASSizeInBytes;
+    };
+
     struct BLASDesc {
         Buffer* indexBuffer;
         size_t indexBufferStartOffset;
@@ -147,7 +152,8 @@ namespace RHINO {
     };
 
     struct TLASDesc {
-        size_t instanceCount;
+        size_t blasInstancesCount;
+        BLAS* const* blasInstances;
     };
 
     class CommandList {
