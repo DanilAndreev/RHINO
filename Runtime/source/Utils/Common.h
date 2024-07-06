@@ -28,6 +28,7 @@ namespace RHINO {
     }
 
 #define RHINO_CEIL_TO_MULTIPLE_OF(intValue, multiple) (((intValue + multiple - 1) / multiple) * multiple)
+#define RHINO_CEIL_TO_POWER_OF_TWO(intValue, powerOfTwo) ((intValue + (powerOfTwo - 1)) & (~(powerOfTwo - 1)))
 
 #ifdef __clang__
 #define RHINO_UNUSED_VAR(var) (RHINO::UnusedVarHelper(var))

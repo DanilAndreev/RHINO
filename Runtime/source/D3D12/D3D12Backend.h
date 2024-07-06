@@ -36,6 +36,9 @@ namespace RHINO::APID3D12 {
         void ReleaseCommandList(CommandList* commandList) noexcept final;
 
     public:
+        void GetBLASRequirements(size_t& outScratchSize, size_t& outBLASSize) noexcept;
+        void GetTLASRequirements(size_t& outScratchSize, size_t& outTLASSize) noexcept;
+    public:
         void SubmitCommandList(CommandList* cmd) noexcept final;
 
     private:
@@ -43,7 +46,7 @@ namespace RHINO::APID3D12 {
         ID3D12RootSignature* CreateRootSignature(size_t spacesCount, const DescriptorSpaceDesc* spaces) noexcept;
 
     private:
-        ID3D12Device* m_Device = nullptr;
+        ID3D12Device5* m_Device = nullptr;
         ID3D12CommandQueue* m_DefaultQueue = nullptr;
         ID3D12Fence* m_DefaultQueueFence = nullptr;
         UINT64 m_DefaultQueueFenceLastVal = 0;

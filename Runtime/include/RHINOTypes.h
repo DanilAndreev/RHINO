@@ -19,14 +19,26 @@ namespace RHINO {
     class ComputePSO;
     class CommandList;
 
+    class BLAS;
+    class TLAS;
+
     enum class TextureFormat {
         R32G32B32A32_FLOAT,
         R32G32B32A32_UINT,
         R32G32B32A32_SINT,
 
+        R32G32B32_FLOAT,
+        R32G32B32_UINT,
+        R32G32B32_SINT,
+
         R32_FLOAT,
         R32_UINT,
         R32_SINT,
+    };
+
+    enum class IndexFormat {
+        R32_UINT,
+        R16_UINT,
     };
 
     enum class ResourceHeapType {
@@ -117,6 +129,25 @@ namespace RHINO {
         size_t dimensionsX;
         size_t dimensionsY;
         size_t dimensionsZ;
+    };
+
+    struct BLASDesc {
+        Buffer* indexBuffer;
+        size_t indexBufferStartOffset;
+        size_t indexCount;
+        IndexFormat indexFormat = IndexFormat::R32_UINT;
+        Buffer* vertexBuffer;
+        size_t vertexBufferStartOffset;
+        TextureFormat vertexFormat = TextureFormat::R32G32B32_FLOAT;
+        size_t vertexCount;
+        size_t vertexStride;
+        // Just one tranform value.
+        Buffer* transformBuffer;
+        size_t transformBufferStartOffset;
+    };
+
+    struct TLASDesc {
+        size_t instanceCount;
     };
 
     class CommandList {

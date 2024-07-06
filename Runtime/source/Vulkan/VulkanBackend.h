@@ -37,6 +37,7 @@ namespace RHINO::APIVulkan {
         CommandList* AllocateCommandList(const char* name) noexcept final;
         void ReleaseCommandList(CommandList* commandList) noexcept final;
 
+        void BuildBLAS() noexcept;
     public:
         void SubmitCommandList(CommandList* cmd) noexcept override;
 

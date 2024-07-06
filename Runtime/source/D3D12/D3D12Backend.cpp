@@ -108,7 +108,27 @@ namespace RHINO::APID3D12 {
 
     void D3D12Backend::Release() noexcept {}
 
-    RTPSO* D3D12Backend::CompileRTPSO(const RTPSODesc& desc) noexcept { return nullptr; }
+    RTPSO* D3D12Backend::CompileRTPSO(const RTPSODesc& desc) noexcept {
+        // raytracing sampe (D3D12RaytracingSimpleLightning.cpp:306)
+        D3D12_DXIL_LIBRARY_DESC dxilLibDesc{};
+        dxilLibDesc.pExports = ;
+        dxilLibDesc.NumExports = ;
+        dxilLibDesc.DXILLibrary.BytecodeLength = ;
+        dxilLibDesc.DXILLibrary.pShaderBytecode = ;
+
+
+        D3D12_HIT_GROUP_DESC hitGroupDesc{};
+        hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+        hitGroupDesc.IntersectionShaderImport = L"Intersection shader entry";
+        hitGroupDesc.ClosestHitShaderImport = L"Clothest hit shader entry";
+        hitGroupDesc.AnyHitShaderImport = L"Any hit shader entry";
+        hitGroupDesc.HitGroupExport = L"Export name";
+
+        D3D12_RAYTRACING_SHADER_CONFIG rtShaderConfig{};
+        rtShaderConfig.
+
+        return nullptr;
+    }
 
     void D3D12Backend::ReleaseRTPSO(RTPSO* pso) noexcept { delete pso; }
 
@@ -308,6 +328,55 @@ namespace RHINO::APID3D12 {
         d3d12CommandList->allocator->Release();
         delete d3d12CommandList;
     }
+
+    void D3D12Backend::GetBLASRequirements(size_t& outScratchSize, size_t& outBLASSize) noexcept {
+        // GetRaytracingAccelerationStructurePrebuildInfo may check pointers for null values for calculating sizes but not accessing data by
+        // these pointers. So we can pass dummy not null pointers to tell D3D12 that we are about to pass real pointers during the build.
+        // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-getraytracingaccelerationstructureprebuildinfo
+        constexpr D3D12_GPU_VIRTUAL_ADDRESS dummyNotNullPointer = 0x1;
+
+        D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
+        geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+        geometryDesc.Triangles.IndexBuffer = dummyNotNullPointer;
+        geometryDesc.Triangles.IndexCount = indexCount;
+        geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;
+        geometryDesc.Triangles.Transform3x4 = 0;
+        geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+        geometryDesc.Triangles.VertexCount = vertexCount;
+        geometryDesc.Triangles.VertexBuffer.StartAddress = dummyNotNullPointer;
+        geometryDesc.Triangles.VertexBuffer.StrideInBytes = vertexStride;
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
+        inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        inputsDesc.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE |
+                           D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
+        inputsDesc.NumDescs = 1;
+        inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+        inputsDesc.pGeometryDescs = &geometryDesc;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+
+        m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
+
+        outScratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        outBLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+
+    }
+    void D3D12Backend::GetTLASRequirements(size_t& outScratchSize, size_t& outTLASSize) noexcept {
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
+        inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        inputsDesc.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+        inputsDesc.NumDescs = blasInstanceCount;
+        inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+
+        m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
+
+        outScratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        outTLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+    }
+
     void D3D12Backend::SubmitCommandList(CommandList* cmd) noexcept {
         auto d3d12CMD = static_cast<D3D12CommandList*>(cmd);
         d3d12CMD->cmd->Close();
