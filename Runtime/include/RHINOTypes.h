@@ -200,8 +200,9 @@ namespace RHINO {
         BLAS* blas = nullptr;
         uint32_t instanceID = 0;
         uint32_t instanceMask = ~0;
-        float transform[3][4] = {};
-
+        float transform[3][4] = {1.0f, 0.0f, 0.0f, 0.0f,
+                                 0.0f, 1.0f, 0.0f, 0.0f,
+                                 0.0f, 0.0f, 1.0f, 0.0f};
     };
 
     struct TLASDesc {
