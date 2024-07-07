@@ -153,7 +153,7 @@ namespace RHINO::APIVulkan {
         vkDestroyInstance(m_Instance, m_Alloc);
     }
 
-    RTPSO* VulkanBackend::CompileRTPSO(const RTPSODesc& desc) noexcept {
+    RTPSO* VulkanBackend::CreateRTPSO(const RTPSODesc& desc) noexcept {
         return nullptr;
     }
 

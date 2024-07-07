@@ -9,8 +9,9 @@
 namespace RHINO::APID3D12 {
     using namespace std::string_literals;
 
-    void D3D12CommandList::Initialize(const char* name, ID3D12Device5* device) noexcept {
+    void D3D12CommandList::Initialize(const char* name, ID3D12Device5* device, D3D12GarbageCollector* garbageCollector) noexcept {
         m_Device = device;
+        m_GarbageCollector = garbageCollector;
         RHINO_D3DS(m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_Allocator)));
         RHINO_D3DS(m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_Allocator, nullptr, IID_PPV_ARGS(&m_Cmd)));
         RHINO_GPU_DEBUG(SetDebugName(m_Allocator, "CMDAllocator_"s + name));
@@ -90,7 +91,42 @@ namespace RHINO::APID3D12 {
 
     void D3D12CommandList::BuildRTPSO(RTPSO* pso) noexcept {
         auto* d3d12PSO = static_cast<D3D12RTPSO*>(pso);
-        //TODO: upload data to shaderTable.
+        assert(d3d12PSO->tableRecordSizeInBytes >= D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+
+        ID3D12StateObjectProperties* rtpsoInfo;
+        d3d12PSO->PSO->QueryInterface(IID_PPV_ARGS(&rtpsoInfo));
+
+        ID3D12Resource* stagingBuffer = nullptr;
+        // Allocating buffer for shader table
+        D3D12_HEAP_PROPERTIES heapProperties{};
+        heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+        heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+        D3D12_RESOURCE_DESC resourceDesc{};
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Alignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(d3d12PSO->tableRecordSizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE,
+                                                     nullptr, IID_PPV_ARGS(&stagingBuffer)));
+
+        uint8_t* mappedData = nullptr;
+        stagingBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mappedData));
+        for (size_t i = 0; i < d3d12PSO->tableLayout.size(); ++i) {
+            const auto& entryName = d3d12PSO->tableLayout[i].second.c_str();
+            memcpy(mappedData, rtpsoInfo->GetShaderIdentifier(entryName), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            mappedData += d3d12PSO->tableRecordSizeInBytes;
+        }
+        stagingBuffer->Unmap(0, nullptr);
+        m_Cmd->CopyBufferRegion(d3d12PSO->shaderTable, 0, stagingBuffer, 0, resourceDesc.Width);
+        m_GarbageCollector->AddGarbage(stagingBuffer, m_Fence, m_FenceNextVal);
     }
 
     BLAS* D3D12CommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
@@ -169,6 +205,7 @@ namespace RHINO::APID3D12 {
         auto result = new D3D12TLAS{};
 
         std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instancesDesc{desc.blasInstancesCount};
+
 
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc{};
         inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;

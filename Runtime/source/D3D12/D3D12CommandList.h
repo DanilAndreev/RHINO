@@ -2,6 +2,7 @@
 
 #ifdef ENABLE_API_D3D12
 
+#include "D3D12GarbageCollector.h"
 #include "RHINOTypes.h"
 
 namespace RHINO::APID3D12 {
@@ -13,8 +14,10 @@ namespace RHINO::APID3D12 {
         ID3D12Fence* m_Fence;
         size_t m_FenceNextVal = 0;
 
+        D3D12GarbageCollector* m_GarbageCollector = nullptr;
+
     public:
-        void Initialize(const char* name, ID3D12Device5* device) noexcept;
+        void Initialize(const char* name, ID3D12Device5* device, D3D12GarbageCollector* garbageCollector) noexcept;
         void Release() noexcept;
         void SumbitToQueue(ID3D12CommandQueue* queue) noexcept;
 

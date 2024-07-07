@@ -100,7 +100,7 @@ namespace RHINO::APID3D12 {
 
     void D3D12Backend::Release() noexcept {}
 
-    RTPSO* D3D12Backend::CompileRTPSO(const RTPSODesc& desc) noexcept {
+    RTPSO* D3D12Backend::CreateRTPSO(const RTPSODesc& desc) noexcept {
         constexpr std::wstring SHADER_ID_PREFIX = L"s";
         constexpr std::wstring HITGROUP_ID_PREFIX = L"h";
 
@@ -193,7 +193,7 @@ namespace RHINO::APID3D12 {
         heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
         // Shader table has just a pointer in the record.
-        const size_t shaderTableRecordSize = D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT;
+        result->tableRecordSizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 
         D3D12_RESOURCE_DESC resourceDesc{};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -204,7 +204,7 @@ namespace RHINO::APID3D12 {
         resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
         resourceDesc.SampleDesc.Count = 1;
         resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(shaderTableRecordSize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(result->tableRecordSizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
         RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
                                                      nullptr, IID_PPV_ARGS(&result->shaderTable)));

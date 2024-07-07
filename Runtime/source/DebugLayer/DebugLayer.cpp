@@ -59,8 +59,8 @@ namespace RHINO::DebugLayer {
         m_Wrapped->Release();
     }
 
-    RTPSO* DebugLayer::CompileRTPSO(const RTPSODesc& desc) noexcept {
-        auto* result = m_Wrapped->CompileRTPSO(desc);
+    RTPSO* DebugLayer::CreateRTPSO(const RTPSODesc& desc) noexcept {
+        auto* result = m_Wrapped->CreateRTPSO(desc);
 
         auto* meta = new RTPSOMeta{DLResourceType::RTPSO, desc.debugName};
         m_ResourcesMeta[result] = DebugMetadata{.meta = meta};

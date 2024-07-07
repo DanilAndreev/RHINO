@@ -35,6 +35,7 @@ namespace RHINO::APID3D12 {
         ID3D12StateObject* PSO = nullptr;
         ID3D12Resource* shaderTable = nullptr;
         std::vector<std::pair<RTShaderTableRecordType, std::wstring>> tableLayout;
+        size_t tableRecordSizeInBytes = 0;
     };
 
     class D3D12ComputePSO : public ComputePSO {
