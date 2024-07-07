@@ -98,7 +98,10 @@ namespace RHINO::APID3D12 {
         m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_CopyQueueFence));
     }
 
-    void D3D12Backend::Release() noexcept {}
+    void D3D12Backend::Release() noexcept {
+        //TODO: finish garbage collector thread and wait for it.
+        m_GarbageCollector.Release();
+    }
 
     RTPSO* D3D12Backend::CreateRTPSO(const RTPSODesc& desc) noexcept {
         constexpr std::wstring SHADER_ID_PREFIX = L"s";
@@ -398,7 +401,7 @@ namespace RHINO::APID3D12 {
 
     CommandList* D3D12Backend::AllocateCommandList(const char* name) noexcept {
         auto* result = new D3D12CommandList{};
-        result->Initialize(name, m_Device);
+        result->Initialize(name, m_Device, &m_GarbageCollector);
         return result;
     }
 

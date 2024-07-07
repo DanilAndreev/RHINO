@@ -17,4 +17,12 @@ namespace RHINO::APID3D12 {
             }
         }
     }
+
+    void D3D12GarbageCollector::Release() noexcept {
+        for (auto& item : m_TrackedItems) {
+            WaitForSingleObject(item.event, INFINITE);
+            item.resource->Release();
+        }
+        m_TrackedItems.clear();
+    }
 } // namespace RHINO::APID3D12

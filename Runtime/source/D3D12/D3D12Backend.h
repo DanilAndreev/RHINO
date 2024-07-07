@@ -3,6 +3,7 @@
 #ifdef ENABLE_API_D3D12
 
 #include "D3D12BackendTypes.h"
+#include "D3D12GarbageCollector.h"
 
 namespace RHINO::APID3D12 {
     class D3D12Backend : public RHINOInterface {
@@ -55,6 +56,8 @@ namespace RHINO::APID3D12 {
         ID3D12CommandQueue* m_CopyQueue = nullptr;
         ID3D12Fence* m_CopyQueueFence = nullptr;
         UINT64 m_CopyQueueFenceLastVal = 0;
+
+        D3D12GarbageCollector m_GarbageCollector = {};
     };
 }// namespace RHINO::APID3D12
 
