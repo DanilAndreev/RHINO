@@ -196,9 +196,17 @@ namespace RHINO {
         size_t transformBufferStartOffset;
     };
 
+    struct BLASInstanceDesc {
+        BLAS* blas = nullptr;
+        uint32_t instanceID = 0;
+        uint32_t instanceMask = ~0;
+        float transform[3][4] = {};
+
+    };
+
     struct TLASDesc {
         size_t blasInstancesCount;
-        BLAS* const* blasInstances;
+        const BLASInstanceDesc* blasInstances;
     };
 
     class CommandList {

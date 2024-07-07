@@ -161,6 +161,7 @@ namespace RHINO::APID3D12 {
             resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
             resourceDesc.SampleDesc.Count = 1;
             resourceDesc.SampleDesc.Quality = 0;
+            resourceDesc.Flags = D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE;
 
             RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                        D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&result->buffer)));
@@ -196,13 +197,15 @@ namespace RHINO::APID3D12 {
         D3D12_RAYTRACING_INSTANCE_DESC* mappedData = nullptr;
         blasInstancesCPU->Map(0, nullptr, reinterpret_cast<void**>(&mappedData));
         for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
-            D3D12_RAYTRACING_INSTANCE_DESC& instanceDesc = mappedData[i];
-            instanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-            instanceDesc.InstanceID = ;
-            instanceDesc.InstanceMask = ;
-            instanceDesc.AccelerationStructure = ;
-            instanceDesc.Transform = ;
-            instanceDesc.InstanceContributionToHitGroupIndex = ;
+            const BLASInstanceDesc& instanceDesc = desc.blasInstances[i];
+            auto* d3d12BLAS = static_cast<D3D12BLAS*>(instanceDesc.blas);
+            D3D12_RAYTRACING_INSTANCE_DESC& mappedInstanceDesc = mappedData[i];
+            mappedInstanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+            mappedInstanceDesc.InstanceID = instanceDesc.instanceID;
+            mappedInstanceDesc.InstanceMask = instanceDesc.instanceMask;
+            mappedInstanceDesc.AccelerationStructure = d3d12BLAS->buffer->GetGPUVirtualAddress();
+            memcpy(mappedInstanceDesc.Transform, instanceDesc.transform, sizeof(instanceDesc.transform));
+            mappedInstanceDesc.InstanceContributionToHitGroupIndex = 0; //TODO: <- figure out wtf is that
         }
         blasInstancesCPU->Unmap(0, nullptr);
         m_Cmd->CopyBufferRegion(blasInstancesGPU, 0, blasInstancesCPU, 0, instancesSize);
@@ -239,6 +242,7 @@ namespace RHINO::APID3D12 {
             resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
             resourceDesc.SampleDesc.Count = 1;
             resourceDesc.SampleDesc.Quality = 0;
+            resourceDesc.Flags = D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE;
 
             RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                          D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&result->buffer)));
