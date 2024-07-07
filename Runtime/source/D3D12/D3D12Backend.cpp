@@ -398,15 +398,7 @@ namespace RHINO::APID3D12 {
 
     CommandList* D3D12Backend::AllocateCommandList(const char* name) noexcept {
         auto* result = new D3D12CommandList{};
-
-        result->device = m_Device;
-        RHINO_D3DS(m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&result->allocator)));
-        RHINO_D3DS(m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, result->allocator, nullptr,
-                                               IID_PPV_ARGS(&result->cmd)));
-        // result->cmd->Close();
-
-        SetDebugName(result->allocator, "CMDAllocator_"s + name);
-        SetDebugName(result->cmd, "CMD_"s + name);
+        result->Initialize(name, m_Device);
         return result;
     }
 
@@ -414,8 +406,8 @@ namespace RHINO::APID3D12 {
         if (!commandList)
             return;
         auto* d3d12CommandList = static_cast<D3D12CommandList*>(commandList);
-        d3d12CommandList->cmd->Release();
-        d3d12CommandList->allocator->Release();
+        d3d12CommandList->m_Cmd->Release();
+        d3d12CommandList->m_Allocator->Release();
         delete d3d12CommandList;
     }
 
@@ -469,9 +461,7 @@ namespace RHINO::APID3D12 {
 
     void D3D12Backend::SubmitCommandList(CommandList* cmd) noexcept {
         auto d3d12CMD = static_cast<D3D12CommandList*>(cmd);
-        d3d12CMD->cmd->Close();
-        ID3D12CommandList* list = d3d12CMD->cmd;
-        m_DefaultQueue->ExecuteCommandLists(1, &list);
+        d3d12CMD->SumbitToQueue(m_DefaultQueue);
         m_DefaultQueue->Signal(m_DefaultQueueFence, ++m_CopyQueueFenceLastVal);
 
         HANDLE event = CreateEventA(nullptr, true, false, "DefaultQueueCompletion");

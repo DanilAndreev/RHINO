@@ -7,8 +7,33 @@
 #include "D3D12Utils.h"
 
 namespace RHINO::APID3D12 {
+    using namespace std::string_literals;
+
+    void D3D12CommandList::Initialize(const char* name, ID3D12Device5* device) noexcept {
+        m_Device = device;
+        RHINO_D3DS(m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_Allocator)));
+        RHINO_D3DS(m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_Allocator, nullptr, IID_PPV_ARGS(&m_Cmd)));
+        RHINO_GPU_DEBUG(SetDebugName(m_Allocator, "CMDAllocator_"s + name));
+        RHINO_GPU_DEBUG(SetDebugName(m_Cmd, "CMD_"s + name));
+
+        m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
+    }
+
+    void D3D12CommandList::Release() noexcept {
+        m_Allocator->Release();
+        m_Cmd->Release();
+        m_Fence->Release();
+    }
+
+    void D3D12CommandList::SumbitToQueue(ID3D12CommandQueue* queue) noexcept {
+        m_Cmd->Close();
+        ID3D12CommandList* list = m_Cmd;
+        queue->ExecuteCommandLists(1, &list);
+        queue->Signal(m_Fence, m_FenceNextVal++);
+    }
+
     void D3D12CommandList::Dispatch(const DispatchDesc& desc) noexcept {
-        cmd->Dispatch(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
+        m_Cmd->Dispatch(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
     }
     void D3D12CommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
         auto* d3d12PSO = static_cast<D3D12RTPSO*>(desc.pso);
@@ -29,7 +54,7 @@ namespace RHINO::APID3D12 {
         raysDesc.Height = desc.height;
         raysDesc.Depth = 1;
 
-        cmd->DispatchRays(&raysDesc);
+        m_Cmd->DispatchRays(&raysDesc);
     }
 
     void D3D12CommandList::Draw() noexcept {}
@@ -37,13 +62,13 @@ namespace RHINO::APID3D12 {
     void D3D12CommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {\
         auto d3d12Src = static_cast<D3D12Buffer*>(src);
         auto d3d12Dst = static_cast<D3D12Buffer*>(dst);
-        cmd->CopyBufferRegion(d3d12Dst->buffer, dstOffset, d3d12Src->buffer, srcOffset, size);
+        m_Cmd->CopyBufferRegion(d3d12Dst->buffer, dstOffset, d3d12Src->buffer, srcOffset, size);
     }
 
     void D3D12CommandList::SetComputePSO(ComputePSO* pso) noexcept {
         auto* d3d12ComputePSO = static_cast<D3D12ComputePSO*>(pso);
-        cmd->SetComputeRootSignature(d3d12ComputePSO->rootSignature);
-        cmd->SetPipelineState(d3d12ComputePSO->PSO);
+        m_Cmd->SetComputeRootSignature(d3d12ComputePSO->rootSignature);
+        m_Cmd->SetPipelineState(d3d12ComputePSO->PSO);
     }
 
     void D3D12CommandList::SetRTPSO(RTPSO* pso) noexcept {
@@ -53,13 +78,13 @@ namespace RHINO::APID3D12 {
         auto* d3d12CBVSRVUAVHeap = static_cast<D3D12DescriptorHeap*>(CBVSRVUAVHeap);
         auto* d3d12SamplerHeap = static_cast<D3D12DescriptorHeap*>(samplerHeap);
         if (!samplerHeap) {
-            cmd->SetDescriptorHeaps(1, &d3d12CBVSRVUAVHeap->GPUDescriptorHeap);
-            cmd->SetComputeRootDescriptorTable(0, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
+            m_Cmd->SetDescriptorHeaps(1, &d3d12CBVSRVUAVHeap->GPUDescriptorHeap);
+            m_Cmd->SetComputeRootDescriptorTable(0, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
         } else {
             ID3D12DescriptorHeap* heaps[] = {d3d12CBVSRVUAVHeap->GPUDescriptorHeap, d3d12SamplerHeap->GPUDescriptorHeap};
-            cmd->SetDescriptorHeaps(2, heaps);
-            cmd->SetComputeRootDescriptorTable(0, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
-            cmd->SetComputeRootDescriptorTable(1, d3d12SamplerHeap->GPUHeapGPUStartHandle);
+            m_Cmd->SetDescriptorHeaps(2, heaps);
+            m_Cmd->SetComputeRootDescriptorTable(0, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
+            m_Cmd->SetComputeRootDescriptorTable(1, d3d12SamplerHeap->GPUHeapGPUStartHandle);
         }
     }
 
@@ -97,7 +122,7 @@ namespace RHINO::APID3D12 {
         inputsDesc.pGeometryDescs = &geometryDesc;
 
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
-        device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
+        m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
 
         size_t ASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
         {
@@ -117,7 +142,7 @@ namespace RHINO::APID3D12 {
             resourceDesc.SampleDesc.Count = 1;
             resourceDesc.SampleDesc.Quality = 0;
 
-            RHINO_D3DS(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+            RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                        D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&result->buffer)));
             RHINO_GPU_DEBUG(SetDebugName(result->buffer, name));
         }
@@ -133,7 +158,7 @@ namespace RHINO::APID3D12 {
         // postBuildInfoDesc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE;
         // cmd->BuildRaytracingAccelerationStructure(&buildDesc, 1, &postBuildInfoDesc);
 
-        cmd->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
+        m_Cmd->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
         return result;
     }
 
@@ -153,7 +178,7 @@ namespace RHINO::APID3D12 {
         inputsDesc.InstanceDescs = blasInstances;
 
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
-        device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
+        m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
 
         size_t ASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
         {
@@ -173,7 +198,7 @@ namespace RHINO::APID3D12 {
             resourceDesc.SampleDesc.Count = 1;
             resourceDesc.SampleDesc.Quality = 0;
 
-            RHINO_D3DS(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+            RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                        D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&result->buffer)));
             RHINO_GPU_DEBUG(SetDebugName(result->buffer, name));
         }
@@ -183,7 +208,7 @@ namespace RHINO::APID3D12 {
         buildDesc.Inputs = inputsDesc;
         buildDesc.ScratchAccelerationStructureData = scratch->buffer->GetGPUVirtualAddress() + scratchBufferStartOffset;
 
-        cmd->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
+        m_Cmd->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
         return result;
     }
 }// namespace RHINO::APID3D12
