@@ -113,7 +113,6 @@ namespace RHINO::APID3D12 {
         std::vector<std::wstring> wideNamesStorage;
         std::vector<D3D12_STATE_SUBOBJECT> subobjects{};
 
-        // raytracing sampe (D3D12RaytracingSimpleLightning.cpp:306)
         for (size_t i = 0; i < desc.shaderModulesCount; ++i) {
             const ShaderModule& shaderModule = desc.shaderModules[i];
 
@@ -163,16 +162,16 @@ namespace RHINO::APID3D12 {
             }
         }
 
-        //TODO: add root signature
+        ID3D12RootSignature* rootSignature = CreateRootSignature(desc.spacesCount, desc.spacesDescs);
+        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &rootSignature});
 
         D3D12_RAYTRACING_SHADER_CONFIG rtShaderConfig{};
         rtShaderConfig.MaxPayloadSizeInBytes = 0; // TODO: for example pixel color or etc.
         rtShaderConfig.MaxAttributeSizeInBytes = 0; // TODO: for example barycentrics or smth
+        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &rtShaderConfig});
 
         D3D12_RAYTRACING_PIPELINE_CONFIG rtPipelineConfig{};
         rtPipelineConfig.MaxTraceRecursionDepth = desc.maxTraceRecursionDepth;
-
-        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &rtShaderConfig});
         subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &rtPipelineConfig});
 
         D3D12_STATE_OBJECT_DESC stateDesc{};
