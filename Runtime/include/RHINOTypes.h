@@ -217,10 +217,17 @@ namespace RHINO {
     public:
         virtual void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept = 0;
         virtual void Dispatch(const DispatchDesc& desc) noexcept = 0;
+        virtual void DispatchRays(const DispatchRaysDesc& desc) noexcept = 0;
         virtual void Draw() noexcept = 0;
         virtual void SetComputePSO(ComputePSO* pso) noexcept = 0;
-        virtual void SetRTPSO(RTPSO* pso) noexcept = 0;
         virtual void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept = 0;
+
+    public:
+        virtual void BuildRTPSO(RTPSO* pso) noexcept = 0;
+        virtual BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
+                                const char* name) noexcept = 0;
+        virtual TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
+                                const char* name) noexcept = 0;
     };
 
     struct WriteBufferDescriptorDesc {

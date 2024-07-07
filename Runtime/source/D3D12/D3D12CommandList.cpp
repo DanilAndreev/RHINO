@@ -72,9 +72,6 @@ namespace RHINO::APID3D12 {
         m_Cmd->SetPipelineState(d3d12ComputePSO->PSO);
     }
 
-    void D3D12CommandList::SetRTPSO(RTPSO* pso) noexcept {
-    }
-
     void D3D12CommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
         auto* d3d12CBVSRVUAVHeap = static_cast<D3D12DescriptorHeap*>(CBVSRVUAVHeap);
         auto* d3d12SamplerHeap = static_cast<D3D12DescriptorHeap*>(samplerHeap);

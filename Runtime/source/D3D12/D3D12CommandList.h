@@ -24,16 +24,15 @@ namespace RHINO::APID3D12 {
     public:
         void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
         void SetComputePSO(ComputePSO* pso) noexcept final;
-        void SetRTPSO(RTPSO* pso) noexcept final;
         void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept final;
         void Dispatch(const DispatchDesc& desc) noexcept final;
-        void DispatchRays(const DispatchRaysDesc& desc) noexcept;
+        void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
         void Draw() noexcept final;
 
     public:
-        void BuildRTPSO(RTPSO* pso) noexcept;
-        BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept;
-        TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept;
+        void BuildRTPSO(RTPSO* pso) noexcept final;
+        BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
+        TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
 
     private:
         ID3D12Resource* CreateStagingBuffer(size_t size, size_t alignment, D3D12_HEAP_TYPE heap,
