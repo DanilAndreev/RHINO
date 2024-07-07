@@ -59,6 +59,12 @@ namespace RHINO::APID3D12 {
                 return DXGI_FORMAT_R32G32B32A32_UINT;
             case TextureFormat::R32G32B32A32_SINT:
                 return DXGI_FORMAT_R32G32B32A32_SINT;
+            case TextureFormat::R32G32B32_FLOAT:
+                return DXGI_FORMAT_R32G32B32_FLOAT;
+            case TextureFormat::R32G32B32_UINT:
+                return DXGI_FORMAT_R32G32B32_UINT;
+            case TextureFormat::R32G32B32_SINT:
+                return DXGI_FORMAT_R32G32B32_SINT;
             case TextureFormat::R32_FLOAT:
                 return DXGI_FORMAT_R32_FLOAT;
             case TextureFormat::R32_UINT:
@@ -104,8 +110,8 @@ namespace RHINO::APID3D12 {
     }
 
     RTPSO* D3D12Backend::CreateRTPSO(const RTPSODesc& desc) noexcept {
-        constexpr std::wstring SHADER_ID_PREFIX = L"s";
-        constexpr std::wstring HITGROUP_ID_PREFIX = L"h";
+        static const std::wstring SHADER_ID_PREFIX = L"s";
+        static const std::wstring HITGROUP_ID_PREFIX = L"h";
 
         auto* result = new D3D12RTPSO{};
 
