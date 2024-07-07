@@ -167,6 +167,15 @@ namespace RHINO {
         size_t dimensionsZ;
     };
 
+    struct DispatchRaysDesc {
+        RTPSO* pso;
+        size_t width;
+        size_t height;
+        size_t rayGenerationShaderRecordIndex;
+        size_t missShaderStartRecordIndex;
+        size_t hitGroupStartRecordIndex;
+    };
+
     struct ASPrebuildInfo {
         size_t scratchBufferSizeInBytes;
         size_t MaxASSizeInBytes;

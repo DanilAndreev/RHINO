@@ -10,19 +10,26 @@ namespace RHINO::APID3D12 {
     void D3D12CommandList::Dispatch(const DispatchDesc& desc) noexcept {
         cmd->Dispatch(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
     }
-    void D3D12CommandList::DispatchRays() noexcept {
-        D3D12_DISPATCH_RAYS_DESC dispatchRaysDesc{};
-        // dispatchRaysDesc.RayGenerationShaderRecord.StartAddress = GetRayGenShader();
-        // dispatchRaysDesc.RayGenerationShaderRecord.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        // dispatchRaysDesc.MissShaderTable.StartAddress = GetMissShaderTable();
-        // dispatchRaysDesc.MissShaderTable.SizeInBytes = 1 * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        // dispatchRaysDesc.HitGroupTable.StartAddress = GetHitGroupTable();
-        // dispatchRaysDesc.HitGroupTable.SizeInBytes = 1 * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        // dispatchRaysDesc.Width = backbufferWidth;
-        // dispatchRaysDesc.Height = backbufferHeight;
-        // dispatchRaysDesc.Depth = 1;
+    void D3D12CommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
+        auto* d3d12PSO = static_cast<D3D12RTPSO*>(desc.pso);
 
-        cmd->DispatchRays(&dispatchRaysDesc);
+        D3D12_DISPATCH_RAYS_DESC raysDesc{};
+        const size_t recordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+
+        auto rayGenStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordSize * desc.rayGenerationShaderRecordIndex;
+        raysDesc.RayGenerationShaderRecord.StartAddress = rayGenStart;
+        raysDesc.RayGenerationShaderRecord.SizeInBytes = recordSize;
+        auto missStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordSize * desc.missShaderStartRecordIndex;
+        raysDesc.MissShaderTable.StartAddress = missStart;
+        raysDesc.MissShaderTable.SizeInBytes = recordSize;
+        auto hitGroupStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordSize * desc.missShaderStartRecordIndex;
+        raysDesc.HitGroupTable.StartAddress = hitGroupStart;
+        raysDesc.HitGroupTable.SizeInBytes = recordSize;
+        raysDesc.Width = desc.width;
+        raysDesc.Height = desc.height;
+        raysDesc.Depth = 1;
+
+        cmd->DispatchRays(&raysDesc);
     }
 
     void D3D12CommandList::Draw() noexcept {}
@@ -54,6 +61,11 @@ namespace RHINO::APID3D12 {
             cmd->SetComputeRootDescriptorTable(0, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
             cmd->SetComputeRootDescriptorTable(1, d3d12SamplerHeap->GPUHeapGPUStartHandle);
         }
+    }
+
+    void D3D12CommandList::BuildRTPSO(RTPSO* pso) noexcept {
+        auto* d3d12PSO = static_cast<D3D12RTPSO*>(pso);
+        //TODO: upload data to shaderTable.
     }
 
     BLAS* D3D12CommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,

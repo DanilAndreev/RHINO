@@ -18,10 +18,11 @@ namespace RHINO::APID3D12 {
         void SetRTPSO(RTPSO* pso) noexcept final;
         void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept final;
         void Dispatch(const DispatchDesc& desc) noexcept final;
-        void DispatchRays() noexcept;
+        void DispatchRays(const DispatchRaysDesc& desc) noexcept;
         void Draw() noexcept final;
 
     public:
+        void BuildRTPSO(RTPSO* pso) noexcept;
         BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept;
         TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept;
 
