@@ -199,7 +199,7 @@ namespace RHINO {
     struct BLASInstanceDesc {
         BLAS* blas = nullptr;
         uint32_t instanceID = 0;
-        uint32_t instanceMask = ~0;
+        uint32_t instanceMask = ~0u;
         float transform[3][4] = {1.0f, 0.0f, 0.0f, 0.0f,
                                  0.0f, 1.0f, 0.0f, 0.0f,
                                  0.0f, 0.0f, 1.0f, 0.0f};
