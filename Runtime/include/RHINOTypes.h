@@ -91,6 +91,12 @@ namespace RHINO {
         Count,
     };
 
+    enum class RTShaderTableRecordType {
+        RayGeneration = 0,
+        HitGroup = 1,
+        Miss = 2,
+    };
+
     struct Dim3D {
         size_t width;
         size_t height;
@@ -116,15 +122,43 @@ namespace RHINO {
         const char* entrypoint;
     };
 
-    struct RTPSODesc {
-        const char* debugName;
-    };
-
     struct ComputePSODesc {
         size_t spacesCount = 0;
         const DescriptorSpaceDesc* spacesDescs = nullptr;
         ShaderModule CS = {};
         const char* debugName = "UnnamedComputePSO";
+    };
+
+    struct RTHitGroupDesc {
+        size_t closestHitShaderIndex;
+        size_t anyHitShaderIndex;
+        size_t intersectionShaderIndex;
+    };
+    struct RTRayGenerationDesc {
+        size_t rayGenerationShaderIndex;
+    };
+    struct RTMissDesc {
+        size_t missShaderIndex;
+    };
+    struct RTShaderTableRecord {
+        RTShaderTableRecordType recordType;
+        union {
+            RTHitGroupDesc hitGroup;
+            RTRayGenerationDesc rayGeneration;
+            RTMissDesc miss;
+        };
+    };
+
+    struct RTPSODesc {
+        size_t spacesCount = 0;
+        const DescriptorSpaceDesc* spacesDescs = nullptr;
+        size_t shaderModulesCount = 0;
+        const ShaderModule* shaderModules = nullptr;
+        size_t recordsCount = 0;
+        const RTShaderTableRecord* records = nullptr;
+        size_t maxTraceRecursionDepth;
+
+        const char* debugName = "UnnamedRTPSO";
     };
 
     struct DispatchDesc {

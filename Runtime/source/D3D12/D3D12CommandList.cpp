@@ -22,7 +22,6 @@ namespace RHINO::APID3D12 {
         // dispatchRaysDesc.Height = backbufferHeight;
         // dispatchRaysDesc.Depth = 1;
 
-
         cmd->DispatchRays(&dispatchRaysDesc);
     }
 

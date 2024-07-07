@@ -101,47 +101,125 @@ namespace RHINO::APID3D12 {
     void D3D12Backend::Release() noexcept {}
 
     RTPSO* D3D12Backend::CompileRTPSO(const RTPSODesc& desc) noexcept {
+        constexpr std::wstring SHADER_ID_PREFIX = L"s";
+        constexpr std::wstring HITGROUP_ID_PREFIX = L"h";
+
         auto* result = new D3D12RTPSO{};
 
+        std::vector<void*> allocatedObjects{};
+        std::vector<std::wstring> wideNamesStorage;
+        std::vector<D3D12_STATE_SUBOBJECT> subobjects{};
+
         // raytracing sampe (D3D12RaytracingSimpleLightning.cpp:306)
-        D3D12_EXPORT_DESC exportDesc{};
-        exportDesc.Name = L"MyExportName";
+        for (size_t i = 0; i < desc.shaderModulesCount; ++i) {
+            const ShaderModule& shaderModule = desc.shaderModules[i];
 
-        D3D12_DXIL_LIBRARY_DESC dxilLibDesc{};
-        dxilLibDesc.pExports = &exportDesc;
-        dxilLibDesc.NumExports = 1;
-        dxilLibDesc.DXILLibrary.BytecodeLength = ;
-        dxilLibDesc.DXILLibrary.pShaderBytecode = ;
+            std::string entrypoint = shaderModule.entrypoint;
+            auto* exportDesc = new D3D12_EXPORT_DESC{};
+            exportDesc->Name = wideNamesStorage.emplace_back(entrypoint.cbegin(), entrypoint.cend()).c_str();
+            exportDesc->ExportToRename = wideNamesStorage.emplace_back(SHADER_ID_PREFIX + std::to_wstring(i)).c_str();
+            allocatedObjects.emplace_back(exportDesc);
 
-        D3D12_HIT_GROUP_DESC hitGroupDesc{};
-        hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-        hitGroupDesc.IntersectionShaderImport = L"Intersection shader entry";
-        hitGroupDesc.ClosestHitShaderImport = L"Clothest hit shader entry";
-        hitGroupDesc.AnyHitShaderImport = L"Any hit shader entry";
-        hitGroupDesc.HitGroupExport = L"Export name";
+            auto* dxilLibDesc = new D3D12_DXIL_LIBRARY_DESC{};
+            dxilLibDesc->pExports = exportDesc;
+            dxilLibDesc->NumExports = 1;
+            dxilLibDesc->DXILLibrary.BytecodeLength = shaderModule.bytecodeSize;
+            dxilLibDesc->DXILLibrary.pShaderBytecode = shaderModule.bytecode;
+            allocatedObjects.emplace_back(dxilLibDesc);
+            subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, dxilLibDesc});
+        }
+
+        for (size_t i = 0; i < desc.recordsCount; ++i) {
+            const RTShaderTableRecord& record = desc.records[i];
+            switch (record.recordType) {
+                case RTShaderTableRecordType::HitGroup: {
+                    D3D12_HIT_GROUP_DESC hitGroupDesc{};
+                    hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+                    const auto intersectionID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.intersectionShaderIndex);
+                    hitGroupDesc.IntersectionShaderImport = wideNamesStorage.emplace_back(intersectionID).c_str();
+                    const auto closestHitID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.closestHitShaderIndex);
+                    hitGroupDesc.ClosestHitShaderImport = wideNamesStorage.emplace_back(closestHitID).c_str();
+                    const auto anyHitID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.anyHitShaderIndex);
+                    hitGroupDesc.AnyHitShaderImport = wideNamesStorage.emplace_back(anyHitID).c_str();
+                    const auto hitGroupID = HITGROUP_ID_PREFIX + std::to_wstring(i);
+                    hitGroupDesc.HitGroupExport = wideNamesStorage.emplace_back(hitGroupID).c_str();
+                    subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &hitGroupDesc});
+                    result->tableLayout.emplace_back(record.recordType, hitGroupID);
+                    break;
+                }
+                case RTShaderTableRecordType::RayGeneration: {
+                    const auto shaderID = SHADER_ID_PREFIX + std::to_wstring(record.rayGeneration.rayGenerationShaderIndex);
+                    result->tableLayout.emplace_back(record.recordType, shaderID);
+                    break;
+                }
+                case RTShaderTableRecordType::Miss: {
+                    const auto shaderID = SHADER_ID_PREFIX + std::to_wstring(record.miss.missShaderIndex);
+                    result->tableLayout.emplace_back(record.recordType, shaderID);
+                    break;
+                }
+            }
+        }
+
+        //TODO: add root signature
 
         D3D12_RAYTRACING_SHADER_CONFIG rtShaderConfig{};
         rtShaderConfig.MaxPayloadSizeInBytes = 0; // TODO: for example pixel color or etc.
         rtShaderConfig.MaxAttributeSizeInBytes = 0; // TODO: for example barycentrics or smth
 
         D3D12_RAYTRACING_PIPELINE_CONFIG rtPipelineConfig{};
-        rtPipelineConfig.MaxTraceRecursionDepth = 1;
+        rtPipelineConfig.MaxTraceRecursionDepth = desc.maxTraceRecursionDepth;
 
-        std::vector<D3D12_STATE_SUBOBJECT> subobjects{};
-        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &hitGroupDesc});
         subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &rtShaderConfig});
         subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &rtPipelineConfig});
-        subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &dxilLibDesc});
 
         D3D12_STATE_OBJECT_DESC stateDesc{};
         stateDesc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
         stateDesc.NumSubobjects = subobjects.size();
         stateDesc.pSubobjects = subobjects.data();
-        m_Device->CreateStateObject(&stateDesc, IID_PPV_ARGS(&result->PSO));
+        RHINO_D3DS(m_Device->CreateStateObject(&stateDesc, IID_PPV_ARGS(&result->PSO)));
+        RHINO_GPU_DEBUG(SetDebugName(result->PSO, desc.debugName));
+
+        wideNamesStorage.clear();
+        for (void* ptr : allocatedObjects) {
+            free(ptr);
+        }
+        allocatedObjects.clear();
+
+        // Allocating buffer for shader table
+        D3D12_HEAP_PROPERTIES heapProperties{};
+        heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+        heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        //TODO: maybe change to D3D12_MEMORY_POOL_L0
+        heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+        // Shader table has just a pointer in the record.
+        const size_t shaderTableRecordSize = D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT;
+
+        D3D12_RESOURCE_DESC resourceDesc{};
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Alignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(shaderTableRecordSize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
+                                                     nullptr, IID_PPV_ARGS(&result->shaderTable)));
+
         return result;
     }
 
-    void D3D12Backend::ReleaseRTPSO(RTPSO* pso) noexcept { delete pso; }
+    void D3D12Backend::ReleaseRTPSO(RTPSO* pso) noexcept {
+        auto* d3d12PSO = static_cast<D3D12RTPSO*>(pso);
+        if (d3d12PSO->PSO)
+            d3d12PSO->PSO->Release();
+        if (d3d12PSO->shaderTable)
+            d3d12PSO->shaderTable->Release();
+        delete d3d12PSO;
+    }
 
     ComputePSO* D3D12Backend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* result = new D3D12ComputePSO{};
