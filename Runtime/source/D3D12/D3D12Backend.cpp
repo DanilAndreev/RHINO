@@ -473,7 +473,8 @@ namespace RHINO::APID3D12 {
 
         HANDLE event = CreateEventA(nullptr, true, false, "DefaultQueueCompletion");
         m_DefaultQueueFence->SetEventOnCompletion(m_CopyQueueFenceLastVal, event);
-        WaitForSingleObject(event, INFINITE);
+        DWORD res = WaitForSingleObject(event, INFINITE);
+        assert(res == WAIT_OBJECT_0);
         CloseHandle(event);
     }
 
