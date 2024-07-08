@@ -35,8 +35,7 @@ namespace RHINO::APID3D12 {
         TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
 
     private:
-        ID3D12Resource* CreateStagingBuffer(size_t size, size_t alignment, D3D12_HEAP_TYPE heap,
-                                            D3D12_RESOURCE_STATES initialState) noexcept;
+        ID3D12Resource* CreateStagingBuffer(size_t size, D3D12_HEAP_TYPE heap, D3D12_RESOURCE_STATES initialState) noexcept;
     };
 } // namespace RHINO::APID3D12
 
