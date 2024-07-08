@@ -414,8 +414,7 @@ namespace RHINO::APID3D12 {
         if (!commandList)
             return;
         auto* d3d12CommandList = static_cast<D3D12CommandList*>(commandList);
-        d3d12CommandList->m_Cmd->Release();
-        d3d12CommandList->m_Allocator->Release();
+        d3d12CommandList->Release();
         delete d3d12CommandList;
     }
 
@@ -475,6 +474,7 @@ namespace RHINO::APID3D12 {
         HANDLE event = CreateEventA(nullptr, true, false, "DefaultQueueCompletion");
         m_DefaultQueueFence->SetEventOnCompletion(m_CopyQueueFenceLastVal, event);
         WaitForSingleObject(event, INFINITE);
+        CloseHandle(event);
     }
 
     ID3D12RootSignature* D3D12Backend::CreateRootSignature(size_t spacesCount,

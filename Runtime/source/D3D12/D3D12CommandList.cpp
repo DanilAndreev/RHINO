@@ -17,7 +17,7 @@ namespace RHINO::APID3D12 {
         RHINO_GPU_DEBUG(SetDebugName(m_Allocator, "CMDAllocator_"s + name));
         RHINO_GPU_DEBUG(SetDebugName(m_Cmd, "CMD_"s + name));
 
-        m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
+        RHINO_D3DS(m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
     }
 
     void D3D12CommandList::Release() noexcept {

@@ -14,6 +14,7 @@ namespace RHINO::APID3D12 {
             if (WaitForSingleObject(i->event, 0) == WAIT_OBJECT_0) {
                 i->resource->Release();
                 i = m_TrackedItems.erase(i);
+                CloseHandle(i->event);
             }
         }
     }
@@ -21,6 +22,7 @@ namespace RHINO::APID3D12 {
     void D3D12GarbageCollector::Release() noexcept {
         for (auto& item : m_TrackedItems) {
             WaitForSingleObject(item.event, INFINITE);
+            CloseHandle(item.event);
             item.resource->Release();
         }
         m_TrackedItems.clear();
