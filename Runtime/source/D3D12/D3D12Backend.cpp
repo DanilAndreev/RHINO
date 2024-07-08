@@ -347,7 +347,7 @@ namespace RHINO::APID3D12 {
         resourceDesc.Format = ToDXGIFormat(format);
         resourceDesc.SampleDesc.Count = 1;
         resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
         resourceDesc.Width = dimensions.width;
         resourceDesc.Height = dimensions.height;
