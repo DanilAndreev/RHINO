@@ -116,7 +116,7 @@ namespace RHINO::APID3D12 {
         auto* result = new D3D12RTPSO{};
 
         std::vector<void*> allocatedObjects{};
-        std::vector<std::wstring> wideNamesStorage;
+        std::vector<std::wstring> wStrg;
         std::vector<D3D12_STATE_SUBOBJECT> subobjects{};
 
         for (size_t i = 0; i < desc.shaderModulesCount; ++i) {
@@ -124,8 +124,8 @@ namespace RHINO::APID3D12 {
 
             std::string entrypoint = shaderModule.entrypoint;
             auto* exportDesc = new D3D12_EXPORT_DESC{};
-            exportDesc->Name = wideNamesStorage.emplace_back(entrypoint.cbegin(), entrypoint.cend()).c_str();
-            exportDesc->ExportToRename = wideNamesStorage.emplace_back(SHADER_ID_PREFIX + std::to_wstring(i)).c_str();
+            exportDesc->Name = wStrg.emplace_back(SHADER_ID_PREFIX + std::to_wstring(i)).c_str();
+            exportDesc->ExportToRename = wStrg.emplace_back(entrypoint.cbegin(), entrypoint.cend()).c_str();
             allocatedObjects.emplace_back(exportDesc);
 
             auto* dxilLibDesc = new D3D12_DXIL_LIBRARY_DESC{};
@@ -143,14 +143,23 @@ namespace RHINO::APID3D12 {
                 case RTShaderTableRecordType::HitGroup: {
                     D3D12_HIT_GROUP_DESC hitGroupDesc{};
                     hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-                    const auto intersectionID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.intersectionShaderIndex);
-                    hitGroupDesc.IntersectionShaderImport = wideNamesStorage.emplace_back(intersectionID).c_str();
-                    const auto closestHitID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.closestHitShaderIndex);
-                    hitGroupDesc.ClosestHitShaderImport = wideNamesStorage.emplace_back(closestHitID).c_str();
-                    const auto anyHitID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.anyHitShaderIndex);
-                    hitGroupDesc.AnyHitShaderImport = wideNamesStorage.emplace_back(anyHitID).c_str();
+                    std::wstring intersectionID{};
+                    if (record.hitGroup.intersectionShaderIndex) {
+                        intersectionID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.intersectionShaderIndex);
+                    }
+                    hitGroupDesc.IntersectionShaderImport = intersectionID.empty() ? nullptr : wStrg.emplace_back(intersectionID).c_str();
+                    std::wstring closestHitID{};
+                    if (record.hitGroup.clothestHitShaderEnabled) {
+                        closestHitID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.closestHitShaderIndex);
+                    }
+                    hitGroupDesc.ClosestHitShaderImport = closestHitID.empty() ? nullptr : wStrg.emplace_back(closestHitID).c_str();
+                    std::wstring anyHitID{};
+                    if (record.hitGroup.anyHitShaderEnabled) {
+                        anyHitID = SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.anyHitShaderIndex);
+                    }
+                    hitGroupDesc.AnyHitShaderImport = anyHitID.empty() ? nullptr : wStrg.emplace_back(anyHitID).c_str();
                     const auto hitGroupID = HITGROUP_ID_PREFIX + std::to_wstring(i);
-                    hitGroupDesc.HitGroupExport = wideNamesStorage.emplace_back(hitGroupID).c_str();
+                    hitGroupDesc.HitGroupExport = wStrg.emplace_back(hitGroupID).c_str();
                     subobjects.emplace_back(D3D12_STATE_SUBOBJECT{D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &hitGroupDesc});
                     result->tableLayout.emplace_back(record.recordType, hitGroupID);
                     break;
@@ -187,7 +196,7 @@ namespace RHINO::APID3D12 {
         RHINO_D3DS(m_Device->CreateStateObject(&stateDesc, IID_PPV_ARGS(&result->PSO)));
         RHINO_GPU_DEBUG(SetDebugName(result->PSO, desc.debugName));
 
-        wideNamesStorage.clear();
+        wStrg.clear();
         for (void* ptr : allocatedObjects) {
             free(ptr);
         }

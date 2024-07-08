@@ -130,18 +130,21 @@ namespace RHINO {
     };
 
     struct RTHitGroupDesc {
-        size_t closestHitShaderIndex;
-        size_t anyHitShaderIndex;
-        size_t intersectionShaderIndex;
+        size_t closestHitShaderIndex = 0;
+        bool clothestHitShaderEnabled = false;
+        size_t anyHitShaderIndex = 0;
+        bool anyHitShaderEnabled = false;
+        size_t intersectionShaderIndex = 0;
+        bool intersectionShaderEnabled = false;
     };
     struct RTRayGenerationDesc {
-        size_t rayGenerationShaderIndex;
+        size_t rayGenerationShaderIndex = 0;
     };
     struct RTMissDesc {
-        size_t missShaderIndex;
+        size_t missShaderIndex = 0;
     };
     struct RTShaderTableRecord {
-        RTShaderTableRecordType recordType;
+        RTShaderTableRecordType recordType = RTShaderTableRecordType::RayGeneration;
         union {
             RTHitGroupDesc hitGroup;
             RTRayGenerationDesc rayGeneration;
