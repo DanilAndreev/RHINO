@@ -3,6 +3,7 @@
 #ifdef ENABLE_API_D3D12
 
 #include "D3D12BackendTypes.h"
+#include "D3D12GarbageCollector.h"
 
 namespace RHINO::APID3D12 {
     class D3D12Backend : public RHINOInterface {
@@ -14,7 +15,7 @@ namespace RHINO::APID3D12 {
         void Release() noexcept final;
 
     public:
-        RTPSO* CompileRTPSO(const RTPSODesc& desc) noexcept final;
+        RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
         ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
@@ -36,14 +37,17 @@ namespace RHINO::APID3D12 {
         void ReleaseCommandList(CommandList* commandList) noexcept final;
 
     public:
+        ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept final;
+        ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept final;
+
+    public:
         void SubmitCommandList(CommandList* cmd) noexcept final;
 
     private:
-        void SetDebugName(ID3D12DeviceChild* resource, const std::string& name) noexcept;
         ID3D12RootSignature* CreateRootSignature(size_t spacesCount, const DescriptorSpaceDesc* spaces) noexcept;
 
     private:
-        ID3D12Device* m_Device = nullptr;
+        ID3D12Device5* m_Device = nullptr;
         ID3D12CommandQueue* m_DefaultQueue = nullptr;
         ID3D12Fence* m_DefaultQueueFence = nullptr;
         UINT64 m_DefaultQueueFenceLastVal = 0;
@@ -53,6 +57,8 @@ namespace RHINO::APID3D12 {
         ID3D12CommandQueue* m_CopyQueue = nullptr;
         ID3D12Fence* m_CopyQueueFence = nullptr;
         UINT64 m_CopyQueueFenceLastVal = 0;
+
+        D3D12GarbageCollector m_GarbageCollector = {};
     };
 }// namespace RHINO::APID3D12
 

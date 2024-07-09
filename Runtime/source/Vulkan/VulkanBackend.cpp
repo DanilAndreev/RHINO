@@ -153,7 +153,7 @@ namespace RHINO::APIVulkan {
         vkDestroyInstance(m_Instance, m_Alloc);
     }
 
-    RTPSO* VulkanBackend::CompileRTPSO(const RTPSODesc& desc) noexcept {
+    RTPSO* VulkanBackend::CreateRTPSO(const RTPSODesc& desc) noexcept {
         return nullptr;
     }
 
@@ -656,6 +656,61 @@ namespace RHINO::APIVulkan {
             result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         }
         return result;
+    }
+
+    void VulkanBackend::BuildBLAS() noexcept {
+        VkAccelerationStructureGeometryTrianglesDataKHR geomTriangles{};
+        geomTriangles.indexType = VK_INDEX_TYPE_UINT16;
+        geomTriangles.indexData = ;
+        geomTriangles.vertexStride = ;
+        geomTriangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        geomTriangles.vertexData = ;
+        geomTriangles.maxVertex = ;
+        geomTriangles.transformData = ;
+
+
+        VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+        asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        asGeom.geometry.triangles = geomTriangles;
+
+        VkAccelerationStructureBuildGeometryInfoKHR buildGeomInfo{};
+        buildGeomInfo.dstAccelerationStructure = VK_NULL_HANDLE;
+        buildGeomInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        buildGeomInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        buildGeomInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        buildGeomInfo.geometryCount = 1;
+        buildGeomInfo.pGeometries = &asGeom;
+        buildGeomInfo.ppGeometries = nullptr;
+        buildGeomInfo.scratchData = {};
+        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildGeomInfo, maxPrimCounts, sizeInfos);
+
+
+
+
+        VkBuffer asBuffer;
+        VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        bufferInfo.size = ;
+        bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        vkCreateBuffer(m_Device, &bufferInfo, m_Alloc, &asBuffer);
+
+        //TODO: allocate buffer memory
+
+        VkAccelerationStructureCreateInfoKHR asInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
+        asInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        asInfo.buffer = asBuffer;
+        asInfo.deviceAddress = ;
+        asInfo.offset = 0;
+        asInfo.size = ;
+        asInfo.createFlags = 0;
+
+        VkAccelerationStructureKHR accelerationStructure;
+        vkCreateAccelerationStructureKHR(m_Device, &asInfo, m_Alloc, &accelerationStructure);
+
+
+
+        vkCmdBuildAccelerationStructuresKHR(m_Cmd, );
     }
 }// namespace RHINO::APIVulkan
 

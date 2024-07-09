@@ -17,7 +17,7 @@ namespace RHINO::APIVulkan {
         void Release() noexcept final;
 
     public:
-        RTPSO* CompileRTPSO(const RTPSODesc& desc) noexcept final;
+        RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
         ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
@@ -37,6 +37,7 @@ namespace RHINO::APIVulkan {
         CommandList* AllocateCommandList(const char* name) noexcept final;
         void ReleaseCommandList(CommandList* commandList) noexcept final;
 
+        void BuildBLAS() noexcept;
     public:
         void SubmitCommandList(CommandList* cmd) noexcept override;
 

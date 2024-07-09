@@ -2,22 +2,16 @@
 
 #include "D3D12Backend.h"
 #include "D3D12CommandList.h"
+#include "D3D12Converters.h"
 #include "D3D12DescriptorHeap.h"
+#include "D3D12Utils.h"
 
 #include "SCARTools/SCARComputePSOArchiveView.h"
 
 #pragma comment(lib, "dxguid.lib")
 #include <dxgi.h>
 
-
-#ifdef _DEBUG
-#define RHINO_D3DS(expr) assert(expr == S_OK)
-#define RHINO_GPU_DEBUG(expr) expr
-#else
-#define RHINO_D3DS(expr) expr
-#define RHINO_GPU_DEBUG(expr)
-#endif
-
+#include <d3dx12/d3dx12.h>
 
 namespace RHINO::APID3D12 {
     using namespace std::string_literals;
@@ -67,12 +61,20 @@ namespace RHINO::APID3D12 {
                 return DXGI_FORMAT_R32G32B32A32_UINT;
             case TextureFormat::R32G32B32A32_SINT:
                 return DXGI_FORMAT_R32G32B32A32_SINT;
+            case TextureFormat::R32G32B32_FLOAT:
+                return DXGI_FORMAT_R32G32B32_FLOAT;
+            case TextureFormat::R32G32B32_UINT:
+                return DXGI_FORMAT_R32G32B32_UINT;
+            case TextureFormat::R32G32B32_SINT:
+                return DXGI_FORMAT_R32G32B32_SINT;
             case TextureFormat::R32_FLOAT:
                 return DXGI_FORMAT_R32_FLOAT;
             case TextureFormat::R32_UINT:
                 return DXGI_FORMAT_R32_UINT;
             case TextureFormat::R32_SINT:
                 return DXGI_FORMAT_R32_SINT;
+            default:
+                return DXGI_FORMAT_R32G32B32A32_FLOAT;
         }
     }
 
@@ -106,11 +108,122 @@ namespace RHINO::APID3D12 {
         m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_CopyQueueFence));
     }
 
-    void D3D12Backend::Release() noexcept {}
+    void D3D12Backend::Release() noexcept {
+        //TODO: finish garbage collector thread and wait for it.
+        m_GarbageCollector.Release();
+    }
 
-    RTPSO* D3D12Backend::CompileRTPSO(const RTPSODesc& desc) noexcept { return nullptr; }
+    RTPSO* D3D12Backend::CreateRTPSO(const RTPSODesc& desc) noexcept {
+        static const std::wstring SHADER_ID_PREFIX = L"shdr";
+        static const std::wstring HITGROUP_ID_PREFIX = L"htgrp";
 
-    void D3D12Backend::ReleaseRTPSO(RTPSO* pso) noexcept { delete pso; }
+        auto* result = new D3D12RTPSO{};
+
+        std::vector<std::wstring> wStrg;
+        std::vector<D3D12_SHADER_BYTECODE> bytecodeRefs{};
+
+        CD3DX12_STATE_OBJECT_DESC raytracingPipeline{D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE};
+        for (size_t i = 0; i < desc.shaderModulesCount; ++i) {
+            const ShaderModule& shaderModule = desc.shaderModules[i];
+            auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+            D3D12_SHADER_BYTECODE& libdxil = bytecodeRefs.emplace_back(shaderModule.bytecode, shaderModule.bytecodeSize);
+            lib->SetDXILLibrary(&libdxil);
+            const std::string entrypoint = shaderModule.entrypoint;
+            const auto wEntrypoint = wStrg.emplace_back(entrypoint.cbegin(), entrypoint.cend()).c_str();
+            const auto exportName = wStrg.emplace_back(SHADER_ID_PREFIX + std::to_wstring(i)).c_str();
+            lib->DefineExport(exportName, wEntrypoint);
+        }
+
+        for (size_t i = 0; i < desc.recordsCount; ++i) {
+            const RTShaderTableRecord& record = desc.records[i];
+            switch (record.recordType) {
+                case RTShaderTableRecordType::RayGeneration: {
+                    const auto shaderID = SHADER_ID_PREFIX + std::to_wstring(record.rayGeneration.rayGenerationShaderIndex);
+                    result->tableLayout.emplace_back(record.recordType, shaderID);
+                    break;
+                }
+                case RTShaderTableRecordType::HitGroup: {
+                    auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
+                    if (record.hitGroup.intersectionShaderIndex) {
+                        const auto shaderID = wStrg.emplace_back(SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.intersectionShaderIndex)).c_str();
+                        hitGroup->SetIntersectionShaderImport(shaderID);
+                    }
+                    if (record.hitGroup.clothestHitShaderEnabled) {
+                        const auto shaderID = wStrg.emplace_back(SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.closestHitShaderIndex)).c_str();
+                        hitGroup->SetClosestHitShaderImport(shaderID);
+                    }
+                    if (record.hitGroup.anyHitShaderEnabled) {
+                        const auto shaderID = wStrg.emplace_back(SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.anyHitShaderIndex)).c_str();
+                        hitGroup->SetAnyHitShaderImport(shaderID);
+                    }
+                    const auto hitGroupID = wStrg.emplace_back(HITGROUP_ID_PREFIX + std::to_wstring(i)).c_str();
+                    hitGroup->SetHitGroupExport(hitGroupID);
+                    hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
+
+                    result->tableLayout.emplace_back(record.recordType, hitGroupID);
+                    break;
+                }
+                case RTShaderTableRecordType::Miss: {
+                    const auto shaderID = SHADER_ID_PREFIX + std::to_wstring(record.miss.missShaderIndex);
+                    result->tableLayout.emplace_back(record.recordType, shaderID);
+                    break;
+                }
+            }
+        }
+
+        auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+        shaderConfig->Config(desc.maxPayloadSizeInBytes, desc.maxAttributeSizeInBytes);
+
+        auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+        result->rootSignature = CreateRootSignature(desc.spacesCount, desc.spacesDescs);
+        globalRootSignature->SetRootSignature(result->rootSignature);
+
+        auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+        pipelineConfig->Config(desc.maxTraceRecursionDepth);
+
+        const D3D12_STATE_OBJECT_DESC* pDesc = raytracingPipeline;
+        RHINO_D3DS(m_Device->CreateStateObject(pDesc, IID_PPV_ARGS(&result->PSO)));
+        RHINO_GPU_DEBUG(SetDebugName(result->PSO, desc.debugName));
+
+        wStrg.clear();
+        bytecodeRefs.clear();
+
+        // Allocating buffer for shader table
+        D3D12_HEAP_PROPERTIES heapProperties{};
+        heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+        heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        //TODO: maybe change to D3D12_MEMORY_POOL_L0
+        heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+        // Shader table has just a pointer in the record.
+        result->tableRecordStride = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+
+        D3D12_RESOURCE_DESC resourceDesc{};
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Alignment = 0;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(result->tableLayout.size() * result->tableRecordStride, 256);
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+                                                     nullptr, IID_PPV_ARGS(&result->shaderTable)));
+
+        return result;
+    }
+
+    void D3D12Backend::ReleaseRTPSO(RTPSO* pso) noexcept {
+        auto* d3d12PSO = static_cast<D3D12RTPSO*>(pso);
+        if (d3d12PSO->PSO)
+            d3d12PSO->PSO->Release();
+        if (d3d12PSO->shaderTable)
+            d3d12PSO->shaderTable->Release();
+        delete d3d12PSO;
+    }
 
     ComputePSO* D3D12Backend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* result = new D3D12ComputePSO{};
@@ -230,7 +343,7 @@ namespace RHINO::APID3D12 {
         resourceDesc.Format = ToDXGIFormat(format);
         resourceDesc.SampleDesc.Count = 1;
         resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
         resourceDesc.Width = dimensions.width;
         resourceDesc.Height = dimensions.height;
@@ -289,14 +402,7 @@ namespace RHINO::APID3D12 {
 
     CommandList* D3D12Backend::AllocateCommandList(const char* name) noexcept {
         auto* result = new D3D12CommandList{};
-
-        RHINO_D3DS(m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&result->allocator)));
-        RHINO_D3DS(m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, result->allocator, nullptr,
-                                               IID_PPV_ARGS(&result->cmd)));
-        // result->cmd->Close();
-
-        SetDebugName(result->allocator, "CMDAllocator_"s + name);
-        SetDebugName(result->cmd, "CMD_"s + name);
+        result->Initialize(name, m_Device, &m_GarbageCollector);
         return result;
     }
 
@@ -304,24 +410,68 @@ namespace RHINO::APID3D12 {
         if (!commandList)
             return;
         auto* d3d12CommandList = static_cast<D3D12CommandList*>(commandList);
-        d3d12CommandList->cmd->Release();
-        d3d12CommandList->allocator->Release();
+        d3d12CommandList->Release();
         delete d3d12CommandList;
     }
+
+    ASPrebuildInfo D3D12Backend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
+        // GetRaytracingAccelerationStructurePrebuildInfo may check pointers for null values for calculating sizes but not accessing data by
+        // these pointers. So we can pass dummy not null pointers to tell D3D12 that we are about to pass real pointers during the build.
+        // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-getraytracingaccelerationstructureprebuildinfo
+        constexpr D3D12_GPU_VIRTUAL_ADDRESS dummyNotNullPointer = 0x1;
+
+        D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
+        geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+        geometryDesc.Triangles.IndexBuffer = dummyNotNullPointer;
+        geometryDesc.Triangles.IndexCount = desc.indexCount;
+        geometryDesc.Triangles.IndexFormat = Convert::ToDXGIFormat(desc.indexFormat);
+        geometryDesc.Triangles.Transform3x4 = 0;
+        geometryDesc.Triangles.VertexFormat = Convert::ToDXGIFormat(desc.vertexFormat);
+        geometryDesc.Triangles.VertexCount = desc.vertexCount;
+        geometryDesc.Triangles.VertexBuffer.StartAddress = dummyNotNullPointer;
+        geometryDesc.Triangles.VertexBuffer.StrideInBytes = desc.vertexStride;
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
+        inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        inputsDesc.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE |
+                           D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
+        inputsDesc.NumDescs = 1;
+        inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+        inputsDesc.pGeometryDescs = &geometryDesc;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+        m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
+
+        auto scratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        auto BLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        return {scratchSize, BLASSize};
+    }
+
+    ASPrebuildInfo D3D12Backend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
+        inputsDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        inputsDesc.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+        inputsDesc.NumDescs = desc.blasInstancesCount;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
+        m_Device->GetRaytracingAccelerationStructurePrebuildInfo(&inputsDesc, &info);
+
+        auto scratchSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        auto BLASSize = RHINO_CEIL_TO_POWER_OF_TWO(info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+        return {scratchSize, BLASSize};
+    }
+
     void D3D12Backend::SubmitCommandList(CommandList* cmd) noexcept {
         auto d3d12CMD = static_cast<D3D12CommandList*>(cmd);
-        d3d12CMD->cmd->Close();
-        ID3D12CommandList* list = d3d12CMD->cmd;
-        m_DefaultQueue->ExecuteCommandLists(1, &list);
+        d3d12CMD->SumbitToQueue(m_DefaultQueue);
         m_DefaultQueue->Signal(m_DefaultQueueFence, ++m_CopyQueueFenceLastVal);
 
         HANDLE event = CreateEventA(nullptr, true, false, "DefaultQueueCompletion");
         m_DefaultQueueFence->SetEventOnCompletion(m_CopyQueueFenceLastVal, event);
-        WaitForSingleObject(event, INFINITE);
-    }
-
-    void D3D12Backend::SetDebugName(ID3D12DeviceChild* resource, const std::string& name) noexcept {
-        resource->SetPrivateData(WKPDID_D3DDebugObjectName, name.length(), name.c_str());
+        DWORD res = WaitForSingleObject(event, INFINITE);
+        assert(res == WAIT_OBJECT_0);
+        CloseHandle(event);
     }
 
     ID3D12RootSignature* D3D12Backend::CreateRootSignature(size_t spacesCount,

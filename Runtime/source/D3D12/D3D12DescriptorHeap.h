@@ -8,10 +8,11 @@ namespace RHINO::APID3D12 {
         void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept final;
         void WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept final;
         void WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept final;
-        void WriteSRV(const WriteTexture2DSRVDesc& desc) noexcept final;
-        void WriteUAV(const WriteTexture2DSRVDesc& desc) noexcept final;
-        void WriteSRV(const WriteTexture3DSRVDesc& desc) noexcept final;
-        void WriteUAV(const WriteTexture3DSRVDesc& desc) noexcept final;
+        void WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept final;
+        void WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept final;
+        void WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept final;
+        void WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept final;
+        void WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept final;
 
     public:
         [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHeapCPUHandle(UINT index) const noexcept;

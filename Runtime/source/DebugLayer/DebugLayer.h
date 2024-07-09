@@ -60,7 +60,7 @@ namespace RHINO::DebugLayer {
     public:
         void Initialize() noexcept final;
         void Release() noexcept final;
-        RTPSO* CompileRTPSO(const RTPSODesc& desc) noexcept final;
+        RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
         ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
@@ -77,6 +77,8 @@ namespace RHINO::DebugLayer {
         void ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept final;
         CommandList* AllocateCommandList(const char* name) noexcept final;
         void ReleaseCommandList(CommandList* commandList) noexcept final;
+        ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept final;
+        ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept final;
         void SubmitCommandList(CommandList* cmd) noexcept final;
     private:
         /**

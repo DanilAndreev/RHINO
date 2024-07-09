@@ -59,8 +59,8 @@ namespace RHINO::DebugLayer {
         m_Wrapped->Release();
     }
 
-    RTPSO* DebugLayer::CompileRTPSO(const RTPSODesc& desc) noexcept {
-        auto* result = m_Wrapped->CompileRTPSO(desc);
+    RTPSO* DebugLayer::CreateRTPSO(const RTPSODesc& desc) noexcept {
+        auto* result = m_Wrapped->CreateRTPSO(desc);
 
         auto* meta = new RTPSOMeta{DLResourceType::RTPSO, desc.debugName};
         m_ResourcesMeta[result] = DebugMetadata{.meta = meta};
@@ -204,6 +204,16 @@ namespace RHINO::DebugLayer {
         m_ResourcesMeta.erase(commandList);
     }
 
+    ASPrebuildInfo DebugLayer::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
+        auto result = m_Wrapped->GetBLASPrebuildInfo(desc);
+        return result;
+    }
+
+    ASPrebuildInfo DebugLayer::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
+        auto result = m_Wrapped->GetTLASPrebuildInfo(desc);
+        return result;
+    }
+
     void DebugLayer::SubmitCommandList(CommandList* cmd) noexcept {
         m_Wrapped->SubmitCommandList(cmd);
     }
@@ -236,6 +246,8 @@ namespace RHINO::DebugLayer {
             RHINO_ENUM_SWITCH_CASE(ResourceUsage::CopySource)
             RHINO_ENUM_SWITCH_CASE(ResourceUsage::CopyDest)
             RHINO_ENUM_SWITCH_CASE(ResourceUsage::ValidMask)
+            default:
+                return "InvalidResourceUsageEnum";
         }
     }
 }// namespace RHINO::DebugLayer

@@ -22,7 +22,7 @@ namespace RHINO {
 
     public:
         // PSO MANAGEMENT
-        virtual RTPSO* CompileRTPSO(const RTPSODesc& desc) noexcept = 0;
+        virtual RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept = 0;
         virtual void ReleaseRTPSO(RTPSO* pso) noexcept = 0;
         virtual ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept = 0;
         virtual ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes, const char* debugName) noexcept = 0;
@@ -30,7 +30,8 @@ namespace RHINO {
 
     public:
         // RESOURCE MANAGEMENT
-        virtual Buffer* CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept = 0;
+        virtual Buffer* CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride,
+                                     const char* name) noexcept = 0;
         virtual void ReleaseBuffer(Buffer* buffer) noexcept = 0;
         virtual void* MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept = 0;
         virtual void UnmapMemory(Buffer* buffer) noexcept = 0;
@@ -44,6 +45,10 @@ namespace RHINO {
 
         virtual CommandList* AllocateCommandList(const char* name) noexcept = 0;
         virtual void ReleaseCommandList(CommandList* commandList) noexcept = 0;
+
+    public:
+        virtual ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept = 0;
+        virtual ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept = 0;
 
     public:
         // JOB SUBMISSION

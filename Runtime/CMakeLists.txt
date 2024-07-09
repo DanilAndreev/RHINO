@@ -22,8 +22,11 @@ set(HeaderFiles
 
         source/D3D12/D3D12Backend.h
         source/D3D12/D3D12BackendTypes.h
+        source/D3D12/D3D12Converters.h
+        source/D3D12/D3D12Utils.h
         source/D3D12/D3D12DescriptorHeap.h
         source/D3D12/D3D12CommandList.h
+        source/D3D12/D3D12GarbageCollector.h
 
         source/SCARTools/SCARComputePSOArchiveView.h
 )
@@ -55,6 +58,7 @@ set(SourceFiles
         source/D3D12/D3D12Backend.cpp
         source/D3D12/D3D12DescriptorHeap.cpp
         source/D3D12/D3D12CommandList.cpp
+        source/D3D12/D3D12GarbageCollector.cpp
 
         source/SCARTools/SCARComputePSOArchiveView.cpp
 )
@@ -65,18 +69,19 @@ if(APPLE)
     set_source_files_properties(${ObjCHeaderFiles} PROPERTIES HEADER_FILE_ONLY TRUE)
     set_property(TARGET RHINO APPEND_STRING PROPERTY COMPILE_FLAGS "-fobjc-arc")
     target_compile_definitions(RHINO PRIVATE ENABLE_API_METAL=1)
-    target_include_directories(RHINO PRIVATE external/include)
     target_link_libraries(RHINO PRIVATE "-framework Metal" "-framework Foundation")
 else()
     message("RHINO AVAILABLE APIs: Vulkan, D3D12.")
     add_library(RHINO ${SourceFiles} ${HeaderFiles} ${InterfaceHeaderFiles})
-    target_compile_definitions(RHINO PRIVATE ENABLE_API_VULKAN=1 ENABLE_API_D3D12=1)
+    target_compile_definitions(RHINO PRIVATE ENABLE_API_D3D12=1) #ENABLE_API_VULKAN=1
     target_link_libraries(RHINO PRIVATE d3d12.lib dxgi.lib)
 
     find_package(Vulkan REQUIRED)
     target_include_directories(RHINO PRIVATE ${Vulkan_INCLUDE_DIRS})
     target_link_libraries(RHINO PRIVATE Vulkan::Vulkan)
 endif()
+
+target_include_directories(RHINO PRIVATE external/include)
 
 # --------------------------------------------- DEBUG MACRO ------------------------------------------------------------
 if(RHINO_VULKAN_DEBUG_SWAPCHAIN)
