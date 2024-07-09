@@ -52,7 +52,7 @@ namespace RHINO::APID3D12 {
         auto missStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordStride * desc.missShaderStartRecordIndex;
         raysDesc.MissShaderTable.StartAddress = missStart;
         raysDesc.MissShaderTable.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        auto hitGroupStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordStride * desc.missShaderStartRecordIndex;
+        auto hitGroupStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordStride * desc.hitGroupStartRecordIndex;
         raysDesc.HitGroupTable.StartAddress = hitGroupStart;
         raysDesc.HitGroupTable.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
         raysDesc.Width = desc.width;
