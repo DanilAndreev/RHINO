@@ -243,13 +243,18 @@ namespace RHINO {
         size_t offsetInHeap = 0;
     };
 
-    struct WriteTexture2DSRVDesc {
+    struct WriteTexture2DDescriptorDesc {
         Texture2D* texture = nullptr;
         size_t offsetInHeap = 0;
     };
 
-    struct WriteTexture3DSRVDesc {
+    struct WriteTexture3DDescriptorDesc {
         Texture2D* texture = nullptr;
+        size_t offsetInHeap = 0;
+    };
+
+    struct WriteTLASDescriptorDesc {
+        TLAS* tlas = nullptr;
         size_t offsetInHeap = 0;
     };
 
@@ -262,11 +267,13 @@ namespace RHINO {
         virtual void WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept = 0;
         virtual void WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept = 0;
 
-        virtual void WriteSRV(const WriteTexture2DSRVDesc& desc) noexcept = 0;
-        virtual void WriteUAV(const WriteTexture2DSRVDesc& desc) noexcept = 0;
+        virtual void WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept = 0;
+        virtual void WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept = 0;
 
-        virtual void WriteSRV(const WriteTexture3DSRVDesc& desc) noexcept = 0;
-        virtual void WriteUAV(const WriteTexture3DSRVDesc& desc) noexcept = 0;
+        virtual void WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept = 0;
+        virtual void WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept = 0;
+
+        virtual void WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept = 0;
     };
 } // namespace RHINO
 

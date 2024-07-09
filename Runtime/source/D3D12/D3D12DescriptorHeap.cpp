@@ -49,7 +49,7 @@ namespace RHINO::APID3D12 {
         device->CreateConstantBufferView(&cbvDesc, CPUHeapCPUHandle);
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
-    void D3D12DescriptorHeap::WriteSRV(const WriteTexture2DSRVDesc& desc) noexcept {
+    void D3D12DescriptorHeap::WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept {
         auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -63,7 +63,7 @@ namespace RHINO::APID3D12 {
         device->CreateShaderResourceView(d3d12Texture->texture, &srvDesc, CPUHeapCPUHandle);
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
-    void D3D12DescriptorHeap::WriteUAV(const WriteTexture2DSRVDesc& desc) noexcept {
+    void D3D12DescriptorHeap::WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept {
         auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
@@ -76,7 +76,7 @@ namespace RHINO::APID3D12 {
         device->CreateUnorderedAccessView(d3d12Texture->texture, nullptr, &uavDesc, CPUHeapCPUHandle);
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
-    void D3D12DescriptorHeap::WriteSRV(const WriteTexture3DSRVDesc& desc) noexcept {
+    void D3D12DescriptorHeap::WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept {
         auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -90,7 +90,7 @@ namespace RHINO::APID3D12 {
         device->CreateShaderResourceView(d3d12Texture->texture, &srvDesc, CPUHeapCPUHandle);
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
-    void D3D12DescriptorHeap::WriteUAV(const WriteTexture3DSRVDesc& desc) noexcept {
+    void D3D12DescriptorHeap::WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept {
         auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
@@ -101,6 +101,21 @@ namespace RHINO::APID3D12 {
         D3D12_CPU_DESCRIPTOR_HANDLE CPUHeapCPUHandle = GetCPUHeapCPUHandle(desc.offsetInHeap);
         D3D12_CPU_DESCRIPTOR_HANDLE GPUHeapCPUHandle = GetGPUHeapCPUHandle(desc.offsetInHeap);
         device->CreateUnorderedAccessView(d3d12Texture->texture, nullptr, &uavDesc, CPUHeapCPUHandle);
+        device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    }
+
+    void D3D12DescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
+        auto* d3d12TLAS = static_cast<D3D12TLAS*>(desc.tlas);
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+        // srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        // srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+        srvDesc.RaytracingAccelerationStructure.Location = d3d12TLAS->buffer->GetGPUVirtualAddress();
+
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUHeapCPUHandle = GetCPUHeapCPUHandle(desc.offsetInHeap);
+        D3D12_CPU_DESCRIPTOR_HANDLE GPUHeapCPUHandle = GetGPUHeapCPUHandle(desc.offsetInHeap);
+        device->CreateShaderResourceView(d3d12TLAS->buffer, &srvDesc, CPUHeapCPUHandle);
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
 
