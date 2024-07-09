@@ -98,9 +98,9 @@ namespace RHINO {
     };
 
     struct Dim3D {
-        size_t width;
-        size_t height;
-        size_t depth;
+        size_t width = 0;
+        size_t height = 0;
+        size_t depth = 0;
     };
 
     struct DescriptorRangeDesc {
@@ -117,9 +117,9 @@ namespace RHINO {
     };
 
     struct ShaderModule {
-        size_t bytecodeSize;
-        const uint8_t* bytecode;
-        const char* entrypoint;
+        size_t bytecodeSize = 0;
+        const uint8_t* bytecode = nullptr;
+        const char* entrypoint = nullptr;
     };
 
     struct ComputePSODesc {
@@ -159,44 +159,46 @@ namespace RHINO {
         const ShaderModule* shaderModules = nullptr;
         size_t recordsCount = 0;
         const RTShaderTableRecord* records = nullptr;
-        size_t maxTraceRecursionDepth;
+        size_t maxTraceRecursionDepth = 1;
 
         const char* debugName = "UnnamedRTPSO";
     };
 
     struct DispatchDesc {
-        size_t dimensionsX;
-        size_t dimensionsY;
-        size_t dimensionsZ;
+        size_t dimensionsX = 1;
+        size_t dimensionsY = 1;
+        size_t dimensionsZ = 1;
     };
 
     struct DispatchRaysDesc {
-        RTPSO* pso;
-        size_t width;
-        size_t height;
-        size_t rayGenerationShaderRecordIndex;
-        size_t missShaderStartRecordIndex;
-        size_t hitGroupStartRecordIndex;
+        RTPSO* pso = nullptr;
+        size_t width = 0;
+        size_t height = 0;
+        size_t rayGenerationShaderRecordIndex = 0;
+        size_t missShaderStartRecordIndex = 0;
+        size_t hitGroupStartRecordIndex = 0;
+        DescriptorHeap* CDBSRVUAVHeap = nullptr;
+        DescriptorHeap* samplerHeap = nullptr;
     };
 
     struct ASPrebuildInfo {
-        size_t scratchBufferSizeInBytes;
-        size_t MaxASSizeInBytes;
+        size_t scratchBufferSizeInBytes = 0;
+        size_t MaxASSizeInBytes = 0;
     };
 
     struct BLASDesc {
-        Buffer* indexBuffer;
-        size_t indexBufferStartOffset;
-        size_t indexCount;
+        Buffer* indexBuffer = nullptr;
+        size_t indexBufferStartOffset = 0;
+        size_t indexCount = 0;
         IndexFormat indexFormat = IndexFormat::R32_UINT;
-        Buffer* vertexBuffer;
-        size_t vertexBufferStartOffset;
+        Buffer* vertexBuffer = nullptr;
+        size_t vertexBufferStartOffset = 0;
         TextureFormat vertexFormat = TextureFormat::R32G32B32_FLOAT;
-        size_t vertexCount;
-        size_t vertexStride;
+        size_t vertexCount = 0;
+        size_t vertexStride = 0;
         // Just one tranform value.
-        Buffer* transformBuffer;
-        size_t transformBufferStartOffset;
+        Buffer* transformBuffer = nullptr;
+        size_t transformBufferStartOffset = 0;
     };
 
     struct BLASInstanceDesc {
@@ -209,8 +211,8 @@ namespace RHINO {
     };
 
     struct TLASDesc {
-        size_t blasInstancesCount;
-        const BLASInstanceDesc* blasInstances;
+        size_t blasInstancesCount = 0;
+        const BLASInstanceDesc* blasInstances = nullptr;
     };
 
     class CommandList {

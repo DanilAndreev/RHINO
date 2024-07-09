@@ -175,8 +175,8 @@ namespace RHINO::APID3D12 {
         shaderConfig->Config(payloadSize, attributeSize);
 
         auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-        ID3D12RootSignature* rootSignature = CreateRootSignature(desc.spacesCount, desc.spacesDescs);
-        globalRootSignature->SetRootSignature(rootSignature);
+        result->rootSignature = CreateRootSignature(desc.spacesCount, desc.spacesDescs);
+        globalRootSignature->SetRootSignature(result->rootSignature);
 
         auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
         pipelineConfig->Config(desc.maxTraceRecursionDepth);
@@ -196,7 +196,7 @@ namespace RHINO::APID3D12 {
         heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
         // Shader table has just a pointer in the record.
-        result->tableRecordSizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        result->tableRecordStride = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
 
         D3D12_RESOURCE_DESC resourceDesc{};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -207,7 +207,7 @@ namespace RHINO::APID3D12 {
         resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
         resourceDesc.SampleDesc.Count = 1;
         resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(result->tableLayout.size() * result->tableRecordSizeInBytes, 256);
+        resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(result->tableLayout.size() * result->tableRecordStride, 256);
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
