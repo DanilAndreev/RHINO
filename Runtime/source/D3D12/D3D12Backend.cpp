@@ -112,8 +112,8 @@ namespace RHINO::APID3D12 {
     }
 
     RTPSO* D3D12Backend::CreateRTPSO(const RTPSODesc& desc) noexcept {
-        static const std::wstring SHADER_ID_PREFIX = L"s";
-        static const std::wstring HITGROUP_ID_PREFIX = L"h";
+        static const std::wstring SHADER_ID_PREFIX = L"shdr";
+        static const std::wstring HITGROUP_ID_PREFIX = L"htgrp";
 
         auto* result = new D3D12RTPSO{};
 
@@ -152,7 +152,7 @@ namespace RHINO::APID3D12 {
                     }
                     if (record.hitGroup.anyHitShaderEnabled) {
                         const auto shaderID = wStrg.emplace_back(SHADER_ID_PREFIX + std::to_wstring(record.hitGroup.anyHitShaderIndex)).c_str();
-                        hitGroup->SetClosestHitShaderImport(shaderID);
+                        hitGroup->SetAnyHitShaderImport(shaderID);
                     }
                     const auto hitGroupID = wStrg.emplace_back(HITGROUP_ID_PREFIX + std::to_wstring(i)).c_str();
                     hitGroup->SetHitGroupExport(hitGroupID);
