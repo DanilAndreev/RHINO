@@ -73,6 +73,8 @@ namespace RHINO::APID3D12 {
                 return DXGI_FORMAT_R32_UINT;
             case TextureFormat::R32_SINT:
                 return DXGI_FORMAT_R32_SINT;
+            default:
+                return DXGI_FORMAT_R32G32B32A32_FLOAT;
         }
     }
 
