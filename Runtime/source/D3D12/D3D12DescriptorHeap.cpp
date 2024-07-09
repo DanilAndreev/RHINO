@@ -41,7 +41,7 @@ namespace RHINO::APID3D12 {
         auto* d3d12Buffer = static_cast<D3D12Buffer*>(desc.buffer);
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
-        cbvDesc.SizeInBytes = desc.size;
+        cbvDesc.SizeInBytes = RHINO_CEIL_TO_MULTIPLE_OF(desc.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
         cbvDesc.BufferLocation = d3d12Buffer->buffer->GetGPUVirtualAddress() + desc.bufferOffset;
 
         D3D12_CPU_DESCRIPTOR_HANDLE CPUHeapCPUHandle = GetCPUHeapCPUHandle(desc.offsetInHeap);
