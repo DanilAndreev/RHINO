@@ -170,8 +170,8 @@ namespace RHINO::APID3D12 {
         }
 
         auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-        UINT payloadSize = 16;    // float4 pixelColor
-        UINT attributeSize = 8;  // float2 barycentrics
+        UINT payloadSize = 32;    // float4 pixelColor
+        UINT attributeSize = 32;  // float2 barycentrics
         shaderConfig->Config(payloadSize, attributeSize);
 
         auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
