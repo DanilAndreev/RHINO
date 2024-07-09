@@ -159,7 +159,9 @@ namespace RHINO {
         const ShaderModule* shaderModules = nullptr;
         size_t recordsCount = 0;
         const RTShaderTableRecord* records = nullptr;
-        size_t maxTraceRecursionDepth = 1;
+        uint32_t maxTraceRecursionDepth = 1;
+        uint32_t maxPayloadSizeInBytes = 0;
+        uint32_t maxAttributeSizeInBytes = 0;
 
         const char* debugName = "UnnamedRTPSO";
     };
