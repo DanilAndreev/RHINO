@@ -190,7 +190,7 @@ namespace RHINO::APID3D12 {
         const size_t instancesSize = desc.blasInstancesCount * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
         ID3D12Resource* blasInstancesCPU = CreateStagingBuffer(instancesSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_COPY_SOURCE);
         RHINO_GPU_DEBUG(SetDebugName(blasInstancesCPU, "BLAS Intances CPU Staging"));
-        ID3D12Resource* blasInstancesGPU = CreateStagingBuffer(instancesSize, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST);
+        ID3D12Resource* blasInstancesGPU = CreateStagingBuffer(instancesSize, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
         RHINO_GPU_DEBUG(SetDebugName(blasInstancesGPU, "BLAS Intances GPU Staging"));
         D3D12_RAYTRACING_INSTANCE_DESC* mappedData = nullptr;
         blasInstancesCPU->Map(0, nullptr, reinterpret_cast<void**>(&mappedData));

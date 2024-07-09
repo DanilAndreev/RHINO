@@ -69,7 +69,6 @@ if(APPLE)
     set_source_files_properties(${ObjCHeaderFiles} PROPERTIES HEADER_FILE_ONLY TRUE)
     set_property(TARGET RHINO APPEND_STRING PROPERTY COMPILE_FLAGS "-fobjc-arc")
     target_compile_definitions(RHINO PRIVATE ENABLE_API_METAL=1)
-    target_include_directories(RHINO PRIVATE external/include)
     target_link_libraries(RHINO PRIVATE "-framework Metal" "-framework Foundation")
 else()
     message("RHINO AVAILABLE APIs: Vulkan, D3D12.")
@@ -81,6 +80,8 @@ else()
     target_include_directories(RHINO PRIVATE ${Vulkan_INCLUDE_DIRS})
     target_link_libraries(RHINO PRIVATE Vulkan::Vulkan)
 endif()
+
+target_include_directories(RHINO PRIVATE external/include)
 
 # --------------------------------------------- DEBUG MACRO ------------------------------------------------------------
 if(RHINO_VULKAN_DEBUG_SWAPCHAIN)
