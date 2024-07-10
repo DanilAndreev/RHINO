@@ -1,13 +1,13 @@
-#include "SCARComputePSOArchiveView.h"
+#include "SCARRTPSOArchiveView.h"
+
 #define SCAR_RHINO_ADDONS
 #include <SCARUnarchiver.h>
 
 namespace RHINO::SCARTools {
-    SCARComputePSOArchiveView::SCARComputePSOArchiveView(const void* archive, uint32_t sizeInBytes,
-                                                         const char* debugName) noexcept {
+    SCARRTPSOArchiveView::SCARRTPSOArchiveView(const void* archive, uint32_t sizeInBytes, const RTPSODesc& desc) noexcept {
         SCAR::ArchiveReader reader{archive, sizeInBytes};
         reader.Read();
-        if (!reader.HasRecord(SCAR::RecordType::CSAssembly)) {
+        if (!reader.HasRecord(SCAR::RecordType::LibAssembly)) {
             m_IsValid = false;
             return;
         }
@@ -16,8 +16,8 @@ namespace RHINO::SCARTools {
             return;
         }
 
-        SCAR::Record cs = reader.GetRecord(SCAR::RecordType::CSAssembly);
-        // TODO: add argument
+        SCAR::Record lib = reader.GetRecord(SCAR::RecordType::LibAssembly);
+
         m_Desc.CS.entrypoint = "main";
         m_Desc.CS.bytecode = cs.data;
         m_Desc.CS.bytecodeSize = cs.dataSize;
@@ -29,6 +29,6 @@ namespace RHINO::SCARTools {
         m_Desc.debugName = debugName;
     }
 
-    const ComputePSODesc& SCARComputePSOArchiveView::GetDesc() const noexcept { return m_Desc; }
-    bool SCARComputePSOArchiveView::IsValid() const noexcept { return m_IsValid; }
+    const RTPSODesc& SCARRTPSOArchiveView::GetPatchedDesc() const noexcept { return m_Desc; }
+    bool SCARRTPSOArchiveView::IsValid() const noexcept { return m_IsValid; }
 } // namespace RHINO::SCARTools

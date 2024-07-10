@@ -2,11 +2,12 @@
 
 #ifdef ENABLE_API_D3D12
 
+#include "RHINOInterfaceImplBase.h"
 #include "D3D12BackendTypes.h"
 #include "D3D12GarbageCollector.h"
 
 namespace RHINO::APID3D12 {
-    class D3D12Backend : public RHINOInterface {
+    class D3D12Backend : public RHINOInterfaceImplBase {
     public:
         explicit D3D12Backend() noexcept;
 
@@ -18,8 +19,6 @@ namespace RHINO::APID3D12 {
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
-        ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
-                                          const char* debugName) noexcept final;
         void ReleaseComputePSO(ComputePSO* pso) noexcept final;
 
     public:

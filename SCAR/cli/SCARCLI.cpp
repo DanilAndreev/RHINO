@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
     rootSignature.spacesDescs = spaces;
 
     settings.rootSignature = &rootSignature;
-    settings.psoLang = SCAR::ArchivePSOLang::SPIRV;
+    settings.psoLang = SCAR::ArchivePSOLang::DXIL;
     settings.psoType = SCAR::ArchivePSOType::Library;
     settings.libratySettings.inputFilepath = "rt.hlsl";
     settings.libratySettings.maxAttributeSizeInBytes = 32;
