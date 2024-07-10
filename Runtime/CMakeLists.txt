@@ -8,6 +8,7 @@ set(HeaderFiles
         source/pch.h
 
         source/RHINOTypesImpl.h
+        source/RHINOInterfaceImplBase.h
         source/Utils/Common.h
         source/Utils/PlatformBase.h
 
@@ -29,6 +30,7 @@ set(HeaderFiles
         source/D3D12/D3D12GarbageCollector.h
 
         source/SCARTools/SCARComputePSOArchiveView.h
+        source/SCARTools/SCARRTPSOArchiveView.h
 )
 
 set(ObjCHeaderFiles
@@ -47,6 +49,7 @@ set(ObjCSourceFiles
 set(SourceFiles
         source/main.cpp
         source/RHINOTypesImpl.cpp
+        source/RHINOInterfaceImplBase.cpp
 
         source/DebugLayer/DebugLayer.cpp
 
@@ -61,6 +64,7 @@ set(SourceFiles
         source/D3D12/D3D12GarbageCollector.cpp
 
         source/SCARTools/SCARComputePSOArchiveView.cpp
+        source/SCARTools/SCARRTPSOArchiveView.cpp
 )
 
 if(APPLE)

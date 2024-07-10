@@ -6,8 +6,6 @@
 #include "D3D12DescriptorHeap.h"
 #include "D3D12Utils.h"
 
-#include "SCARTools/SCARComputePSOArchiveView.h"
-
 #pragma comment(lib, "dxguid.lib")
 #include <dxgi.h>
 
@@ -239,16 +237,6 @@ namespace RHINO::APID3D12 {
         SetDebugName(result->PSO, desc.debugName);
         SetDebugName(result->rootSignature, desc.debugName + ".RootSignature"s);
         return result;
-    }
-
-    ComputePSO* D3D12Backend::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
-                                                    const char* debugName) noexcept {
-        //TODO: check lang
-        const SCARTools::SCARComputePSOArchiveView view{scar, sizeInBytes, debugName};
-        if (!view.IsValid()) {
-            return nullptr;
-        }
-        return CompileComputePSO(view.GetDesc());
     }
 
     void D3D12Backend::ReleaseComputePSO(ComputePSO* pso) noexcept {
