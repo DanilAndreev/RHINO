@@ -46,6 +46,8 @@ static const char* str(SCAR::ArchivePSOType type) noexcept {
             return "Compute";
         case SCAR::ArchivePSOType::Graphics:
             return "Graphics";
+        case SCAR::ArchivePSOType::Library:
+            return "Library";
         default:
             return "Unknown";
     }

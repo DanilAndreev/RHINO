@@ -15,12 +15,13 @@ namespace SCAR {
         Geometry,
 
         Compute,
+        Lib,
     };
 
     struct ChainSettings {
         ChainStageTarget stage;
         std::filesystem::path shaderFilepath;
-        std::string entrypoint;
+        std::optional<std::string> entrypoint;
         std::set<std::string> defines;
     };
 

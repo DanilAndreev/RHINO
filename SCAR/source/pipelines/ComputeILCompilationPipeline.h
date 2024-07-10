@@ -4,9 +4,9 @@
 #include "ICompilationPipeline.h"
 
 namespace SCAR {
-    class ILComputeCompilationPipeline final : public ICompilationPipeline {
+    class ComputeILCompilationPipeline final : public ICompilationPipeline {
     public:
-        explicit ILComputeCompilationPipeline(CompilationChain* chain) noexcept;
+        explicit ComputeILCompilationPipeline(CompilationChain* chain) noexcept;
 
     public:
         ArchiveBinary Execute(const CompileSettings& settings, std::vector<std::string>& errors,
