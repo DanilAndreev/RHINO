@@ -17,6 +17,24 @@ namespace SCAR {
         const char* errorsStr = nullptr;
     };
 
+    struct GraphicsCompileSettings {
+        const char* vertexShaderInputFilepath = nullptr;
+        const char* vertexShaderEntrypoint = nullptr;
+        const char* pixelShaderInputFilepath = nullptr;
+        const char* pixelShaderEntrypoint = nullptr;
+    };
+
+    struct ComputeCompileSettings {
+        const char* inputFilepath = nullptr;
+        const char* entrypoint = nullptr;
+    };
+
+    struct LibraryCompileSettings {
+        const char* inputFilepath = nullptr;
+        uint32_t maxPayloadSizeInBytes = 0;
+        uint32_t maxAttributeSizeInBytes = 0;
+    };
+
     struct CompileSettings {
         size_t optimizationLevel = 3;
         ArchivePSOLang psoLang = {};
@@ -27,6 +45,13 @@ namespace SCAR {
         const char** includeDirectories = nullptr;
 
         PSORootSignatureDesc* rootSignature = nullptr;
+
+        union {
+            GraphicsCompileSettings graphicsSetting;
+            ComputeCompileSettings computeSettings;
+            LibraryCompileSettings libratySettings;
+        };
+
     };
 
     CompilationResult Compile(const CompileSettings* settings) noexcept;

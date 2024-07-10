@@ -9,6 +9,7 @@ namespace SCAR {
     enum class ArchivePSOType : uint16_t {
         Compute,
         Graphics,
+        Library,
     };
 
     enum class ArchivePSOLang : uint16_t {
@@ -35,6 +36,7 @@ namespace SCAR {
         PSAssembly,
 
         CSAssembly,
+        LibAssembly,
 
         RootSignature,
     };
@@ -74,6 +76,7 @@ namespace SCAR {
                     case RecordType::VSAssembly:
                     case RecordType::PSAssembly:
                     case RecordType::CSAssembly:
+                    case RecordType::LibAssembly:
                     case RecordType::RootSignature:
                         record.flags = *ReadItem<RecordFlags>(cursor);
                         record.data = m_Archive + *ReadItem<uint32_t>(cursor);

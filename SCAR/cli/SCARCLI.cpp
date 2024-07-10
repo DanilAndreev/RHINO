@@ -53,25 +53,26 @@ int main(int argc, char* argv[]) {
 
     // -------------------------- START TESTS
     const RHINO::DescriptorRangeDesc space0rd[] = {
-        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 0, 2},
-//        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 1, 1},
-    };
-
-    const RHINO::DescriptorRangeDesc space1rd[] = {
+        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::SRV, 0, 1},
         RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 1, 1},
+        RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::CBV, 2, 1},
     };
 
     const RHINO::DescriptorSpaceDesc spaces[] = {
         RHINO::DescriptorSpaceDesc{0, 0, std::size(space0rd), space0rd},
-        RHINO::DescriptorSpaceDesc{1, 4, std::size(space1rd), space1rd},
     };
+
     SCAR::PSORootSignatureDesc rootSignature{};
     rootSignature.spacesCount = std::size(spaces);
     rootSignature.spacesDescs = spaces;
 
     settings.rootSignature = &rootSignature;
     settings.psoLang = SCAR::ArchivePSOLang::SPIRV;
-    settings.psoType = SCAR::ArchivePSOType::Compute;
+    settings.psoType = SCAR::ArchivePSOType::Library;
+    settings.libratySettings.inputFilepath = "rt.hlsl";
+    settings.libratySettings.maxAttributeSizeInBytes = 32;
+    settings.libratySettings.maxPayloadSizeInBytes = 32;
+
 
     outFilepath = "out.scar";
 

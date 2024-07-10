@@ -17,7 +17,8 @@ set(HeaderFiles
         source/steps/HlslToSpirvStep.h
         source/steps/DXCCommon.hpp
 
-        source/pipelines/ILComputeCompilationPipeline.h
+        source/pipelines/ComputeILCompilationPipeline.h
+        source/pipelines/LibILCompilationPipeline.h
 
         source/archiver/PSOArchiver.h
         source/serializers/SerializeRootSignature.h
@@ -34,7 +35,8 @@ set(SourceFiles
 
         source/archiver/PSOArchiver.cpp
 
-        source/pipelines/ILComputeCompilationPipeline.cpp
+        source/pipelines/ComputeILCompilationPipeline.cpp
+        source/pipelines/LibILCompilationPipeline.cpp
 
         source/serializers/SerializeRootSignature.cpp
 )

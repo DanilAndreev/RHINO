@@ -1,20 +1,20 @@
-#include "ILComputeCompilationPipeline.h"
+#include "LibILCompilationPipeline.h"
 
 #include "archiver/PSOArchiver.h"
 #include "serializers/SerializeRootSignature.h"
 
 namespace SCAR {
-    ILComputeCompilationPipeline::ILComputeCompilationPipeline(CompilationChain* chain) noexcept :
+    LibILCompilationPipeline::LibILCompilationPipeline(CompilationChain* chain) noexcept :
         m_CompilationChain(chain) {}
 
-    ArchiveBinary ILComputeCompilationPipeline::Execute(const CompileSettings& settings, std::vector<std::string>& errors,
+    ArchiveBinary LibILCompilationPipeline::Execute(const CompileSettings& settings, std::vector<std::string>& errors,
                                                         std::vector<std::string>& warnings) noexcept {
         assert(m_CompilationChain != nullptr);
 
         ChainSettings chSettings{};
-        chSettings.shaderFilepath = "layouts.compute.hlsl";
-        chSettings.entrypoint = "main";
-        chSettings.stage = ChainStageTarget::Compute;
+        chSettings.shaderFilepath = settings.libratySettings.inputFilepath;
+        chSettings.entrypoint = std::nullopt;
+        chSettings.stage = ChainStageTarget::Lib;
 
         ChainContext context{};
         bool status = m_CompilationChain->Run(settings, chSettings, context);
@@ -29,7 +29,7 @@ namespace SCAR {
         }
 
         PSOArchiver archiver{settings.psoType, settings.psoLang};
-        archiver.AddRecord(RecordType::CSAssembly, RecordFlags::None, shaderModuleAssembly, context.dataLength);
+        archiver.AddRecord(RecordType::LibAssembly, RecordFlags::None, shaderModuleAssembly, context.dataLength);
         delete shaderModuleAssembly;
         archiver.AddRecord(RecordType::RootSignature, RecordFlags::None,
                            SerializeRootSignature(*settings.rootSignature));

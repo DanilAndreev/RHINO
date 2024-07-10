@@ -21,7 +21,7 @@ namespace RHINO::SCARTools {
         }
 
         SCAR::Record cs = reader.GetRecord(SCAR::RecordType::CSAssembly);
-        // TODO: read from archive
+        // TODO: add argument
         m_Desc.CS.entrypoint = "main";
         m_Desc.CS.bytecode = cs.data;
         m_Desc.CS.bytecodeSize = cs.dataSize;

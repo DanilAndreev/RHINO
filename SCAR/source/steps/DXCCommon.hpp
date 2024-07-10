@@ -19,10 +19,10 @@ namespace SCAR {
 
             IDxcBlobEncoding* pEncoding;
             std::wstring wPath = pFilename;
-            std::string path{wPath.begin(), wPath.end()};
-            if (IncludedFiles.find(path) != IncludedFiles.end()) {
+            const std::string path{wPath.begin(), wPath.end()};
+            if (IncludedFiles.contains(path)) {
                 // Return empty string blob if this file has been included before
-                static const char nullStr[] = " ";
+                constexpr char nullStr[] = " ";
                 pUtils->CreateBlobFromPinned(nullStr, ARRAYSIZE(nullStr), DXC_CP_ACP, &pEncoding);
                 *ppIncludeSource = pEncoding;
                 return S_OK;
@@ -61,6 +61,9 @@ namespace SCAR {
             case ChainStageTarget::Compute:
                 args.emplace_back(L"cs_6_0");
                 break;
+            case ChainStageTarget::Lib:
+                args.emplace_back(L"lib_6_3");
+                break;
             default:;
         }
 
@@ -73,8 +76,10 @@ namespace SCAR {
         args.emplace_back(L"-I");
         args.emplace_back(std::filesystem::path{chSettings.shaderFilepath}.remove_filename().wstring());
 
-        args.emplace_back(L"-E");
-        args.emplace_back(std::wstring{chSettings.entrypoint.begin(), chSettings.entrypoint.end()});
+        if (chSettings.stage != ChainStageTarget::Lib) {
+            args.emplace_back(L"-E");
+            args.emplace_back(chSettings.entrypoint->begin(), chSettings.entrypoint->end());
+        }
 
         std::wstring optLevel = L"-O";
         optLevel += std::to_wstring(settings.optimizationLevel);
