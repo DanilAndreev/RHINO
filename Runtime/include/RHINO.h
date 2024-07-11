@@ -55,7 +55,8 @@ namespace RHINO {
 
     public:
         // JOB SUBMISSION
-        virtual void SubmitCommandList(CommandList* cmd) noexcept = 0;
+        virtual void SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
+                                       const uint64_t* values) noexcept = 0;
         virtual void QueueSignal(Semaphore* semaphore, uint64_t value) noexcept = 0;
         virtual bool WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept = 0;
     };

@@ -456,9 +456,16 @@ namespace RHINO::APID3D12 {
         return {scratchSize, BLASSize};
     }
 
-    void D3D12Backend::SubmitCommandList(CommandList* cmd) noexcept {
+    void D3D12Backend::SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
+                                         const uint64_t* values) noexcept {
         auto d3d12CMD = static_cast<D3D12CommandList*>(cmd);
         d3d12CMD->SumbitToQueue(m_DefaultQueue);
+
+        for (size_t i = 0; i < waitSemaphoresCount; ++i) {
+            const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(waitSemaphores[i]);
+            m_DefaultQueue->Wait(d3d12Semaphore->fence, values[i]);
+        }
+
         m_DefaultQueue->Signal(m_DefaultQueueFence, ++m_CopyQueueFenceLastVal);
 
         HANDLE event = CreateEventA(nullptr, true, false, "DefaultQueueCompletion");

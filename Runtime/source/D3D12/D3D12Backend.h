@@ -40,7 +40,8 @@ namespace RHINO::APID3D12 {
         ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept final;
 
     public:
-        void SubmitCommandList(CommandList* cmd) noexcept final;
+        void SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
+                               const uint64_t* values) noexcept final;
         void QueueSignal(Semaphore* semaphore, uint64_t value) noexcept final;
         bool WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept final;
 
