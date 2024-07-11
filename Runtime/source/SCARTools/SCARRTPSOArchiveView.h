@@ -9,6 +9,7 @@ namespace RHINO::SCARTools {
 
     private:
         RTPSODesc m_Desc{};
+        std::vector<ShaderModule> m_ShaderModulesView{};
         std::vector<DescriptorSpaceDesc> m_RootSignatureView{};
         bool m_IsValid = true;
     };

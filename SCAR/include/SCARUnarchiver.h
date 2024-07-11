@@ -31,14 +31,20 @@ namespace SCAR {
 
     enum class RecordType : uint16_t {
         TableEnd = 0x0,
+        // Compiled binary assemblies
         PSOAssembly,
+
         VSAssembly,
         PSAssembly,
 
         CSAssembly,
+
         LibAssembly,
 
+        // Configuration payload
         RootSignature,
+        ShadersEntrypoints,
+        RTAttributes,
     };
 
     struct Record {
@@ -78,6 +84,8 @@ namespace SCAR {
                     case RecordType::CSAssembly:
                     case RecordType::LibAssembly:
                     case RecordType::RootSignature:
+                    case RecordType::ShadersEntrypoints:
+                    case RecordType::RTAttributes:
                         record.flags = *ReadItem<RecordFlags>(cursor);
                         record.data = m_Archive + *ReadItem<uint32_t>(cursor);
                         record.dataSize = *ReadItem<uint32_t>(cursor);
@@ -121,6 +129,21 @@ namespace SCAR {
                         reinterpret_cast<const RHINO::DescriptorRangeDesc*>(start + rangesOffset);
             }
             return spacesDescs;
+        }
+        [[nodiscard]] std::vector<const char*> CreateEntrypointsView() const noexcept {
+            Record record = GetRecord(RecordType::ShadersEntrypoints);
+            const auto* start = reinterpret_cast<const char*>(record.data);
+            const auto* cursor = start;
+
+            std::vector<const char*> entrypoints{};
+            for (size_t i = 0; i < record.dataSize; ++i) {
+                if (*cursor == '\0') {
+                    entrypoints.emplace_back(start);
+                    start = cursor + 1;
+                }
+                ++cursor;
+            }
+            return entrypoints;
         }
 #endif
 

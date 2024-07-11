@@ -68,6 +68,11 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
+    RTPSO* DebugLayer::CreateSCARRTPSO(const void* scar, uint32_t sizeInBytes, const RTPSODesc& desc) noexcept {
+        auto* result = m_Wrapped->CreateSCARRTPSO(scar, sizeInBytes, desc);
+        return result;
+    }
+
     void DebugLayer::ReleaseRTPSO(RTPSO* pso) noexcept {
         m_Wrapped->ReleaseRTPSO(pso);
         delete static_cast<RTPSOMeta*>(m_ResourcesMeta[pso].meta);

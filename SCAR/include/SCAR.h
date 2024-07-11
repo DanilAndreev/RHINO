@@ -31,6 +31,9 @@ namespace SCAR {
 
     struct LibraryCompileSettings {
         const char* inputFilepath = nullptr;
+        size_t entrypointsCount = 0;
+        const char** entrypoints = nullptr;
+
         uint32_t maxPayloadSizeInBytes = 0;
         uint32_t maxAttributeSizeInBytes = 0;
     };
@@ -49,7 +52,7 @@ namespace SCAR {
         union {
             GraphicsCompileSettings graphicsSetting;
             ComputeCompileSettings computeSettings;
-            LibraryCompileSettings libratySettings;
+            LibraryCompileSettings librarySettings;
         };
 
     };

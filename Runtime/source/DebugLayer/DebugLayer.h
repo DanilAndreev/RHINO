@@ -61,6 +61,7 @@ namespace RHINO::DebugLayer {
         void Initialize() noexcept final;
         void Release() noexcept final;
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
+        RTPSO* CreateSCARRTPSO(const void* scar, uint32_t sizeInBytes, const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
         ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,

@@ -21,7 +21,7 @@ set(HeaderFiles
         source/pipelines/LibILCompilationPipeline.h
 
         source/archiver/PSOArchiver.h
-        source/serializers/SerializeRootSignature.h
+        source/serializers/Serializers.h
         )
 
 set(SourceFiles
@@ -39,6 +39,7 @@ set(SourceFiles
         source/pipelines/LibILCompilationPipeline.cpp
 
         source/serializers/SerializeRootSignature.cpp
+        source/serializers/SerializeEntrypoints.cpp
 )
 
 if(APPLE)
