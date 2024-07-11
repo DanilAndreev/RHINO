@@ -27,6 +27,9 @@ namespace SCAR {
 
     enum class RecordFlags : uint16_t {
         None = 0x0,
+        MultipleValues = 0x1 << 0,
+
+        VALID_MASK = None | MultipleValues,
     };
 
     enum class RecordType : uint16_t {

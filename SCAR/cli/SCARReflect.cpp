@@ -20,8 +20,14 @@ static const char* str(SCAR::RecordType recordType) noexcept {
             return "PSAssembly";
         case SCAR::RecordType::CSAssembly:
             return "CSAssembly";
+        case SCAR::RecordType::LibAssembly:
+            return "LibAssembly";
         case SCAR::RecordType::RootSignature:
             return "RootSignature";
+        case SCAR::RecordType::ShadersEntrypoints:
+            return "ShadersEntrypoints";
+        case SCAR::RecordType::RTAttributes:
+            return "RTAttributes";
         default:
             return "Unknown";
     }
@@ -53,6 +59,15 @@ static const char* str(SCAR::ArchivePSOType type) noexcept {
     }
 }
 
+static const char* str(SCAR::RecordFlags flag) noexcept {
+    switch (flag) {
+        case SCAR::RecordFlags::MultipleValues:
+            return "MultipleValues";
+        default:
+            return "ERROR_FLAG_VALUE";
+    }
+}
+
 static const char* str(RHINO::DescriptorRangeType type) noexcept {
     switch (type) {
         case RHINO::DescriptorRangeType::CBV:
@@ -74,10 +89,29 @@ void PrintTable(const SCAR::ArchiveReader& reader, size_t indent = 0) noexcept {
 
     std::cout << "Table content:" << std::endl;
     for (const SCAR::Record& r: reader.GetTable() | std::views::values) {
+        std::vector<std::string> flagsStr{};
+        for (size_t i = 0; i < sizeof(SCAR::RecordFlags); ++i) {
+            auto flag = static_cast<SCAR::RecordFlags>(1 << i);
+            if (bool(size_t(flag) & size_t(SCAR::RecordFlags::VALID_MASK)) && bool(size_t(flag) & size_t(r.flags))) {
+                flagsStr.emplace_back(str(flag));
+            }
+        }
+
         size_t offsetFromStart = reinterpret_cast<size_t>(r.data) - reinterpret_cast<size_t>(reader.GetArchiveBinary());
         std::cout << IS << "Record: " << str(r.type) << " | OffsetFromArchiveStart: " << offsetFromStart
-                  << " Size: " << r.dataSize << " Flags: " << std::bitset<16>(static_cast<uint16_t>(r.flags))
-                  << std::endl;
+                  << " Size: " << r.dataSize << " Flags: " << std::bitset<16>(static_cast<uint16_t>(r.flags));
+        if (!flagsStr.empty()) {
+            std::cout << " (";
+        }
+        for (size_t i = 0; i < flagsStr.size(); ++i) {
+            std::cout << flagsStr[i];
+            if (i + 1 < flagsStr.size()) {
+                std::cout << " | ";
+            } else {
+                std::cout << ")";
+            }
+        }
+        std::cout << std::endl;
     }
 }
 

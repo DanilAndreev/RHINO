@@ -37,7 +37,7 @@ namespace SCAR {
                            SerializeRootSignature(*settings.rootSignature));
 
         std::vector<std::string> entrypoints{librarySettings.entrypoints, librarySettings.entrypoints + librarySettings.entrypointsCount};
-        archiver.AddRecord(RecordType::ShadersEntrypoints, RecordFlags::None, SerializeEntrypoints(entrypoints));
+        archiver.AddRecord(RecordType::ShadersEntrypoints, RecordFlags::MultipleValues, SerializeEntrypoints(entrypoints));
         return archiver.Archive();
     }
 } // namespace SCAR
