@@ -132,18 +132,18 @@ namespace RHINO::APIVulkan {
         asGeom.geometry.triangles.maxVertex = desc.vertexCount;
         asGeom.geometry.triangles.transformData = {transform->deviceAddress + desc.transformBufferStartOffset};
 
-        VkAccelerationStructureBuildGeometryInfoKHR buildGeoInfo{};
-        buildGeoInfo.dstAccelerationStructure = VK_NULL_HANDLE;
-        buildGeoInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        buildGeoInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-        buildGeoInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        buildGeoInfo.geometryCount = 1;
-        buildGeoInfo.pGeometries = &asGeom;
-        buildGeoInfo.ppGeometries = nullptr;
-        buildGeoInfo.scratchData = {scratch->deviceAddress};
+        VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
+        buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;
+        buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
+                             VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+        buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        buildInfo.geometryCount = 1;
+        buildInfo.pGeometries = &asGeom;
+        buildInfo.ppGeometries = nullptr;
 
         VkAccelerationStructureBuildSizesInfoKHR outSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildGeoInfo, nullptr,
+        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
                                                 &outSizesInfo);
 
 
@@ -155,23 +155,69 @@ namespace RHINO::APIVulkan {
 
         // TODO: allocate buffer memory
 
-        VkAccelerationStructureCreateInfoKHR asInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
-        asInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        asInfo.buffer = result->buffer;
-        asInfo.deviceAddress = NULL;
-        asInfo.offset = 0;
-        asInfo.size = outSizesInfo.accelerationStructureSize;
-        asInfo.createFlags = 0;
+        VkAccelerationStructureCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
+        createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        createInfo.buffer = result->buffer;
+        createInfo.deviceAddress = NULL;
+        createInfo.offset = 0;
+        createInfo.size = outSizesInfo.accelerationStructureSize;
+        createInfo.createFlags = 0;
 
-        VkAccelerationStructureKHR accelerationStructure;
-        vkCreateAccelerationStructureKHR(m_Device, &asInfo, m_Alloc, &accelerationStructure);
+        vkCreateAccelerationStructureKHR(m_Device, &createInfo, m_Alloc, &result->accelerationStructure);
 
-        vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildGeoInfo, nullptr);
+        buildInfo.scratchData = {scratch->deviceAddress};
+        buildInfo.dstAccelerationStructure = result->accelerationStructure;
+        vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildInfo, nullptr);
     }
 
     TLAS* VulkanCommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                        const char* name) noexcept {
+        auto* scratch = static_cast<VulkanBuffer*>(scratchBuffer);
 
+        auto result = new VulkanTLAS{};
+
+        for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
+            const BLASInstanceDesc& instanceDesc = desc.blasInstances[i];
+            VkAccelerationStructureInstanceKHR nativeInstanceDesc{};
+            nativeInstanceDesc.flags = 0;
+            nativeInstanceDesc.mask = instanceDesc.instanceMask;
+            nativeInstanceDesc.instanceCustomIndex = instanceDesc.instanceID;
+            nativeInstanceDesc.instanceShaderBindingTableRecordOffset = 0;
+            nativeInstanceDesc.accelerationStructureReference = ;
+            memcpy(nativeInstanceDesc.transform.matrix, instanceDesc.transform, sizeof(instanceDesc.transform));
+
+            //TODO: copy it to mapped buffer and upload
+        }
+
+        VkAccelerationStructureGeometryInstancesDataKHR instancesDesc{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR};
+        instancesDesc.data.deviceAddress = instBufferAddr;
+        instancesDesc.arrayOfPointers = VK_FALSE;
+
+        VkAccelerationStructureGeometryKHR geoDesc{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+        geoDesc.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+        geoDesc.geometry.instances = instancesDesc;
+
+        VkAccelerationStructureBuildGeometryInfoKHR buildInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
+        buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        buildInfo.geometryCount = 1;
+        buildInfo.pGeometries = &geoDesc;
+        buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+        buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+
+        VkAccelerationStructureBuildSizesInfoKHR sizeInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
+        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr, &sizeInfo);
+
+        VkAccelerationStructureCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
+        createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+        createInfo.size = sizeInfo.accelerationStructureSize;
+        createInfo.createFlags = 0;
+        createInfo.offset = 0;
+        vkCreateAccelerationStructureKHR(m_Device, &createInfo, m_Alloc, &result->accelerationStructure);
+
+        buildInfo.scratchData = {scratch->deviceAddress};
+        buildInfo.dstAccelerationStructure = result->accelerationStructure;
+        vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildInfo, nullptr);
     }
 } // namespace RHINO::APIVulkan
 
