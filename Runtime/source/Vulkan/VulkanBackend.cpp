@@ -435,7 +435,7 @@ namespace RHINO::APIVulkan {
 
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new VulkanCommandList{};
-        result->Initialize(name, m_PhysicalDevice, m_Device, m_DefaultQueueCMDPool);
+        result->Initialize(name, m_PhysicalDevice, m_Device, m_DefaultQueueCMDPool, m_Alloc);
         return result;
     }
 
