@@ -402,6 +402,12 @@ namespace RHINO::APID3D12 {
         delete d3d12CommandList;
     }
 
+    Semaphore* D3D12Backend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
+        auto* result = new D3D12Semaphore{};
+        m_Device->CreateFence(initialValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&result->fence));
+        return result;
+    }
+
     ASPrebuildInfo D3D12Backend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
         // GetRaytracingAccelerationStructurePrebuildInfo may check pointers for null values for calculating sizes but not accessing data by
         // these pointers. So we can pass dummy not null pointers to tell D3D12 that we are about to pass real pointers during the build.
@@ -460,6 +466,21 @@ namespace RHINO::APID3D12 {
         DWORD res = WaitForSingleObject(event, INFINITE);
         assert(res == WAIT_OBJECT_0);
         CloseHandle(event);
+    }
+
+    void D3D12Backend::QueueSignal(Semaphore* semaphore, uint64_t value) noexcept {
+        auto* d3d12Semaphore = static_cast<D3D12Semaphore*>(semaphore);
+        m_DefaultQueue->Signal(d3d12Semaphore->fence, value);
+    }
+
+    bool D3D12Backend::WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
+        const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
+
+        HANDLE event = CreateEventA(nullptr, true, false, "RHINO.WaitForSemaphore");
+        d3d12Semaphore->fence->SetEventOnCompletion(value, event);
+        DWORD res = WaitForSingleObject(event, timeout);
+        CloseHandle(event);
+        return res == WAIT_OBJECT_0;
     }
 
     ID3D12RootSignature* D3D12Backend::CreateRootSignature(size_t spacesCount,
