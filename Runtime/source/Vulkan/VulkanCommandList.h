@@ -14,7 +14,11 @@ namespace RHINO::APIVulkan {
         void SetRTPSO(RTPSO* pso) noexcept final;
         void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept final;
 
-    public:
+        BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
+        TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
+
+        VkAllocationCallbacks* m_Alloc;
+        VkDevice m_Device = VK_NULL_HANDLE;
         VkCommandBuffer cmd = VK_NULL_HANDLE;
         VkCommandPool pool = VK_NULL_HANDLE; //TODO: move to rhi.
 

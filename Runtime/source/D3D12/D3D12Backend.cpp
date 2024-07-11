@@ -398,12 +398,6 @@ namespace RHINO::APID3D12 {
         delete d3d12CommandList;
     }
 
-    Semaphore* D3D12Backend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
-        auto* result = new D3D12Semaphore{};
-        m_Device->CreateFence(initialValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&result->fence));
-        return result;
-    }
-
     ASPrebuildInfo D3D12Backend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
         // GetRaytracingAccelerationStructurePrebuildInfo may check pointers for null values for calculating sizes but not accessing data by
         // these pointers. So we can pass dummy not null pointers to tell D3D12 that we are about to pass real pointers during the build.
@@ -452,30 +446,52 @@ namespace RHINO::APID3D12 {
         return {scratchSize, BLASSize};
     }
 
-    void D3D12Backend::SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
-                                         const uint64_t* values) noexcept {
+    void D3D12Backend::SubmitCommandList(CommandList* cmd) noexcept {
         auto d3d12CMD = static_cast<D3D12CommandList*>(cmd);
         d3d12CMD->SumbitToQueue(m_DefaultQueue);
-
-        for (size_t i = 0; i < waitSemaphoresCount; ++i) {
-            const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(waitSemaphores[i]);
-            m_DefaultQueue->Wait(d3d12Semaphore->fence, values[i]);
-        }
     }
 
-    void D3D12Backend::QueueSignal(Semaphore* semaphore, uint64_t value) noexcept {
+    Semaphore* D3D12Backend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
+        auto* result = new D3D12Semaphore{};
+        m_Device->CreateFence(initialValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&result->fence));
+        return result;
+    }
+
+    void D3D12Backend::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
+        auto* d3d12Semaphore = static_cast<D3D12Semaphore*>(semaphore);
+        d3d12Semaphore->fence->Release();
+        delete d3d12Semaphore;
+    }
+
+
+    void D3D12Backend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
         auto* d3d12Semaphore = static_cast<D3D12Semaphore*>(semaphore);
         m_DefaultQueue->Signal(d3d12Semaphore->fence, value);
     }
 
-    bool D3D12Backend::WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
+    void D3D12Backend::SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept {
+        auto* d3d12Semaphore = static_cast<D3D12Semaphore*>(semaphore);
+        d3d12Semaphore->fence->Signal(value);
+    }
+
+    bool D3D12Backend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
         const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
 
         HANDLE event = CreateEventA(nullptr, true, false, "RHINO.WaitForSemaphore");
         d3d12Semaphore->fence->SetEventOnCompletion(value, event);
-        DWORD res = WaitForSingleObject(event, timeout);
+        const DWORD res = WaitForSingleObject(event, timeout);
         CloseHandle(event);
         return res == WAIT_OBJECT_0;
+    }
+
+    void D3D12Backend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
+        const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
+        m_DefaultQueue->Wait(d3d12Semaphore->fence, value);
+    }
+
+    uint64_t D3D12Backend::GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept {
+        const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
+        return d3d12Semaphore->fence->GetCompletedValue();
     }
 
     ID3D12RootSignature* D3D12Backend::CreateRootSignature(size_t spacesCount,
