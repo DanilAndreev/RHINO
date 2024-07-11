@@ -7,6 +7,44 @@
 #include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
+    void VulkanCommandList::Initialize(const char* name, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool pool,
+                                       VkAllocationCallbacks* alloc) noexcept {
+        m_Device = device;
+        m_Alloc = alloc;
+
+        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
+        VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+        props.pNext = &descriptorProps;
+        vkGetPhysicalDeviceProperties2(physicalDevice, &props);
+        m_DescriptorProps = descriptorProps;
+
+        VkCommandBufferAllocateInfo cmdAlloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        cmdAlloc.commandPool = pool;
+        cmdAlloc.commandBufferCount = 1;
+        cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        vkAllocateCommandBuffers(m_Device, &cmdAlloc, &m_Cmd);
+
+        VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+        beginInfo.pInheritanceInfo = nullptr;
+        vkBeginCommandBuffer(m_Cmd, &beginInfo);
+    }
+
+    void VulkanCommandList::Release() noexcept {
+        vkFreeCommandBuffers(m_Device, m_Pool, 1, &m_Cmd);
+        vkDestroyCommandPool(m_Device, m_Pool, m_Alloc);
+        // Command pool is managed by VulkanBackend instance and should be released by it.
+    }
+
+    void VulkanCommandList::SubmitToQueue(VkQueue queue) noexcept {
+        vkEndCommandBuffer(m_Cmd);
+
+        VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &m_Cmd;
+        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+    }
+
     void VulkanCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
         auto* vulkanSrc = static_cast<VulkanBuffer*>(src);
         auto* vulkanDst = static_cast<VulkanBuffer*>(dst);
@@ -14,36 +52,25 @@ namespace RHINO::APIVulkan {
         region.size = size;
         region.srcOffset = srcOffset;
         region.dstOffset = dstOffset;
-        vkCmdCopyBuffer(cmd, vulkanSrc->buffer, vulkanDst->buffer, 1, &region);
-    }
-
-    void VulkanCommandList::Dispatch(const DispatchDesc& desc) noexcept {
-        vkCmdDispatch(cmd, desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
-    }
-
-    void VulkanCommandList::Draw() noexcept {
+        vkCmdCopyBuffer(m_Cmd, vulkanSrc->buffer, vulkanDst->buffer, 1, &region);
     }
 
     void VulkanCommandList::SetComputePSO(ComputePSO* pso) noexcept {
         auto* vulkanPSO = static_cast<VulkanComputePSO*>(pso);
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
+        vkCmdBindPipeline(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
         for (auto [space, spaceInfo] : vulkanPSO->heapOffsetsInDescriptorsBySpaces) {
             uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
             VkDeviceSize offset = spaceInfo.second;
             switch (spaceInfo.first) {
                 case DescriptorRangeType::Sampler:
-                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, descriptorProps);
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, m_DescriptorProps);
                     break;
                 default:
-                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, descriptorProps);
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, m_DescriptorProps);
             }
-            EXT::vkCmdSetDescriptorBufferOffsetsEXT(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->layout,
+            EXT::vkCmdSetDescriptorBufferOffsetsEXT(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->layout,
                                                     space, 1, &bufferIndex, &offset);
         }
-    }
-
-    void VulkanCommandList::SetRTPSO(RTPSO* pso) noexcept {
-
     }
 
     void VulkanCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept {
@@ -60,7 +87,29 @@ namespace RHINO::APIVulkan {
             bindingSampler.usage = VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
             bindings[1] = bindingSampler;
         }
-        EXT::vkCmdBindDescriptorBuffersEXT(cmd, SamplerHeap ? 2 : 1, bindings);
+        EXT::vkCmdBindDescriptorBuffersEXT(m_Cmd, SamplerHeap ? 2 : 1, bindings);
+    }
+
+    void VulkanCommandList::Dispatch(const DispatchDesc& desc) noexcept {
+        vkCmdDispatch(m_Cmd, desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
+    }
+
+    void VulkanCommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
+        VkStridedDeviceAddressRegionKHR rayGenTable = {};
+        VkStridedDeviceAddressRegionKHR missTable = {};
+        VkStridedDeviceAddressRegionKHR higGroupTable = {};
+        VkStridedDeviceAddressRegionKHR callableTable = {NULL};
+
+        //TODO: calculate addresses;
+
+        vkCmdTraceRaysKHR(m_Cmd, &rayGenTable, &missTable, &higGroupTable, &callableTable, desc.width, desc.height, 1);
+    }
+
+    void VulkanCommandList::Draw() noexcept {
+    }
+
+    void VulkanCommandList::BuildRTPSO(RTPSO* pso) noexcept {
+        //TODO: impl
     }
 
     BLAS* VulkanCommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
@@ -117,7 +166,7 @@ namespace RHINO::APIVulkan {
         VkAccelerationStructureKHR accelerationStructure;
         vkCreateAccelerationStructureKHR(m_Device, &asInfo, m_Alloc, &accelerationStructure);
 
-        vkCmdBuildAccelerationStructuresKHR(cmd, 1, &buildGeoInfo, nullptr);
+        vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildGeoInfo, nullptr);
     }
 
     TLAS* VulkanCommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,

@@ -7,22 +7,31 @@
 namespace RHINO::APIVulkan {
     class VulkanCommandList : public CommandList {
     public:
-        void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
-        void Dispatch(const DispatchDesc& desc) noexcept final;
-        void Draw() noexcept final;
-        void SetComputePSO(ComputePSO* pso) noexcept final;
-        void SetRTPSO(RTPSO* pso) noexcept final;
-        void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept final;
+        void Initialize(const char* name, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool pool,
+                        VkAllocationCallbacks* alloc) noexcept;
+        void Release() noexcept;
+        void SubmitToQueue(VkQueue queue) noexcept;
 
+    public:
+        void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
+        void SetComputePSO(ComputePSO* pso) noexcept final;
+        void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept final;
+        void Dispatch(const DispatchDesc& desc) noexcept final;
+        void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
+        void Draw() noexcept final;
+
+    public:
+        void BuildRTPSO(RTPSO* pso) noexcept final;
         BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
         TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
 
-        VkAllocationCallbacks* m_Alloc;
+    private:
+        VkAllocationCallbacks* m_Alloc = nullptr;
         VkDevice m_Device = VK_NULL_HANDLE;
-        VkCommandBuffer cmd = VK_NULL_HANDLE;
-        VkCommandPool pool = VK_NULL_HANDLE; //TODO: move to rhi.
+        VkCommandBuffer m_Cmd = VK_NULL_HANDLE;
+        VkCommandPool m_Pool = VK_NULL_HANDLE;
 
-        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps = {};
+        VkPhysicalDeviceDescriptorBufferPropertiesEXT m_DescriptorProps = {};
     };
 }// namespace RHINO::APIVulkan
 

@@ -105,6 +105,14 @@ namespace RHINO::APIVulkan {
 
         LoadVulkanAPI(m_Instance, vkGetInstanceProcAddr);
 
+        VkCommandPoolCreateInfo poolCreateInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+        poolCreateInfo.queueFamilyIndex = m_DefaultQueueFamIndex;
+        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_DefaultQueueCMDPool);
+        poolCreateInfo.queueFamilyIndex = m_AsyncComputeQueueFamIndex;
+        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_AsyncComputeQueueCMDPool);
+        poolCreateInfo.queueFamilyIndex = m_CopyQueueFamIndex;
+        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_CopyQueueCMDPool);
+
 #ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
         {
             assert(g_RHINO_HWND);
@@ -426,30 +434,8 @@ namespace RHINO::APIVulkan {
     }
 
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
-        //TODO: add command list target queue;
         auto* result = new VulkanCommandList{};
-
-        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
-        VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        props.pNext = &descriptorProps;
-        vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &props);
-        result->descriptorProps = descriptorProps;
-
-        VkCommandPoolCreateInfo poolCreateInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-        poolCreateInfo.queueFamilyIndex = m_DefaultQueueFamIndex;
-        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &result->pool);
-        //TODO: move pools to apropriate VulkanBackend fields.
-
-        VkCommandBufferAllocateInfo cmdAlloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-        cmdAlloc.commandPool = result->pool;
-        cmdAlloc.commandBufferCount = 1;
-        cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vkAllocateCommandBuffers(m_Device, &cmdAlloc, &result->cmd);
-
-        VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-        beginInfo.pInheritanceInfo = nullptr;
-        vkBeginCommandBuffer(result->cmd, &beginInfo);
+        result->Initialize(name, m_PhysicalDevice, m_Device, m_DefaultQueueCMDPool);
         return result;
     }
 
@@ -457,21 +443,13 @@ namespace RHINO::APIVulkan {
         if (!commandList)
             return;
         auto* vulkanCMD = static_cast<VulkanCommandList*>(commandList);
-        vkFreeCommandBuffers(m_Device, vulkanCMD->pool, 1, &vulkanCMD->cmd);
-        vkDestroyCommandPool(m_Device, vulkanCMD->pool, m_Alloc);
+        vulkanCMD->Release();
         delete vulkanCMD;
     }
 
     void VulkanBackend::SubmitCommandList(CommandList* cmd) noexcept {
         auto* vulkanCMD = static_cast<VulkanCommandList*>(cmd);
-        vkEndCommandBuffer(vulkanCMD->cmd);
-
-        VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &vulkanCMD->cmd;
-
-        vkQueueSubmit(m_DefaultQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
+        vulkanCMD->SubmitToQueue(m_DefaultQueue);
         vkDeviceWaitIdle(m_Device); // TODO: REMOVE
 
 #ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN

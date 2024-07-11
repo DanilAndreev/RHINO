@@ -62,10 +62,13 @@ namespace RHINO::APIVulkan {
 
         VkQueue m_DefaultQueue = VK_NULL_HANDLE;
         uint32_t m_DefaultQueueFamIndex = 0;
+        VkCommandPool m_DefaultQueueCMDPool = VK_NULL_HANDLE;
         VkQueue m_AsyncComputeQueue = VK_NULL_HANDLE;
         uint32_t m_AsyncComputeQueueFamIndex = 0;
+        VkCommandPool m_AsyncComputeQueueCMDPool = VK_NULL_HANDLE;
         VkQueue m_CopyQueue = VK_NULL_HANDLE;
         uint32_t m_CopyQueueFamIndex = 0;
+        VkCommandPool m_CopyQueueCMDPool = VK_NULL_HANDLE;
 
         VkAllocationCallbacks* m_Alloc = nullptr;
 
