@@ -209,6 +209,11 @@ namespace RHINO::DebugLayer {
         m_ResourcesMeta.erase(commandList);
     }
 
+    Semaphore* DebugLayer::CreateSyncSemaphore(uint64_t initialValue) noexcept {
+        auto result = m_Wrapped->CreateSyncSemaphore(initialValue);
+        return result;
+    }
+
     ASPrebuildInfo DebugLayer::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
         auto result = m_Wrapped->GetBLASPrebuildInfo(desc);
         return result;
@@ -219,8 +224,16 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
-    void DebugLayer::SubmitCommandList(CommandList* cmd) noexcept {
-        m_Wrapped->SubmitCommandList(cmd);
+    void DebugLayer::SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
+                                       const uint64_t* values) noexcept {
+        m_Wrapped->SubmitCommandList(cmd, waitSemaphoresCount, waitSemaphores, values);
+    }
+
+    void DebugLayer::QueueSignal(Semaphore* semaphore, uint64_t value) noexcept { m_Wrapped->QueueSignal(semaphore, value); }
+
+    bool DebugLayer::WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
+        bool result = m_Wrapped->WaitForSemaphore(semaphore, value, timeout);
+        return result;
     }
 
     void DebugLayer::DB(const std::string& text) noexcept {

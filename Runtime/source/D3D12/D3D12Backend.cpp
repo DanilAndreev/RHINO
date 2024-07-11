@@ -100,10 +100,6 @@ namespace RHINO::APID3D12 {
         m_Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_ComputeQueue));
         queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
         m_Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_CopyQueue));
-
-        m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_DefaultQueueFence));
-        m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_ComputeQueueFence));
-        m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_CopyQueueFence));
     }
 
     void D3D12Backend::Release() noexcept {
@@ -465,14 +461,6 @@ namespace RHINO::APID3D12 {
             const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(waitSemaphores[i]);
             m_DefaultQueue->Wait(d3d12Semaphore->fence, values[i]);
         }
-
-        m_DefaultQueue->Signal(m_DefaultQueueFence, ++m_CopyQueueFenceLastVal);
-
-        HANDLE event = CreateEventA(nullptr, true, false, "DefaultQueueCompletion");
-        m_DefaultQueueFence->SetEventOnCompletion(m_CopyQueueFenceLastVal, event);
-        DWORD res = WaitForSingleObject(event, INFINITE);
-        assert(res == WAIT_OBJECT_0);
-        CloseHandle(event);
     }
 
     void D3D12Backend::QueueSignal(Semaphore* semaphore, uint64_t value) noexcept {

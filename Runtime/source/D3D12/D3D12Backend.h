@@ -51,14 +51,8 @@ namespace RHINO::APID3D12 {
     private:
         ID3D12Device5* m_Device = nullptr;
         ID3D12CommandQueue* m_DefaultQueue = nullptr;
-        ID3D12Fence* m_DefaultQueueFence = nullptr;
-        UINT64 m_DefaultQueueFenceLastVal = 0;
         ID3D12CommandQueue* m_ComputeQueue = nullptr;
-        ID3D12Fence* m_ComputeQueueFence = nullptr;
-        UINT64 m_ComputeQueueFenceLastVal = 0;
         ID3D12CommandQueue* m_CopyQueue = nullptr;
-        ID3D12Fence* m_CopyQueueFence = nullptr;
-        UINT64 m_CopyQueueFenceLastVal = 0;
 
         D3D12GarbageCollector m_GarbageCollector = {};
     };
