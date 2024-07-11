@@ -1,7 +1,7 @@
 #include "ComputeILCompilationPipeline.h"
 
 #include "archiver/PSOArchiver.h"
-#include "serializers/SerializeRootSignature.h"
+#include "serializers/Serializers.h"
 
 namespace SCAR {
     ComputeILCompilationPipeline::ComputeILCompilationPipeline(CompilationChain* chain) noexcept :
@@ -33,6 +33,7 @@ namespace SCAR {
         delete shaderModuleAssembly;
         archiver.AddRecord(RecordType::RootSignature, RecordFlags::None,
                            SerializeRootSignature(*settings.rootSignature));
+        archiver.AddRecord(RecordType::ShadersEntrypoints, RecordFlags::None, SerializeEntrypoints({settings.computeSettings.entrypoint}));
         return archiver.Archive();
     }
 } // namespace SCAR

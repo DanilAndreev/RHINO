@@ -1,4 +1,4 @@
-#include "SerializeRootSignature.h"
+#include "Serializers.h"
 
 namespace SCAR {
     SCAR_FORCEINLINE size_t CalculateSerializedRangesOffset(const PSORootSignatureDesc& rootSignature) noexcept {

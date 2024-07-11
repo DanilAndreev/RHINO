@@ -1,7 +1,7 @@
 #include "LibILCompilationPipeline.h"
 
 #include "archiver/PSOArchiver.h"
-#include "serializers/SerializeRootSignature.h"
+#include "serializers/Serializers.h"
 
 namespace SCAR {
     LibILCompilationPipeline::LibILCompilationPipeline(CompilationChain* chain) noexcept :
@@ -11,8 +11,10 @@ namespace SCAR {
                                                         std::vector<std::string>& warnings) noexcept {
         assert(m_CompilationChain != nullptr);
 
+        LibraryCompileSettings librarySettings = settings.librarySettings;
+
         ChainSettings chSettings{};
-        chSettings.shaderFilepath = settings.libratySettings.inputFilepath;
+        chSettings.shaderFilepath = librarySettings.inputFilepath;
         chSettings.entrypoint = std::nullopt;
         chSettings.stage = ChainStageTarget::Lib;
 
@@ -33,6 +35,9 @@ namespace SCAR {
         delete shaderModuleAssembly;
         archiver.AddRecord(RecordType::RootSignature, RecordFlags::None,
                            SerializeRootSignature(*settings.rootSignature));
+
+        std::vector<std::string> entrypoints{librarySettings.entrypoints, librarySettings.entrypoints + librarySettings.entrypointsCount};
+        archiver.AddRecord(RecordType::ShadersEntrypoints, RecordFlags::None, SerializeEntrypoints(entrypoints));
         return archiver.Archive();
     }
 } // namespace SCAR

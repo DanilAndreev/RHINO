@@ -66,12 +66,16 @@ int main(int argc, char* argv[]) {
     rootSignature.spacesCount = std::size(spaces);
     rootSignature.spacesDescs = spaces;
 
+    const char* entrypoints[] = {"MyRaygenShader", "MyMissShader", "MyClosestHitShader"};
+
     settings.rootSignature = &rootSignature;
     settings.psoLang = SCAR::ArchivePSOLang::DXIL;
     settings.psoType = SCAR::ArchivePSOType::Library;
-    settings.libratySettings.inputFilepath = "rt.hlsl";
-    settings.libratySettings.maxAttributeSizeInBytes = 32;
-    settings.libratySettings.maxPayloadSizeInBytes = 32;
+    settings.librarySettings.entrypointsCount = std::size(entrypoints);
+    settings.librarySettings.entrypoints = entrypoints;
+    settings.librarySettings.inputFilepath = "rt.hlsl";
+    settings.librarySettings.maxAttributeSizeInBytes = 32;
+    settings.librarySettings.maxPayloadSizeInBytes = 32;
 
 
     outFilepath = "out.scar";

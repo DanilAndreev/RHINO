@@ -16,7 +16,7 @@ namespace RHINO::SCARTools {
             return;
         }
 
-        SCAR::Record cs = reader.GetRecord(SCAR::RecordType::CSAssembly);
+        const SCAR::Record& cs = reader.GetRecord(SCAR::RecordType::CSAssembly);
         // TODO: add argument
         m_Desc.CS.entrypoint = "main";
         m_Desc.CS.bytecode = cs.data;

@@ -15,18 +15,28 @@ namespace RHINO::SCARTools {
             m_IsValid = false;
             return;
         }
+        if (!reader.HasRecord(SCAR::RecordType::ShadersEntrypoints)) {
+            m_IsValid = false;
+            return;
+        }
 
-        SCAR::Record lib = reader.GetRecord(SCAR::RecordType::LibAssembly);
+        const SCAR::Record& libAss = reader.GetRecord(SCAR::RecordType::LibAssembly);
 
-        m_Desc.CS.entrypoint = "main";
-        m_Desc.CS.bytecode = cs.data;
-        m_Desc.CS.bytecodeSize = cs.dataSize;
+        for (const char* entry : reader.CreateEntrypointsView()) {
+            ShaderModule shaderModule{};
+            shaderModule.bytecodeSize = libAss.dataSize;
+            shaderModule.bytecode = libAss.data;
+            shaderModule.entrypoint = entry;
+            m_ShaderModulesView.emplace_back(shaderModule);
+        }
+
+        m_Desc = desc;
+        m_Desc.shaderModulesCount = m_ShaderModulesView.size();
+        m_Desc.shaderModules = m_ShaderModulesView.data();
 
         m_RootSignatureView = reader.CreateRootSignatureView();
         m_Desc.spacesCount = m_RootSignatureView.size();
         m_Desc.spacesDescs = m_RootSignatureView.data();
-
-        m_Desc.debugName = debugName;
     }
 
     const RTPSODesc& SCARRTPSOArchiveView::GetPatchedDesc() const noexcept { return m_Desc; }
