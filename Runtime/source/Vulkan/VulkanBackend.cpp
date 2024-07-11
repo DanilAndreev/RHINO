@@ -691,6 +691,11 @@ namespace RHINO::APIVulkan {
         result.MaxASSizeInBytes = outSizesInfo.accelerationStructureSize;
         return result;
     }
+
+    ASPrebuildInfo VulkanBackend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
+        ASPrebuildInfo result{};
+        return result;
+    }
 } // namespace RHINO::APIVulkan
 
 #endif// ENABLE_API_VULKAN
