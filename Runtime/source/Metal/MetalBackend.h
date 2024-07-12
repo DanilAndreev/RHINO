@@ -26,8 +26,6 @@ namespace RHINO::APIMetal {
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
-        ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
-                                          const char* debugName) noexcept final;
         void ReleaseComputePSO(ComputePSO* pso) noexcept final;
 
     public:
@@ -65,4 +63,4 @@ namespace RHINO::APIMetal {
     }
 }// namespace RHINO::APIMetal
 
-#endif// ENABLE_API_METAL
+#endif // ENABLE_API_METAL

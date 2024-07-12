@@ -250,7 +250,7 @@ namespace RHINO::DebugLayer {
     }
 
     uint64_t DebugLayer::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
-        auto result = m_Wrapped->SemaphoreWaitFromQueue(semaphore);
+        auto result = m_Wrapped->GetSemaphoreCompletedValue(semaphore);
         return result;
     }
 

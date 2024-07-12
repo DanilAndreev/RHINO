@@ -1,3 +1,5 @@
+#ifdef ENABLE_API_METAL
+
 #include "MetalCommandList.h"
 
 #import <metal_irconverter_runtime/metal_irconverter_runtime.h>
@@ -10,9 +12,7 @@ namespace RHINO::APIMetal {
         m_Cmd = [queue commandBuffer];
     }
 
-    void MetalCommandList::SubmitToQueue() noexcept {
-        [m_Cmd commit];
-    }
+    void MetalCommandList::SubmitToQueue() noexcept { [m_Cmd commit]; }
 
     void MetalCommandList::Release() noexcept {}
 
@@ -43,9 +43,7 @@ namespace RHINO::APIMetal {
         }
 
         [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
-        [encoder useResources:usedCBVSRVs.data()
-                        count:usedCBVSRVs.size()
-                        usage:MTLResourceUsageRead | MTLResourceUsageSample];
+        [encoder useResources:usedCBVSRVs.data() count:usedCBVSRVs.size() usage:MTLResourceUsageRead | MTLResourceUsageSample];
 
         auto size = MTLSizeMake(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
         // TODO: validate correctness
@@ -74,19 +72,13 @@ namespace RHINO::APIMetal {
         }
     }
 
-    void MetalCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset,
-                                      size_t size) noexcept {
+    void MetalCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
         auto srcBuffer = static_cast<MetalBuffer*>(src);
         auto dstBuffer = static_cast<MetalBuffer*>(dst);
         id<MTLBlitCommandEncoder> encoder = [m_Cmd blitCommandEncoder];
 
-        [encoder copyFromBuffer:srcBuffer->buffer
-                   sourceOffset:srcOffset
-                       toBuffer: dstBuffer->buffer
-                destinationOffset:dstOffset
-                             size:size];
+        [encoder copyFromBuffer:srcBuffer->buffer sourceOffset:srcOffset toBuffer:dstBuffer->buffer destinationOffset:dstOffset size:size];
         [encoder endEncoding];
-
     }
     BLAS* MetalCommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                       const char* name) noexcept {
@@ -138,8 +130,7 @@ namespace RHINO::APIMetal {
         auto* result = new MetalTLAS{};
         auto* metalScratch = static_cast<MetalBuffer*>(scratchBuffer);
 
-        id<MTLBuffer> instanceDescBuf = [m_Device newBufferWithLength:0
-                                                              options:MTLResourceOptionCPUCacheModeDefault];
+        id<MTLBuffer> instanceDescBuf = [m_Device newBufferWithLength:0 options:MTLResourceOptionCPUCacheModeDefault];
 
         auto asDescs = [NSMutableArray array];
         for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
@@ -157,7 +148,7 @@ namespace RHINO::APIMetal {
         accelerationStructureDescriptor.instanceDescriptorBufferOffset = 0;
         accelerationStructureDescriptor.instanceDescriptorStride = 0;
 
-        //TODO: apply transform from desc
+        // TODO: apply transform from desc
 
         MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
         result->accelerationStructure = [m_Device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
@@ -172,10 +163,12 @@ namespace RHINO::APIMetal {
     }
 
     void MetalCommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
-        //TODO: implement
+        // TODO: implement
     }
 
     void MetalCommandList::BuildRTPSO(RTPSO* pso) noexcept {
-        //TODO: implement
+        // TODO: implement
     }
 } // namespace RHINO::APIMetal
+
+#endif // ENABLE_API_METAL

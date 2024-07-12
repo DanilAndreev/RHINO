@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef ENABLE_API_METAL
+
 #import <Metal/Metal.h>
 
 namespace RHINO::APIMetal::Convert {
@@ -41,3 +43,5 @@ namespace RHINO::APIMetal::Convert {
         }
     }
 } // namespace RHINO::APIMetal::Convert
+
+#endif // ENABLE_API_METAL

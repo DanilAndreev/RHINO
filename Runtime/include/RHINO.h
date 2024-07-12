@@ -57,7 +57,7 @@ namespace RHINO {
         virtual void SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept = 0;
         virtual bool SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept = 0;
         virtual void SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept = 0;
-        virtual uint64_t GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept = 0;
+        virtual uint64_t GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept = 0;
     };
 
     RHINOInterface* CreateRHINO(BackendAPI backendApi) noexcept;
