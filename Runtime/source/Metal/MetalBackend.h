@@ -46,15 +46,18 @@ namespace RHINO::APIMetal {
 
     public:
         // JOB SUBMISSION
-        void SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
-                               const uint64_t* values) noexcept final;
+        void SubmitCommandList(CommandList* cmd) noexcept final;
         ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept final;
         ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept final;
 
     public:
-        Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept override;
-        void QueueSignal(Semaphore* semaphore, uint64_t value) noexcept override;
-        bool WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept override;
+        Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept final;
+        void ReleaseSyncSemaphore(Semaphore* semaphore) noexcept final;
+        void SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept final;
+        void SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept final;
+        bool SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept final;
+        void SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept final;
+        uint64_t GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept final;
     };
 
     RHINOInterface* AllocateMetalBackend() noexcept {
