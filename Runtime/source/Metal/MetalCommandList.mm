@@ -2,9 +2,23 @@
 
 #import <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
+#include "MetalConverters.h"
+
 namespace RHINO::APIMetal {
+    void MetalCommandList::Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept {
+        m_Device = device;
+        m_Cmd = [queue commandBuffer];
+    }
+
+    void MetalCommandList::SubmitToQueue() noexcept {
+        [m_Cmd commit];
+    }
+
+    void MetalCommandList::Release() noexcept {}
+
+
     void MetalCommandList::Dispatch(const DispatchDesc& desc) noexcept {
-        id<MTLComputeCommandEncoder> encoder = [cmd computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
 
         std::vector<id<MTLResource>> usedUAVs;
         std::vector<id<MTLResource>> usedCBVSRVs;
@@ -47,13 +61,11 @@ namespace RHINO::APIMetal {
         m_CurComputePSO = metalPSO;
     }
 
-    void MetalCommandList::SetRTPSO(RTPSO* pso) noexcept {}
-
     void MetalCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
         auto* metalCBVSRVUAVHeap = static_cast<MetalDescriptorHeap*>(CBVSRVUAVHeap);
         auto* metalSamplerHeap = static_cast<MetalDescriptorHeap*>(CBVSRVUAVHeap);
 
-        id<MTLComputeCommandEncoder> encoder = [cmd computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
         if (samplerHeap) {
             // [encoder setBuffer: ]
         }
@@ -66,13 +78,90 @@ namespace RHINO::APIMetal {
                                       size_t size) noexcept {
         auto srcBuffer = static_cast<MetalBuffer*>(src);
         auto dstBuffer = static_cast<MetalBuffer*>(dst);
-        id<MTLBlitCommandEncoder> encoder = [cmd blitCommandEncoder];
+        id<MTLBlitCommandEncoder> encoder = [m_Cmd blitCommandEncoder];
 
         [encoder copyFromBuffer:srcBuffer->buffer
                    sourceOffset:srcOffset
                        toBuffer: dstBuffer->buffer
                 destinationOffset:dstOffset
                              size:size];
+        [encoder endEncoding];
+
+    }
+    BLAS* MetalCommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
+                                      const char* name) noexcept {
+        auto* result = new MetalBLAS{};
+        auto* metalScratch = static_cast<MetalBuffer*>(scratchBuffer);
+
+        auto* metalVertex = static_cast<MetalBuffer*>(desc.vertexBuffer);
+        auto* metalIndex = static_cast<MetalBuffer*>(desc.indexBuffer);
+        auto* metalTransform = static_cast<MetalBuffer*>(desc.transformBuffer);
+
+        auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+        triangleGeoDesc.vertexBuffer = metalVertex->buffer;
+        triangleGeoDesc.vertexBufferOffset = desc.vertexBufferStartOffset;
+        triangleGeoDesc.vertexFormat = Convert::ToMTLMTLAttributeFormat(desc.vertexFormat);
+        triangleGeoDesc.vertexStride = desc.vertexStride;
+        triangleGeoDesc.indexBuffer = metalIndex->buffer;
+        triangleGeoDesc.indexBufferOffset = desc.indexBufferStartOffset;
+        triangleGeoDesc.indexType = MTLIndexTypeUInt32;
+        triangleGeoDesc.triangleCount = desc.indexCount / 3;
+        triangleGeoDesc.primitiveDataBuffer = nil;
+        triangleGeoDesc.primitiveDataStride = 0;
+        triangleGeoDesc.primitiveDataElementSize = 0;
+        triangleGeoDesc.transformationMatrixBuffer = metalTransform->buffer;
+        triangleGeoDesc.transformationMatrixBufferOffset = desc.transformBufferStartOffset;
+        triangleGeoDesc.intersectionFunctionTableOffset = 0; // TODO <- take from desc
+        triangleGeoDesc.label = [NSString stringWithUTF8String:name];
+
+        auto geometryDescriptors = [NSMutableArray array];
+        [geometryDescriptors addObject:triangleGeoDesc];
+
+        auto accelerationStructureDescriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
+        accelerationStructureDescriptor.geometryDescriptors = geometryDescriptors;
+
+        MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
+
+        result->accelerationStructure = [m_Device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
+
+        id<MTLAccelerationStructureCommandEncoder> encoder = [m_Cmd accelerationStructureCommandEncoder];
+        [encoder buildAccelerationStructure:result->accelerationStructure
+                                 descriptor:accelerationStructureDescriptor
+                              scratchBuffer:metalScratch->buffer
+                        scratchBufferOffset:scratchBufferStartOffset];
+        [encoder endEncoding];
+    }
+
+    TLAS* MetalCommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
+                                      const char* name) noexcept {
+        auto* result = new MetalTLAS{};
+        auto* metalScratch = static_cast<MetalBuffer*>(scratchBuffer);
+
+        auto asArray = [NSArray array];
+        for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
+            const BLASInstanceDesc& instance = desc.blasInstances[i];
+            auto* metalBLAS = static_cast<MetalBLAS*>(instance.blas);
+            [asArray addObject];
+        }
+
+        auto accelerationStructureDescriptor = [MTLInstanceAccelerationStructureDescriptor descriptor];
+        accelerationStructureDescriptor.instanceCount = desc.blasInstancesCount;
+        accelerationStructureDescriptor.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeDefault;
+        accelerationStructureDescriptor.instancedAccelerationStructures = ;
+
+        accelerationStructureDescriptor.instanceDescriptorBuffer = ;
+        accelerationStructureDescriptor.instanceDescriptorBufferOffset = ;
+        accelerationStructureDescriptor.instanceDescriptorStride = ;
+
+        //TODO: apply transform from desc
+
+        result->accelerationStructure = [m_Device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
+
+        id<MTLAccelerationStructureCommandEncoder> encoder = [m_Cmd accelerationStructureCommandEncoder];
+        [encoder buildAccelerationStructure:result->accelerationStructure
+                                 descriptor:accelerationStructureDescriptor
+                              scratchBuffer:metalScratch->buffer
+                        scratchBufferOffset:scratchBufferStartOffset];
         [encoder endEncoding];
 
     }
