@@ -202,7 +202,9 @@ namespace RHINO::APIMetal {
 
     bool MetalBackend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
         const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
-        return [metalSemaphore->event waitUntilSignaledValue:value timeoutMS:timeout];
+        // TODO: Uncommit after MacOS 15 [:harold:]
+        // return [metalSemaphore->event waitUntilSignaledValue:value timeoutMS:timeout];
+        return true;
     }
 
     void MetalBackend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
