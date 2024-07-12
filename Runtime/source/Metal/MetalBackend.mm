@@ -19,7 +19,7 @@ namespace RHINO::APIMetal {
 
     void MetalBackend::Release() noexcept {}
 
-    RTPSO* APIMetal::MetalBackend::CompileRTPSO(const RTPSODesc& desc) noexcept { return nullptr; }
+    RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
 
     void MetalBackend::ReleaseRTPSO(RTPSO* pso) noexcept {}
 
@@ -120,7 +120,8 @@ namespace RHINO::APIMetal {
         delete metalCmd;
     }
 
-    void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {
+    void MetalBackend::SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
+                                         const uint64_t* values) noexcept {
         auto* metalCmd = static_cast<MetalCommandList*>(cmd);
         metalCmd->SubmitToQueue();
     }
@@ -175,6 +176,29 @@ namespace RHINO::APIMetal {
 
     ASPrebuildInfo MetalBackend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
 
+    }
+
+    Semaphore* MetalBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
+        auto* result = new MetalSemaphore{};
+        result->event = [m_Device newSharedEvent];
+        return result;
+    }
+
+    void MetalBackend::QueueSignal(Semaphore* semaphore, uint64_t value) noexcept {
+        auto* metalSemaphore = static_cast<MetalSemaphore*>(semaphore);
+        id<MTLCommandBuffer> cmd = [m_DefaultQueue commandBuffer];
+        [cmd encodeSignalEvent: metalSemaphore->event value: value];
+
+        // [cmd encodeWaitForEvent: metalSemaphore->event value: value];
+        [cmd commit];
+    }
+
+    bool MetalBackend::WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
+        const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
+        [metalSemaphore->event waitUntilSignaledValue:value
+                                            timeoutMS:timeout];
+        [metalSemaphore->event ];
+        return true;
     }
 } // namespace RHINO::APIMetal
 
