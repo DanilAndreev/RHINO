@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef ENABLE_API_D3D12
 
 namespace RHINO::APID3D12 {
     class D3D12GarbageCollector {
@@ -17,3 +18,5 @@ namespace RHINO::APID3D12 {
         std::list<Garbage> m_TrackedItems{};
     };
 } // namespace RHINO::APID3D12
+
+#endif // ENABLE_API_D3D12
