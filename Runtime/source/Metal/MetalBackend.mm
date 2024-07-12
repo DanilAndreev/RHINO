@@ -125,16 +125,6 @@ namespace RHINO::APIMetal {
         metalCmd->SubmitToQueue();
     }
 
-    ComputePSO* MetalBackend::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
-                                                    const char* debugName) noexcept {
-        //TODO: check lang
-        const SCARTools::SCARComputePSOArchiveView view{scar, sizeInBytes, debugName};
-        if (!view.IsValid()) {
-            return nullptr;
-        }
-        return CompileComputePSO(view.GetDesc());
-    }
-
     void* MetalBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
         auto* metalBuffer = static_cast<MetalBuffer*>(buffer);
         return metalBuffer->buffer.contents;

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef ENABLE_API_METAL
+
 #import <Metal/Metal.h>
 #include "MetalBackendTypes.h"
 #include "MetalDescriptorHeap.h"
@@ -16,10 +18,12 @@ namespace RHINO::APIMetal {
         size_t m_CBVSRVUAVHeapOffset = 0;
         MetalDescriptorHeap* m_SamplerHeap = nullptr;
         size_t m_SamplerHeapOffset = 0;
+
     public:
         void Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept;
         void SubmitToQueue() noexcept;
         void Release() noexcept;
+
     public:
         void Dispatch(const DispatchDesc& desc) noexcept final;
         void Draw() noexcept final;
@@ -34,3 +38,5 @@ namespace RHINO::APIMetal {
         void BuildRTPSO(RTPSO* pso) noexcept final;
     };
 } // namespace RHINO::APIMetal
+
+#endif // ENABLE_API_METAL

@@ -1,3 +1,5 @@
+#ifdef ENABLE_API_METAL
+
 #include "MetalDescriptorHeap.h"
 #include "MetalBackendTypes.h"
 
@@ -57,6 +59,8 @@ namespace RHINO::APIMetal {
     }
 
     void MetalDescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
-        //TODO: implement
+        // TODO: implement
     }
 } // namespace RHINO::APIMetal
+
+#endif // ENABLE_API_METAL
