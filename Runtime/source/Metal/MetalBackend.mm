@@ -214,7 +214,7 @@ namespace RHINO::APIMetal {
         [cmd commit];
     }
 
-    uint64_t MetalBackend::GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept {
+    uint64_t MetalBackend::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
         const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
         [metalSemaphore->event signaledValue];
         return true;

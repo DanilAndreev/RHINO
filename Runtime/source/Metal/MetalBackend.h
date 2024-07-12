@@ -57,7 +57,7 @@ namespace RHINO::APIMetal {
         void SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept final;
         bool SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept final;
         void SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept final;
-        uint64_t GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept final;
+        uint64_t GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept final;
     };
 
     RHINOInterface* AllocateMetalBackend() noexcept {
