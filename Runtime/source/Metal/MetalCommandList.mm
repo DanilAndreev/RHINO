@@ -130,6 +130,7 @@ namespace RHINO::APIMetal {
                               scratchBuffer:metalScratch->buffer
                         scratchBufferOffset:scratchBufferStartOffset];
         [encoder endEncoding];
+        return result;
     }
 
     TLAS* MetalCommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
@@ -137,24 +138,28 @@ namespace RHINO::APIMetal {
         auto* result = new MetalTLAS{};
         auto* metalScratch = static_cast<MetalBuffer*>(scratchBuffer);
 
-        auto asArray = [NSArray array];
+        id<MTLBuffer> instanceDescBuf = [m_Device newBufferWithLength:0
+                                                              options:MTLResourceOptionCPUCacheModeDefault];
+
+        auto asDescs = [NSMutableArray array];
         for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
             const BLASInstanceDesc& instance = desc.blasInstances[i];
             auto* metalBLAS = static_cast<MetalBLAS*>(instance.blas);
-            [asArray addObject];
+            [asDescs addObject:metalBLAS->accelerationStructure];
         }
 
         auto accelerationStructureDescriptor = [MTLInstanceAccelerationStructureDescriptor descriptor];
         accelerationStructureDescriptor.instanceCount = desc.blasInstancesCount;
         accelerationStructureDescriptor.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeDefault;
-        accelerationStructureDescriptor.instancedAccelerationStructures = ;
+        accelerationStructureDescriptor.instancedAccelerationStructures = asDescs;
 
-        accelerationStructureDescriptor.instanceDescriptorBuffer = ;
-        accelerationStructureDescriptor.instanceDescriptorBufferOffset = ;
-        accelerationStructureDescriptor.instanceDescriptorStride = ;
+        accelerationStructureDescriptor.instanceDescriptorBuffer = instanceDescBuf;
+        accelerationStructureDescriptor.instanceDescriptorBufferOffset = 0;
+        accelerationStructureDescriptor.instanceDescriptorStride = 0;
 
         //TODO: apply transform from desc
 
+        MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
         result->accelerationStructure = [m_Device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
 
         id<MTLAccelerationStructureCommandEncoder> encoder = [m_Cmd accelerationStructureCommandEncoder];
@@ -163,6 +168,14 @@ namespace RHINO::APIMetal {
                               scratchBuffer:metalScratch->buffer
                         scratchBufferOffset:scratchBufferStartOffset];
         [encoder endEncoding];
+        return result;
+    }
 
+    void MetalCommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
+        //TODO: implement
+    }
+
+    void MetalCommandList::BuildRTPSO(RTPSO* pso) noexcept {
+        //TODO: implement
     }
 } // namespace RHINO::APIMetal
