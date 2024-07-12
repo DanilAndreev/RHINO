@@ -26,9 +26,11 @@ namespace RHINO::APIMetal {
         void SetComputePSO(ComputePSO* pso) noexcept final;
         void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept final;
         void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
+        void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
 
     public:
         BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
         TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
+        void BuildRTPSO(RTPSO* pso) noexcept final;
     };
 } // namespace RHINO::APIMetal
