@@ -120,8 +120,7 @@ namespace RHINO::APIMetal {
         delete metalCmd;
     }
 
-    void MetalBackend::SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
-                                         const uint64_t* values) noexcept {
+    void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {
         auto* metalCmd = static_cast<MetalCommandList*>(cmd);
         metalCmd->SubmitToQueue();
     }
@@ -184,20 +183,38 @@ namespace RHINO::APIMetal {
         return result;
     }
 
-    void MetalBackend::QueueSignal(Semaphore* semaphore, uint64_t value) noexcept {
+    void MetalBackend::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
+        auto* metalSemaphore = static_cast<MetalSemaphore*>(semaphore);
+        delete metalSemaphore;
+    }
+
+    void MetalBackend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
         auto* metalSemaphore = static_cast<MetalSemaphore*>(semaphore);
         id<MTLCommandBuffer> cmd = [m_DefaultQueue commandBuffer];
         [cmd encodeSignalEvent: metalSemaphore->event value: value];
-
-        // [cmd encodeWaitForEvent: metalSemaphore->event value: value];
         [cmd commit];
     }
 
-    bool MetalBackend::WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
+    void MetalBackend::SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept {
+        auto* metalSemaphore = static_cast<MetalSemaphore*>(semaphore);
+        [metalSemaphore->event setSignaledValue: value];
+    }
+
+    bool MetalBackend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
         const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
-        [metalSemaphore->event waitUntilSignaledValue:value
-                                            timeoutMS:timeout];
-        [metalSemaphore->event ];
+        return [metalSemaphore->event waitUntilSignaledValue:value timeoutMS:timeout];
+    }
+
+    void MetalBackend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
+        const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
+        id<MTLCommandBuffer> cmd = [m_DefaultQueue commandBuffer];
+        [cmd encodeWaitForEvent: metalSemaphore->event value: value];
+        [cmd commit];
+    }
+
+    uint64_t MetalBackend::GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept {
+        const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
+        [metalSemaphore->event signaledValue];
         return true;
     }
 } // namespace RHINO::APIMetal
