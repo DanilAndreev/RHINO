@@ -1,3 +1,5 @@
+#ifdef ENABLE_API_D3D12
+
 #include "D3D12GarbageCollector.h"
 
 namespace RHINO::APID3D12 {
@@ -20,7 +22,7 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12GarbageCollector::Release() noexcept {
-        for (auto& item : m_TrackedItems) {
+        for (auto& item: m_TrackedItems) {
             WaitForSingleObject(item.event, INFINITE);
             CloseHandle(item.event);
             item.resource->Release();
@@ -28,3 +30,5 @@ namespace RHINO::APID3D12 {
         m_TrackedItems.clear();
     }
 } // namespace RHINO::APID3D12
+
+#endif // ENABLE_API_D3D12

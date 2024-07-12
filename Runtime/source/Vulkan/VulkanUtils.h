@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef ENABLE_API_VULKAN
+
 #include "VulkanAPI.h"
 #include "VulkanDescriptorHeap.h"
 
@@ -83,3 +85,5 @@ namespace RHINO::APIVulkan {
         return maxDescriptorSize;
     }
 }
+
+#endif // ENABLE_API_VULKAN
