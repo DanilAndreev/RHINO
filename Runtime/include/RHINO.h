@@ -44,10 +44,9 @@ namespace RHINO {
         virtual DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept = 0;
         virtual void ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept = 0;
 
+        //TODO: add command list target queue setting;
         virtual CommandList* AllocateCommandList(const char* name) noexcept = 0;
         virtual void ReleaseCommandList(CommandList* commandList) noexcept = 0;
-
-        virtual Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept = 0;
 
     public:
         virtual ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept = 0;
@@ -55,10 +54,18 @@ namespace RHINO {
 
     public:
         // JOB SUBMISSION
-        virtual void SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
-                                       const uint64_t* values) noexcept = 0;
-        virtual void QueueSignal(Semaphore* semaphore, uint64_t value) noexcept = 0;
-        virtual bool WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept = 0;
+        virtual void SubmitCommandList(CommandList* cmd) noexcept = 0;
+
+    public:
+        // Sync API
+        virtual Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept = 0;
+        virtual void ReleaseSyncSemaphore(Semaphore* semaphore) noexcept = 0;
+
+        virtual void SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept = 0;
+        virtual void SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept = 0;
+        virtual bool SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept = 0;
+        virtual void SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept = 0;
+        virtual uint64_t GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept = 0;
     };
 
     RHINOInterface* CreateRHINO(BackendAPI backendApi) noexcept;

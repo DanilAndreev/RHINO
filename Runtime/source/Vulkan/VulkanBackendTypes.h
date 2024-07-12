@@ -32,6 +32,23 @@ namespace RHINO::APIVulkan {
         VkPipelineLayout layout = VK_NULL_HANDLE;
         std::map<size_t, std::pair<DescriptorRangeType, size_t>> heapOffsetsInDescriptorsBySpaces{};
     };
+
+    class VulkanBLAS : public BLAS {
+    public:
+        VkAccelerationStructureKHR accelerationStructure = VK_NULL_HANDLE;
+        VkBuffer buffer = VK_NULL_HANDLE;
+    };
+
+    class VulkanTLAS : public TLAS {
+    public:
+        VkAccelerationStructureKHR accelerationStructure = VK_NULL_HANDLE;
+        VkBuffer buffer;
+    };
+
+    class VulkanSemaphore : public Semaphore {
+    public:
+        VkSemaphore semaphore = VK_NULL_HANDLE;
+    };
 }// namespace RHINO::APIVulkan
 
 #endif// ENABLE_API_VULKAN

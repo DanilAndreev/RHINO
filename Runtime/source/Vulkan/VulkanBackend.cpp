@@ -5,6 +5,7 @@
 #include "VulkanCommandList.h"
 #include "VulkanDescriptorHeap.h"
 #include "VulkanUtils.h"
+#include "VulkanConverters.h"
 
 #include "SCARTools/SCARComputePSOArchiveView.h"
 
@@ -104,6 +105,14 @@ namespace RHINO::APIVulkan {
 
         LoadVulkanAPI(m_Instance, vkGetInstanceProcAddr);
 
+        VkCommandPoolCreateInfo poolCreateInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+        poolCreateInfo.queueFamilyIndex = m_DefaultQueueFamIndex;
+        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_DefaultQueueCMDPool);
+        poolCreateInfo.queueFamilyIndex = m_AsyncComputeQueueFamIndex;
+        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_AsyncComputeQueueCMDPool);
+        poolCreateInfo.queueFamilyIndex = m_CopyQueueFamIndex;
+        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_CopyQueueCMDPool);
+
 #ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
         {
             assert(g_RHINO_HWND);
@@ -154,6 +163,8 @@ namespace RHINO::APIVulkan {
     }
 
     RTPSO* VulkanBackend::CreateRTPSO(const RTPSODesc& desc) noexcept {
+
+
         return nullptr;
     }
 
@@ -281,17 +292,6 @@ namespace RHINO::APIVulkan {
         return result;
     }
 
-    ComputePSO* VulkanBackend::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
-                                                     const char* debugName) noexcept {
-        //TODO: check lang
-        const SCARTools::SCARComputePSOArchiveView view{scar, sizeInBytes, debugName};
-        if (!view.IsValid()) {
-            return nullptr;
-        }
-        return CompileComputePSO(view.GetDesc());
-
-    }
-
     void VulkanBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {
         auto* vulkanComputePSO = static_cast<VulkanComputePSO*>(pso);
         vkDestroyPipelineLayout(m_Device, vulkanComputePSO->layout, m_Alloc);
@@ -306,7 +306,7 @@ namespace RHINO::APIVulkan {
 
         VkBufferCreateInfo createInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         createInfo.flags = 0;
-        createInfo.usage = ToBufferUsage(usage);
+        createInfo.usage = Convert::ToVkBufferUsage(usage);
         createInfo.usage |= VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         createInfo.size = size;
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -434,54 +434,23 @@ namespace RHINO::APIVulkan {
     }
 
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
-        //TODO: add command list target queue;
         auto* result = new VulkanCommandList{};
-
-        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
-        VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        props.pNext = &descriptorProps;
-        vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &props);
-        result->descriptorProps = descriptorProps;
-
-        VkCommandPoolCreateInfo poolCreateInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-        poolCreateInfo.queueFamilyIndex = m_DefaultQueueFamIndex;
-        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &result->pool);
-        //TODO: move pools to apropriate VulkanBackend fields.
-
-        VkCommandBufferAllocateInfo cmdAlloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-        cmdAlloc.commandPool = result->pool;
-        cmdAlloc.commandBufferCount = 1;
-        cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vkAllocateCommandBuffers(m_Device, &cmdAlloc, &result->cmd);
-
-        VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-        beginInfo.pInheritanceInfo = nullptr;
-        vkBeginCommandBuffer(result->cmd, &beginInfo);
+        result->Initialize(name, m_PhysicalDevice, m_Device, m_DefaultQueueCMDPool, m_Alloc);
         return result;
     }
 
     void VulkanBackend::ReleaseCommandList(CommandList* commandList) noexcept {
-        if (!commandList) return;
+        if (!commandList)
+            return;
         auto* vulkanCMD = static_cast<VulkanCommandList*>(commandList);
-        vkFreeCommandBuffers(m_Device, vulkanCMD->pool, 1, &vulkanCMD->cmd);
-        vkDestroyCommandPool(m_Device, vulkanCMD->pool, m_Alloc);
+        vulkanCMD->Release();
         delete vulkanCMD;
     }
 
     void VulkanBackend::SubmitCommandList(CommandList* cmd) noexcept {
         auto* vulkanCMD = static_cast<VulkanCommandList*>(cmd);
-        vkEndCommandBuffer(vulkanCMD->cmd);
-
-        VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &vulkanCMD->cmd;
-        submitInfo.signalSemaphoreCount = 0;
-        submitInfo.waitSemaphoreCount = 0;
-
-        vkQueueSubmit(m_DefaultQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
-        vkDeviceWaitIdle(m_Device);//TODO: REMOVE
+        vulkanCMD->SubmitToQueue(m_DefaultQueue);
+        vkDeviceWaitIdle(m_Device); // TODO: REMOVE
 
 #ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
         VkResult swapchainStatus = VK_SUCCESS;
@@ -495,6 +464,88 @@ namespace RHINO::APIVulkan {
         RHINO_VKS(vkQueuePresentKHR(m_DefaultQueue, &presentInfo));
         RHINO_VKS(swapchainStatus);
 #endif RHINO_VULKAN_DEBUG_SWAPCHAIN
+    }
+
+    Semaphore* VulkanBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
+        auto* result = new VulkanSemaphore{};
+
+        VkSemaphoreTypeCreateInfo timelineCreateInfo{VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO};
+        timelineCreateInfo.pNext = nullptr;
+        timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+        timelineCreateInfo.initialValue = initialValue;
+
+        VkSemaphoreCreateInfo createInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+        createInfo.pNext = &timelineCreateInfo;
+        createInfo.flags = 0;
+        RHINO_VKS(vkCreateSemaphore(m_Device, &createInfo, m_Alloc, &result->semaphore));
+
+        return result;
+    }
+
+    void VulkanBackend::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
+        auto* vulkanSemaphore = static_cast<VulkanSemaphore*>(semaphore);
+        vkDestroySemaphore(m_Device, vulkanSemaphore->semaphore, m_Alloc);
+        delete vulkanSemaphore;
+    }
+
+    void VulkanBackend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
+        auto* vulkanSemaphore = static_cast<VulkanSemaphore*>(semaphore);
+
+        VkTimelineSemaphoreSubmitInfo timelineInfo{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
+        timelineInfo.signalSemaphoreValueCount = 1;
+        timelineInfo.pSignalSemaphoreValues = &value;
+
+        VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+        submitInfo.pNext = &timelineInfo;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &vulkanSemaphore->semaphore;
+
+        vkQueueSubmit(m_DefaultQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    }
+
+    void VulkanBackend::SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept {
+        auto* vulkanSemaphore = static_cast<VulkanSemaphore*>(semaphore);
+
+        VkSemaphoreSignalInfo signalInfo{VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO};
+        signalInfo.semaphore = vulkanSemaphore->semaphore;
+        signalInfo.value = value;
+
+        vkSignalSemaphore(m_Device, &signalInfo);
+    }
+
+    bool VulkanBackend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
+        const auto* vulkanSemaphore = static_cast<const VulkanSemaphore*>(semaphore);
+
+        VkSemaphoreWaitInfo waitInfo{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+        waitInfo.flags = 0;
+        waitInfo.semaphoreCount = 1;
+        waitInfo.pSemaphores = &vulkanSemaphore->semaphore;
+        waitInfo.pValues = &value;
+
+        const VkResult status = vkWaitSemaphores(m_Device, &waitInfo, timeout);
+        return status == VK_SUCCESS;
+    }
+
+    void VulkanBackend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
+        const auto* vulkanSemaphore = static_cast<const VulkanSemaphore*>(semaphore);
+
+        VkTimelineSemaphoreSubmitInfo timelineInfo{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
+        timelineInfo.waitSemaphoreValueCount = 1;
+        timelineInfo.pWaitSemaphoreValues = &value;
+
+        VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+        submitInfo.pNext = &timelineInfo;
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &vulkanSemaphore->semaphore;
+
+        vkQueueSubmit(m_DefaultQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    }
+
+    uint64_t VulkanBackend::GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept {
+        const auto* vulkanSemaphore = static_cast<const VulkanSemaphore*>(semaphore);
+        uint64_t result;
+        vkGetSemaphoreCounterValue(m_Device, vulkanSemaphore->semaphore, &result);
+        return result;
     }
 
     uint32_t VulkanBackend::SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) noexcept {
@@ -606,112 +657,46 @@ namespace RHINO::APIVulkan {
         }
     }
 
-    VkDescriptorType VulkanBackend::ToDescriptorType(const DescriptorType type) noexcept {
-        switch (type) {
-            case DescriptorType::BufferCBV:
-                return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            case DescriptorType::BufferSRV:
-            case DescriptorType::BufferUAV:
-                return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            case DescriptorType::Texture2DSRV:
-                return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            case DescriptorType::Texture2DUAV:
-                return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            case DescriptorType::Texture3DSRV:
-                return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            case DescriptorType::Texture3DUAV:
-                return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            case DescriptorType::Sampler:
-                return VK_DESCRIPTOR_TYPE_SAMPLER;
-            default:
-                assert(0);
-                return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        }
-    }
-
-    VkBufferUsageFlags VulkanBackend::ToBufferUsage(ResourceUsage usage) noexcept {
-        VkBufferUsageFlags result = 0;
-        if (bool(usage & ResourceUsage::VertexBuffer)) {
-            result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        }
-        if (bool(usage & ResourceUsage::IndexBuffer)) {
-            result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        }
-        if (bool(usage & ResourceUsage::ConstantBuffer)) {
-            result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        }
-        if (bool(usage & ResourceUsage::ShaderResource)) {
-            result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        }
-        if (bool(usage & ResourceUsage::UnorderedAccess)) {
-            result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        }
-        if (bool(usage & ResourceUsage::Indirect)) {
-            result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-        }
-        if (bool(usage & ResourceUsage::CopySource)) {
-            result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        }
-        if (bool(usage & ResourceUsage::CopyDest)) {
-            result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        }
-        return result;
-    }
-
-    void VulkanBackend::BuildBLAS() noexcept {
-        VkAccelerationStructureGeometryTrianglesDataKHR geomTriangles{};
-        geomTriangles.indexType = VK_INDEX_TYPE_UINT16;
-        geomTriangles.indexData = ;
-        geomTriangles.vertexStride = ;
-        geomTriangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-        geomTriangles.vertexData = ;
-        geomTriangles.maxVertex = ;
-        geomTriangles.transformData = ;
-
+    ASPrebuildInfo VulkanBackend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
+        VkDeviceOrHostAddressConstKHR constDummyAddr{VkDeviceAddress{NULL}};
+        VkDeviceOrHostAddressKHR dummyAddr{VkDeviceAddress{NULL}};
 
         VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
         asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
         asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        asGeom.geometry.triangles = geomTriangles;
+        asGeom.geometry.triangles.indexType = Convert::ToVkIndexType(desc.indexFormat);
+        asGeom.geometry.triangles.indexData = constDummyAddr;
+        asGeom.geometry.triangles.vertexStride = desc.vertexStride;
+        asGeom.geometry.triangles.vertexFormat = Convert::ToVkFormat(desc.vertexFormat);
+        asGeom.geometry.triangles.vertexData = constDummyAddr;
+        asGeom.geometry.triangles.maxVertex = desc.vertexCount;
+        asGeom.geometry.triangles.transformData = constDummyAddr;
 
-        VkAccelerationStructureBuildGeometryInfoKHR buildGeomInfo{};
-        buildGeomInfo.dstAccelerationStructure = VK_NULL_HANDLE;
-        buildGeomInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-        buildGeomInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-        buildGeomInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        buildGeomInfo.geometryCount = 1;
-        buildGeomInfo.pGeometries = &asGeom;
-        buildGeomInfo.ppGeometries = nullptr;
-        buildGeomInfo.scratchData = {};
-        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildGeomInfo, maxPrimCounts, sizeInfos);
+        VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
+        buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;
+        buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
+                          VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+        buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        buildInfo.geometryCount = 1;
+        buildInfo.pGeometries = &asGeom;
+        buildInfo.ppGeometries = nullptr;
+        buildInfo.scratchData = dummyAddr;
 
+        VkAccelerationStructureBuildSizesInfoKHR outSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
 
-
-
-        VkBuffer asBuffer;
-        VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        bufferInfo.size = ;
-        bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Device, &bufferInfo, m_Alloc, &asBuffer);
-
-        //TODO: allocate buffer memory
-
-        VkAccelerationStructureCreateInfoKHR asInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
-        asInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        asInfo.buffer = asBuffer;
-        asInfo.deviceAddress = ;
-        asInfo.offset = 0;
-        asInfo.size = ;
-        asInfo.createFlags = 0;
-
-        VkAccelerationStructureKHR accelerationStructure;
-        vkCreateAccelerationStructureKHR(m_Device, &asInfo, m_Alloc, &accelerationStructure);
-
-
-
-        vkCmdBuildAccelerationStructuresKHR(m_Cmd, );
+        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
+                                                &outSizesInfo);
+        ASPrebuildInfo result{};
+        result.scratchBufferSizeInBytes = outSizesInfo.buildScratchSize;
+        result.MaxASSizeInBytes = outSizesInfo.accelerationStructureSize;
+        return result;
     }
-}// namespace RHINO::APIVulkan
+
+    ASPrebuildInfo VulkanBackend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
+        ASPrebuildInfo result{};
+        return result;
+    }
+} // namespace RHINO::APIVulkan
 
 #endif// ENABLE_API_VULKAN
