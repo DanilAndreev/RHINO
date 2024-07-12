@@ -541,7 +541,7 @@ namespace RHINO::APIVulkan {
         vkQueueSubmit(m_DefaultQueue, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
-    uint64_t VulkanBackend::GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept {
+    uint64_t VulkanBackend::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
         const auto* vulkanSemaphore = static_cast<const VulkanSemaphore*>(semaphore);
         uint64_t result;
         vkGetSemaphoreCounterValue(m_Device, vulkanSemaphore->semaphore, &result);

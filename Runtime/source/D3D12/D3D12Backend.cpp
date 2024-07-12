@@ -489,7 +489,7 @@ namespace RHINO::APID3D12 {
         m_DefaultQueue->Wait(d3d12Semaphore->fence, value);
     }
 
-    uint64_t D3D12Backend::GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept {
+    uint64_t D3D12Backend::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
         const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
         return d3d12Semaphore->fence->GetCompletedValue();
     }

@@ -224,15 +224,33 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
-    void DebugLayer::SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
-                                       const uint64_t* values) noexcept {
-        m_Wrapped->SubmitCommandList(cmd, waitSemaphoresCount, waitSemaphores, values);
+    void DebugLayer::SubmitCommandList(CommandList* cmd) noexcept {
+        m_Wrapped->SubmitCommandList(cmd);
     }
 
-    void DebugLayer::QueueSignal(Semaphore* semaphore, uint64_t value) noexcept { m_Wrapped->QueueSignal(semaphore, value); }
+    void DebugLayer::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
+        m_Wrapped->ReleaseSyncSemaphore(semaphore);
+    }
 
-    bool DebugLayer::WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
-        bool result = m_Wrapped->WaitForSemaphore(semaphore, value, timeout);
+    void DebugLayer::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
+        m_Wrapped->SignalFromQueue(semaphore, value);
+    }
+
+    void DebugLayer::SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept {
+        m_Wrapped->SignalFromHost(semaphore, value);
+    }
+
+    bool DebugLayer::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
+        auto result = m_Wrapped->SemaphoreWaitFromHost(semaphore, value, timeout);
+        return result;
+    }
+
+    void DebugLayer::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
+        m_Wrapped->SemaphoreWaitFromQueue(semaphore, value);
+    }
+
+    uint64_t DebugLayer::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
+        auto result = m_Wrapped->SemaphoreWaitFromQueue(semaphore);
         return result;
     }
 
