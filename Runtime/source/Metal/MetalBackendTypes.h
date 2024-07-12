@@ -28,6 +28,16 @@ namespace RHINO::APIMetal {
         // Just vector with all root signature ranges stored. Read by space from  spaceDescs.
         std::vector<DescriptorRangeDesc> rangeDescsStorage{};
     };
+
+    class MetalBLAS : public BLAS {
+    public:
+        id<MTLAccelerationStructure> accelerationStructure = nil;
+    };
+
+    class MetalTLAS : public TLAS {
+    public:
+        id<MTLAccelerationStructure> accelerationStructure = nil;
+    };
 }// namespace RHINO::APIMetal
 
 #endif// ENABLE_API_METAL

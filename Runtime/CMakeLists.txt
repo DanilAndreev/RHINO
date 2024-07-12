@@ -36,10 +36,12 @@ set(HeaderFiles
 
 set(ObjCHeaderFiles
         source/Metal/MetalBackend.h
+        source/Metal/MetalConverters.h
         source/Metal/AllocateMetalBackend.h
         source/Metal/MetalBackendTypes.h
         source/Metal/MetalDescriptorHeap.h
-        source/Metal/MetalCommandList.h)
+        source/Metal/MetalCommandList.h
+)
 set(ObjCSourceFiles
         source/Metal/MetalBackend.mm
         source/Metal/MetalDescriptorHeap.mm

@@ -41,11 +41,13 @@ namespace RHINO::APIMetal {
         DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept final;
         void ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept final;
         CommandList* AllocateCommandList(const char* name) noexcept final;
-        void ReleaseCommandList(CommandList* commandList) noexcept final;
+        void ReleaseCommandList(CommandList* cmd) noexcept final;
 
     public:
         // JOB SUBMISSION
         virtual void SubmitCommandList(CommandList* cmd) noexcept final;
+        ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept final;
+        ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept final;
     };
 
     RHINOInterface* AllocateMetalBackend() noexcept {

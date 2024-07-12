@@ -4,6 +4,7 @@
 #import "MetalBackendTypes.h"
 #include "MetalCommandList.h"
 #include "MetalDescriptorHeap.h"
+#include "MetalConverters.h"
 
 #import <SCARTools/SCARComputePSOArchiveView.h>
 
@@ -109,13 +110,20 @@ namespace RHINO::APIMetal {
 
     CommandList* MetalBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new MetalCommandList{};
-        result->cmd = [m_DefaultQueue commandBuffer];
+        result->Initialize(m_Device, m_DefaultQueue);
         return result;
     }
 
-    void MetalBackend::ReleaseCommandList(CommandList* commandList) noexcept { delete commandList; }
+    void MetalBackend::ReleaseCommandList(CommandList* cmd) noexcept {
+        auto* metalCmd = static_cast<MetalCommandList*>(cmd);
+        metalCmd->Release();
+        delete metalCmd;
+    }
 
-    void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {}
+    void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {
+        auto* metalCmd = static_cast<MetalCommandList*>(cmd);
+        metalCmd->SubmitToQueue();
+    }
 
     ComputePSO* MetalBackend::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
                                                     const char* debugName) noexcept {
@@ -134,6 +142,39 @@ namespace RHINO::APIMetal {
 
     void MetalBackend::UnmapMemory(Buffer* buffer) noexcept {
         // NOOP
+    }
+
+    ASPrebuildInfo MetalBackend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
+        auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+        triangleGeoDesc.vertexBuffer = nil;
+        triangleGeoDesc.vertexBufferOffset = 0;
+        triangleGeoDesc.vertexFormat = Convert::ToMTLMTLAttributeFormat(desc.vertexFormat);
+        triangleGeoDesc.vertexStride = desc.vertexStride;
+        triangleGeoDesc.indexBuffer = nil;
+        triangleGeoDesc.indexBufferOffset = 0;
+        triangleGeoDesc.indexType = Convert::ToMTLIndexType(desc.indexFormat);
+        triangleGeoDesc.triangleCount = desc.indexCount / 3;
+        triangleGeoDesc.primitiveDataBuffer = nil;
+        triangleGeoDesc.primitiveDataStride = 0;
+        triangleGeoDesc.primitiveDataElementSize = 0;
+        triangleGeoDesc.transformationMatrixBuffer = nil;
+        triangleGeoDesc.transformationMatrixBufferOffset = 0;
+
+        auto accelerationStructureDescriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
+        auto geometryDescriptors = [NSMutableArray array];
+        [geometryDescriptors addObject:triangleGeoDesc];
+
+        accelerationStructureDescriptor.geometryDescriptors = geometryDescriptors;
+        MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
+
+        ASPrebuildInfo result{};
+        result.MaxASSizeInBytes = sizes.accelerationStructureSize;
+        result.MaxASSizeInBytes = sizes.buildScratchBufferSize;
+        return result;
+    }
+
+    ASPrebuildInfo MetalBackend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
+
     }
 } // namespace RHINO::APIMetal
 
