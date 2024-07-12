@@ -38,6 +38,11 @@ namespace RHINO::APIMetal {
     public:
         id<MTLAccelerationStructure> accelerationStructure = nil;
     };
+
+    class MetalSemaphore : public Semaphore {
+    public:
+        id<MTLSharedEvent> event;
+    };
 }// namespace RHINO::APIMetal
 
 #endif// ENABLE_API_METAL

@@ -4,10 +4,11 @@
 
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
+#include "RHINOInterfaceImplBase.h"
 
 namespace RHINO::APIMetal {
     class MetalTexture2D;
-    class MetalBackend : public RHINOInterface {
+    class MetalBackend : public RHINOInterfaceImplBase {
     private:
         id<MTLDevice> m_Device = nil;
         id<MTLCommandQueue> m_DefaultQueue;
@@ -22,7 +23,7 @@ namespace RHINO::APIMetal {
         void Release() noexcept final;
 
     public:
-        RTPSO* CompileRTPSO(const RTPSODesc& desc) noexcept final;
+        RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
         ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
@@ -45,9 +46,15 @@ namespace RHINO::APIMetal {
 
     public:
         // JOB SUBMISSION
-        virtual void SubmitCommandList(CommandList* cmd) noexcept final;
+        void SubmitCommandList(CommandList* cmd, size_t waitSemaphoresCount, const Semaphore* const* waitSemaphores,
+                               const uint64_t* values) noexcept final;
         ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept final;
         ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept final;
+
+    public:
+        Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept override;
+        void QueueSignal(Semaphore* semaphore, uint64_t value) noexcept override;
+        bool WaitForSemaphore(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept override;
     };
 
     RHINOInterface* AllocateMetalBackend() noexcept {
