@@ -7,9 +7,7 @@
 namespace RHINO::APIVulkan {
     class VulkanCommandList : public CommandList {
     public:
-        void Initialize(const char* name, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool pool,
-                        VkAllocationCallbacks* alloc) noexcept;
-        void Release() noexcept;
+        void Initialize(const char* name, VulkanObjectContext context, VkCommandPool pool) noexcept;
         void SubmitToQueue(VkQueue queue) noexcept;
 
     public:
@@ -22,13 +20,15 @@ namespace RHINO::APIVulkan {
         void ResourceBarrier(const ResourceBarrierDesc& desc) noexcept final;
 
     public:
+        void Release() noexcept final;
+
+    public:
         void BuildRTPSO(RTPSO* pso) noexcept final;
         BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
         TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
 
     private:
-        VkAllocationCallbacks* m_Alloc = nullptr;
-        VkDevice m_Device = VK_NULL_HANDLE;
+        VulkanObjectContext m_Context = {};
         VkCommandBuffer m_Cmd = VK_NULL_HANDLE;
         VkCommandPool m_Pool = VK_NULL_HANDLE;
 

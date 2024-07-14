@@ -5,28 +5,31 @@
 #include "VulkanBackendTypes.h"
 
 namespace RHINO::APIVulkan {
-    class VulkanDescriptorHeap final : public DescriptorHeap {
+    class VulkanDescriptorHeap : public DescriptorHeap {
     public:
         static constexpr VkDescriptorType CDBSRVUAVTypes[6] = {
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,       VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,  VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+                VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
         static constexpr VkDescriptorType CBVTypes[1] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
-        static constexpr VkDescriptorType SRVTypes[3] = {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-                                                                   VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                                                                   VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
-        static constexpr VkDescriptorType UAVTypes[3] = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                                                   VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-                                                                   VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+        static constexpr VkDescriptorType SRVTypes[3] = {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                                                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+        static constexpr VkDescriptorType UAVTypes[3] = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+                                                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+
+    public:
+        void Initialize() noexcept;
 
     public:
         void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept final;
         void WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept final;
         void WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept final;
-        void WriteSRV(const WriteTexture2DSRVDesc& desc) noexcept final;
-        void WriteUAV(const WriteTexture2DSRVDesc& desc) noexcept final;
-        void WriteSRV(const WriteTexture3DSRVDesc& desc) noexcept final;
-        void WriteUAV(const WriteTexture3DSRVDesc& desc) noexcept final;
+        void WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept final;
+        void WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept final;
+        void WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept final;
+        void WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept final;
+
+    public:
+        void Release() noexcept final;
 
     public:
         uint32_t heapSize = 0;
@@ -37,8 +40,7 @@ namespace RHINO::APIVulkan {
         size_t descriptorHandleIncrementSize = 0;
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{};
-
-        VkDevice device = VK_NULL_HANDLE;
+        VulkanObjectContext m_Context = {};
     };
 
 } // namespace RHINO::APIVulkan

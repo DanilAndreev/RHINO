@@ -14,68 +14,6 @@
 namespace RHINO::APID3D12 {
     using namespace std::string_literals;
 
-    static D3D12_HEAP_TYPE ToD3D12HeapType(ResourceHeapType value) noexcept {
-        switch (value) {
-            case ResourceHeapType::Default:
-                return D3D12_HEAP_TYPE_DEFAULT;
-            case ResourceHeapType::Upload:
-                return D3D12_HEAP_TYPE_UPLOAD;
-            case ResourceHeapType::Readback:
-                return D3D12_HEAP_TYPE_READBACK;
-            default:
-                assert(0);
-                return D3D12_HEAP_TYPE_DEFAULT;
-        }
-    }
-
-    static D3D12_RESOURCE_FLAGS ToD3D12ResourceFlags(ResourceUsage value) noexcept {
-        D3D12_RESOURCE_FLAGS nativeFlags = D3D12_RESOURCE_FLAG_NONE;
-        if (bool(value & ResourceUsage::UnorderedAccess))
-            nativeFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        return nativeFlags;
-    }
-
-    static D3D12_DESCRIPTOR_HEAP_TYPE ToD3D12DescriptorHeapType(DescriptorHeapType type) noexcept {
-        switch (type) {
-            case DescriptorHeapType::SRV_CBV_UAV:
-                return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-            case DescriptorHeapType::RTV:
-                return D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-            case DescriptorHeapType::DSV:
-                return D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-            case DescriptorHeapType::Sampler:
-                return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-            default:
-                assert(0);
-                return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        }
-    }
-
-    static DXGI_FORMAT ToDXGIFormat(TextureFormat format) noexcept {
-        switch (format) {
-            case TextureFormat::R32G32B32A32_FLOAT:
-                return DXGI_FORMAT_R32G32B32A32_FLOAT;
-            case TextureFormat::R32G32B32A32_UINT:
-                return DXGI_FORMAT_R32G32B32A32_UINT;
-            case TextureFormat::R32G32B32A32_SINT:
-                return DXGI_FORMAT_R32G32B32A32_SINT;
-            case TextureFormat::R32G32B32_FLOAT:
-                return DXGI_FORMAT_R32G32B32_FLOAT;
-            case TextureFormat::R32G32B32_UINT:
-                return DXGI_FORMAT_R32G32B32_UINT;
-            case TextureFormat::R32G32B32_SINT:
-                return DXGI_FORMAT_R32G32B32_SINT;
-            case TextureFormat::R32_FLOAT:
-                return DXGI_FORMAT_R32_FLOAT;
-            case TextureFormat::R32_UINT:
-                return DXGI_FORMAT_R32_UINT;
-            case TextureFormat::R32_SINT:
-                return DXGI_FORMAT_R32_SINT;
-            default:
-                return DXGI_FORMAT_R32G32B32A32_FLOAT;
-        }
-    }
-
     D3D12Backend::D3D12Backend() noexcept : m_Device(nullptr) {}
 
     void D3D12Backend::Initialize() noexcept {
@@ -244,7 +182,7 @@ namespace RHINO::APID3D12 {
         }
 
         D3D12_HEAP_PROPERTIES heapProperties{};
-        heapProperties.Type = ToD3D12HeapType(heapType);
+        heapProperties.Type = Convert::ToD3D12HeapType(heapType);
         heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
@@ -260,7 +198,7 @@ namespace RHINO::APID3D12 {
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
         resourceDesc.Width = RHINO_CEIL_TO_MULTIPLE_OF(size, 256);
-        resourceDesc.Flags = ToD3D12ResourceFlags(usage);
+        resourceDesc.Flags = Convert::ToD3D12ResourceFlags(usage);
 
         RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                      result->currentState, nullptr, IID_PPV_ARGS(&result->buffer)));
@@ -301,7 +239,7 @@ namespace RHINO::APID3D12 {
         resourceDesc.Alignment = 0;
         resourceDesc.DepthOrArraySize = 1;
         resourceDesc.MipLevels = mips;
-        resourceDesc.Format = ToDXGIFormat(format);
+        resourceDesc.Format = Convert::ToDXGIFormat(format);
         resourceDesc.SampleDesc.Count = 1;
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -309,7 +247,7 @@ namespace RHINO::APID3D12 {
         resourceDesc.Width = dimensions.width;
         resourceDesc.Height = dimensions.height;
 
-        resourceDesc.Flags = ToD3D12ResourceFlags(usage);
+        resourceDesc.Flags = Convert::ToD3D12ResourceFlags(usage);
 
         RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                      D3D12_RESOURCE_STATE_COMMON, nullptr,
@@ -325,7 +263,7 @@ namespace RHINO::APID3D12 {
         auto* result = new D3D12DescriptorHeap{};
         result->device = m_Device;
 
-        D3D12_DESCRIPTOR_HEAP_TYPE nativeHeapType = ToD3D12DescriptorHeapType(heapType);
+        D3D12_DESCRIPTOR_HEAP_TYPE nativeHeapType = Convert::ToD3D12DescriptorHeapType(heapType);
         D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
         heapDesc.NumDescriptors = descriptorsCount;
         heapDesc.Type = nativeHeapType;

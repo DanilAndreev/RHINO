@@ -7,22 +7,21 @@
 #include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
-    void VulkanCommandList::Initialize(const char* name, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool pool,
-                                       VkAllocationCallbacks* alloc) noexcept {
-        m_Device = device;
-        m_Alloc = alloc;
+    void VulkanCommandList::Initialize(const char* name, VulkanObjectContext context,
+                                       VkCommandPool pool) noexcept {
+        m_Context = context;
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
         VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         props.pNext = &descriptorProps;
-        vkGetPhysicalDeviceProperties2(physicalDevice, &props);
+        vkGetPhysicalDeviceProperties2(m_Context.physicalDevice, &props);
         m_DescriptorProps = descriptorProps;
 
         VkCommandBufferAllocateInfo cmdAlloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
         cmdAlloc.commandPool = pool;
         cmdAlloc.commandBufferCount = 1;
         cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vkAllocateCommandBuffers(m_Device, &cmdAlloc, &m_Cmd);
+        vkAllocateCommandBuffers(m_Context.device, &cmdAlloc, &m_Cmd);
 
         VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -31,9 +30,10 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::Release() noexcept {
-        vkFreeCommandBuffers(m_Device, m_Pool, 1, &m_Cmd);
-        vkDestroyCommandPool(m_Device, m_Pool, m_Alloc);
+        vkFreeCommandBuffers(m_Context.device, m_Pool, 1, &m_Cmd);
+        vkDestroyCommandPool(m_Context.device, m_Pool, m_Context.allocator);
         // Command pool is managed by VulkanBackend instance and should be released by it.
+        delete this;
     }
 
     void VulkanCommandList::SubmitToQueue(VkQueue queue) noexcept {

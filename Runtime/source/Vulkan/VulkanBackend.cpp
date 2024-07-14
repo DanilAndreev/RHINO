@@ -292,14 +292,6 @@ namespace RHINO::APIVulkan {
         return result;
     }
 
-    void VulkanBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {
-        auto* vulkanComputePSO = static_cast<VulkanComputePSO*>(pso);
-        vkDestroyPipelineLayout(m_Device, vulkanComputePSO->layout, m_Alloc);
-        vkDestroyPipeline(m_Device, vulkanComputePSO->PSO, m_Alloc);
-        vkDestroyShaderModule(m_Device, vulkanComputePSO->shaderModule, m_Alloc);
-        delete vulkanComputePSO;
-    }
-
     Buffer* VulkanBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept {
         auto* result = new VulkanBuffer{};
         result->size = size;
@@ -343,14 +335,6 @@ namespace RHINO::APIVulkan {
         return result;
     }
 
-    void VulkanBackend::ReleaseBuffer(Buffer* buffer) noexcept {
-        if (!buffer) return;
-        auto* vulkanBuffer = static_cast<VulkanBuffer*>(buffer);
-        vkDestroyBuffer(m_Device, vulkanBuffer->buffer, m_Alloc);
-        vkFreeMemory(m_Device, vulkanBuffer->memory, m_Alloc);
-        delete vulkanBuffer;
-    }
-
     void* VulkanBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
         auto* vulkanBuffer = static_cast<VulkanBuffer*>(buffer);
         void* result;
@@ -366,9 +350,6 @@ namespace RHINO::APIVulkan {
     Texture2D* VulkanBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
                                               ResourceUsage usage, const char* name) noexcept {
         return nullptr;
-    }
-
-    void VulkanBackend::ReleaseTexture2D(Texture2D* texture) noexcept {
     }
 
     DescriptorHeap* VulkanBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept {
@@ -424,27 +405,10 @@ namespace RHINO::APIVulkan {
         return result;
     }
 
-    void VulkanBackend::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {
-        if (!heap) return;
-        auto* vulkanDescriptorHeap = static_cast<VulkanDescriptorHeap*>(heap);
-        vkUnmapMemory(m_Device, vulkanDescriptorHeap->memory);
-        vkDestroyBuffer(m_Device, vulkanDescriptorHeap->heap, m_Alloc);
-        vkFreeMemory(m_Device, vulkanDescriptorHeap->memory, m_Alloc);
-        delete heap;
-    }
-
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new VulkanCommandList{};
-        result->Initialize(name, m_PhysicalDevice, m_Device, m_DefaultQueueCMDPool, m_Alloc);
+        result->Initialize(name, m_PhysicalDevice, CreateVulkanObjectContext(), m_DefaultQueueCMDPool);
         return result;
-    }
-
-    void VulkanBackend::ReleaseCommandList(CommandList* commandList) noexcept {
-        if (!commandList)
-            return;
-        auto* vulkanCMD = static_cast<VulkanCommandList*>(commandList);
-        vulkanCMD->Release();
-        delete vulkanCMD;
     }
 
     void VulkanBackend::SubmitCommandList(CommandList* cmd) noexcept {
@@ -571,25 +535,35 @@ namespace RHINO::APIVulkan {
         uint32_t copyQueueIndex = ~0;
 
         for (size_t i = 0; i < queuesCount; ++i) {
-            if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 3 && graphicsQueueIndex == ~0 && computeQueueIndex == ~0 && copyQueueIndex == ~0) {
+            if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) &&
+                queues[i].queueCount >= 3 && graphicsQueueIndex == ~0 && computeQueueIndex == ~0 && copyQueueIndex == ~0) {
                 graphicsQueueIndex = i;
                 computeQueueIndex = i;
                 copyQueueIndex = i;
                 break;
-            } else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT) && queues[i].queueCount >= 2 && graphicsQueueIndex == ~0 && computeQueueIndex == ~0) {
+            }
+            else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT) && queues[i].queueCount >= 2 &&
+                     graphicsQueueIndex == ~0 && computeQueueIndex == ~0) {
                 graphicsQueueIndex = i;
                 computeQueueIndex = i;
-            } else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 && computeQueueIndex == ~0 && copyQueueIndex == ~0) {
+            }
+            else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 &&
+                     computeQueueIndex == ~0 && copyQueueIndex == ~0) {
                 computeQueueIndex = i;
                 copyQueueIndex = i;
-            } else if (queues[i].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 && graphicsQueueIndex == ~0 && copyQueueIndex == ~0) {
+            }
+            else if (queues[i].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 &&
+                     graphicsQueueIndex == ~0 && copyQueueIndex == ~0) {
                 graphicsQueueIndex = i;
                 copyQueueIndex = i;
-            } else if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            }
+            else if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 graphicsQueueIndex = i;
-            } else if (queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            }
+            else if (queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
                 computeQueueIndex = i;
-            } else if (queues[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+            }
+            else if (queues[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
                 copyQueueIndex = i;
             }
         }
@@ -601,7 +575,8 @@ namespace RHINO::APIVulkan {
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             queueInfos[0].pQueuePriorities = priorities;
             *infosCount = 1;
-        } else if (graphicsQueueIndex == computeQueueIndex) {
+        }
+        else if (graphicsQueueIndex == computeQueueIndex) {
             *infosCount = 2;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -613,7 +588,8 @@ namespace RHINO::APIVulkan {
             queueInfos[1].queueCount = 1;
             queueInfos[1].queueFamilyIndex = copyQueueIndex;
             queueInfos[1].pQueuePriorities = priorities;
-        } else if (graphicsQueueIndex == copyQueueIndex) {
+        }
+        else if (graphicsQueueIndex == copyQueueIndex) {
             *infosCount = 2;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -625,7 +601,8 @@ namespace RHINO::APIVulkan {
             queueInfos[1].queueCount = 1;
             queueInfos[1].queueFamilyIndex = computeQueueIndex;
             queueInfos[1].pQueuePriorities = priorities;
-        } else if (computeQueueIndex == copyQueueIndex) {
+        }
+        else if (computeQueueIndex == copyQueueIndex) {
             *infosCount = 2;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -637,7 +614,8 @@ namespace RHINO::APIVulkan {
             queueInfos[1].queueCount = 1;
             queueInfos[1].queueFamilyIndex = graphicsQueueIndex;
             queueInfos[1].pQueuePriorities = priorities;
-        } else {
+        }
+        else {
             *infosCount = 3;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -655,6 +633,14 @@ namespace RHINO::APIVulkan {
             queueInfos[2].queueFamilyIndex = computeQueueIndex;
             queueInfos[2].pQueuePriorities = priorities;
         }
+    }
+
+    VulkanObjectContext VulkanBackend::CreateVulkanObjectContext() const noexcept {
+        VulkanObjectContext result{};
+        result.physicalDevice = m_PhysicalDevice;
+        result.device = m_Device;
+        result.allocator = m_Alloc;
+        return result;
     }
 
     ASPrebuildInfo VulkanBackend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {

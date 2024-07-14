@@ -62,6 +62,43 @@ namespace RHINO::APID3D12::Convert {
                 return D3D12_RESOURCE_STATE_COMMON;
         }
     }
+
+        static D3D12_HEAP_TYPE ToD3D12HeapType(ResourceHeapType value) noexcept {
+        switch (value) {
+            case ResourceHeapType::Default:
+                return D3D12_HEAP_TYPE_DEFAULT;
+            case ResourceHeapType::Upload:
+                return D3D12_HEAP_TYPE_UPLOAD;
+            case ResourceHeapType::Readback:
+                return D3D12_HEAP_TYPE_READBACK;
+            default:
+                assert(0);
+                return D3D12_HEAP_TYPE_DEFAULT;
+        }
+    }
+
+    inline D3D12_RESOURCE_FLAGS ToD3D12ResourceFlags(ResourceUsage value) noexcept {
+        D3D12_RESOURCE_FLAGS nativeFlags = D3D12_RESOURCE_FLAG_NONE;
+        if (bool(value & ResourceUsage::UnorderedAccess))
+            nativeFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        return nativeFlags;
+    }
+
+    inline D3D12_DESCRIPTOR_HEAP_TYPE ToD3D12DescriptorHeapType(DescriptorHeapType type) noexcept {
+        switch (type) {
+            case DescriptorHeapType::SRV_CBV_UAV:
+                return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+            case DescriptorHeapType::RTV:
+                return D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+            case DescriptorHeapType::DSV:
+                return D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+            case DescriptorHeapType::Sampler:
+                return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+            default:
+                assert(0);
+                return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        }
+    }
 } // namespace RHINO::APID3D12::Convert
 
 #endif // ENABLE_API_D3D12
