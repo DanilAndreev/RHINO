@@ -73,11 +73,11 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
-    void DebugLayer::ReleaseRTPSO(RTPSO* pso) noexcept {
-        m_Wrapped->ReleaseRTPSO(pso);
-        delete static_cast<RTPSOMeta*>(m_ResourcesMeta[pso].meta);
-        m_ResourcesMeta.erase(pso);
-    }
+    // void DebugLayer::ReleaseRTPSO(RTPSO* pso) noexcept {
+    //     m_Wrapped->ReleaseRTPSO(pso);
+    //     delete static_cast<RTPSOMeta*>(m_ResourcesMeta[pso].meta);
+    //     m_ResourcesMeta.erase(pso);
+    // }
 
     ComputePSO* DebugLayer::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* result = m_Wrapped->CompileComputePSO(desc);
@@ -114,11 +114,11 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
-    void DebugLayer::ReleaseComputePSO(ComputePSO* pso) noexcept {
-        m_Wrapped->ReleaseComputePSO(pso);
-        delete static_cast<ComputePSOMeta*>(m_ResourcesMeta[pso].meta);
-        m_ResourcesMeta.erase(pso);
-    }
+    // void DebugLayer::ReleaseComputePSO(ComputePSO* pso) noexcept {
+    //     m_Wrapped->ReleaseComputePSO(pso);
+    //     delete static_cast<ComputePSOMeta*>(m_ResourcesMeta[pso].meta);
+    //     m_ResourcesMeta.erase(pso);
+    // }
 
     Buffer* DebugLayer::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept {
         switch (heapType) {
@@ -158,11 +158,12 @@ namespace RHINO::DebugLayer {
         m_Wrapped->UnmapMemory(buffer);
     }
 
-    void DebugLayer::ReleaseBuffer(Buffer* buffer) noexcept {
-        m_Wrapped->ReleaseBuffer(buffer);
-        delete static_cast<BufferMeta*>(m_ResourcesMeta[buffer].meta);
-        m_ResourcesMeta.erase(buffer);
-    }
+    // void DebugLayer::ReleaseBuffer(Buffer* buffer) noexcept {
+    //     m_Wrapped->ReleaseBuffer(buffer);
+    //     delete static_cast<BufferMeta*>(m_ResourcesMeta[buffer].meta);
+    //     m_ResourcesMeta.erase(buffer);
+    // }
+
     Texture2D* DebugLayer::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
                                            ResourceUsage usage, const char* name) noexcept {
         auto* result = m_Wrapped->CreateTexture2D(dimensions, mips, format, usage, name);
@@ -173,11 +174,11 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
-    void DebugLayer::ReleaseTexture2D(Texture2D* texture) noexcept {
-        m_Wrapped->ReleaseTexture2D(texture);
-        delete static_cast<Texture2DMeta*>(m_ResourcesMeta[texture].meta);
-        m_ResourcesMeta.erase(texture);
-    }
+    // void DebugLayer::ReleaseTexture2D(Texture2D* texture) noexcept {
+    //     m_Wrapped->ReleaseTexture2D(texture);
+    //     delete static_cast<Texture2DMeta*>(m_ResourcesMeta[texture].meta);
+    //     m_ResourcesMeta.erase(texture);
+    // }
 
     DescriptorHeap* DebugLayer::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept {
         auto* result = m_Wrapped->CreateDescriptorHeap(type, descriptorsCount, name);
@@ -188,11 +189,11 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
-    void DebugLayer::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {
-        m_Wrapped->ReleaseDescriptorHeap(heap);
-        delete static_cast<DescriptorHeapMeta*>(m_ResourcesMeta[heap].meta);
-        m_ResourcesMeta.erase(heap);
-    }
+    // void DebugLayer::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {
+    //     m_Wrapped->ReleaseDescriptorHeap(heap);
+    //     delete static_cast<DescriptorHeapMeta*>(m_ResourcesMeta[heap].meta);
+    //     m_ResourcesMeta.erase(heap);
+    // }
 
     CommandList* DebugLayer::AllocateCommandList(const char* name) noexcept {
         auto* result = m_Wrapped->AllocateCommandList(name);
@@ -203,11 +204,11 @@ namespace RHINO::DebugLayer {
         return result;
     }
 
-    void DebugLayer::ReleaseCommandList(CommandList* commandList) noexcept {
-        m_Wrapped->ReleaseCommandList(commandList);
-        delete static_cast<CommandListMeta*>(m_ResourcesMeta[commandList].meta);
-        m_ResourcesMeta.erase(commandList);
-    }
+    // void DebugLayer::ReleaseCommandList(CommandList* commandList) noexcept {
+    //     m_Wrapped->ReleaseCommandList(commandList);
+    //     delete static_cast<CommandListMeta*>(m_ResourcesMeta[commandList].meta);
+    //     m_ResourcesMeta.erase(commandList);
+    // }
 
     Semaphore* DebugLayer::CreateSyncSemaphore(uint64_t initialValue) noexcept {
         auto result = m_Wrapped->CreateSyncSemaphore(initialValue);
@@ -228,9 +229,9 @@ namespace RHINO::DebugLayer {
         m_Wrapped->SubmitCommandList(cmd);
     }
 
-    void DebugLayer::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
-        m_Wrapped->ReleaseSyncSemaphore(semaphore);
-    }
+    // void DebugLayer::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
+    //     m_Wrapped->ReleaseSyncSemaphore(semaphore);
+    // }
 
     void DebugLayer::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
         m_Wrapped->SignalFromQueue(semaphore, value);
