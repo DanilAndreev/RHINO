@@ -5,7 +5,8 @@
 #include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
-    void VulkanDescriptorHeap::Initialize(VulkanObjectContext context) noexcept {
+    void VulkanDescriptorHeap::Initialize(const char* name, DescriptorHeapType type, size_t descriptorsCount,
+                                          VulkanObjectContext context) noexcept {
         m_Context = context;
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
@@ -13,14 +14,14 @@ namespace RHINO::APIVulkan {
         props.pNext = &descriptorProps;
         vkGetPhysicalDeviceProperties2(m_Context.physicalDevice, &props);
 
-        result->descriptorProps = descriptorProps;
+        m_DescriptorProps = descriptorProps;
 
-        result->descriptorHandleIncrementSize = CalculateDescriptorHandleIncrementSize(type, descriptorProps);
+        m_DescriptorHandleIncrementSize = CalculateDescriptorHandleIncrementSize(type, descriptorProps);
 
         // TODO: 256 is just a magic number for RTX 3080TI.
         //  For some reason descriptorProps.descriptorBufferOffsetAlignment != 256.
         //  Research valid parameter for this one.
-        result->heapSize = RHINO_CEIL_TO_MULTIPLE_OF(result->descriptorHandleIncrementSize * descriptorsCount, 256);
+        m_HeapSize = RHINO_CEIL_TO_MULTIPLE_OF(m_DescriptorHandleIncrementSize * descriptorsCount, 256);
 
         VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         heapCreateInfo.flags = 0;
@@ -28,32 +29,36 @@ namespace RHINO::APIVulkan {
         if (type == DescriptorHeapType::Sampler) {
             heapCreateInfo.usage |= VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT;
         }
-        heapCreateInfo.size = result->heapSize;
+        heapCreateInfo.size = m_HeapSize;
         heapCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Device, &heapCreateInfo, m_Alloc, &result->heap);
+        vkCreateBuffer(m_Context.device, &heapCreateInfo, m_Context.allocator, &m_Heap);
 
         // Create the memory backing up the buffer handle
         VkMemoryRequirements memReqs;
-        vkGetBufferMemoryRequirements(m_Device, result->heap, &memReqs);
+        vkGetBufferMemoryRequirements(m_Context.device, m_Heap, &memReqs);
         VkPhysicalDeviceMemoryProperties memoryProps;
-        vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProps);
+        vkGetPhysicalDeviceMemoryProperties(m_Context.physicalDevice, &memoryProps);
 
         VkMemoryAllocateFlagsInfo allocateFlagsInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
         allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
+        constexpr auto memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         VkMemoryAllocateInfo alloc{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
         alloc.pNext = &allocateFlagsInfo;
         alloc.allocationSize = memReqs.size;
-        alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        vkAllocateMemory(m_Device, &alloc, m_Alloc, &result->memory);
+        alloc.memoryTypeIndex = SelectMemoryType(0xffffff, memoryFlags, m_Context);
+        vkAllocateMemory(m_Context.device, &alloc, m_Context.allocator, &m_Memory);
 
-        vkBindBufferMemory(m_Device, result->heap, result->memory, 0);
+        vkBindBufferMemory(m_Context.device, m_Heap, m_Memory, 0);
 
         VkBufferDeviceAddressInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
-        bufferInfo.buffer = result->heap;
-        result->heapGPUStartHandle = vkGetBufferDeviceAddress(m_Device, &bufferInfo);
+        bufferInfo.buffer = m_Heap;
+        m_HeapGPUStartHandle = vkGetBufferDeviceAddress(m_Context.device, &bufferInfo);
 
-        vkMapMemory(m_Device, result->memory, 0, VK_WHOLE_SIZE, 0, &result->mapped);
+        vkMapMemory(m_Context.device, m_Memory, 0, VK_WHOLE_SIZE, 0, &m_Mapped);
+    }
+    VkDeviceAddress VulkanDescriptorHeap::GetHeapGPUStartHandle() noexcept {
+        return m_HeapGPUStartHandle;
     }
 
     void VulkanDescriptorHeap::WriteSRV(const RHINO::WriteBufferDescriptorDesc& desc) noexcept {
@@ -68,8 +73,9 @@ namespace RHINO::APIVulkan {
         info.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         info.data.pStorageBuffer = &bufferInfo;
 
-        uint8_t* mem = static_cast<uint8_t*>(mapped);
-        EXT::vkGetDescriptorEXT(device, &info, descriptorProps.storageBufferDescriptorSize, mem + desc.offsetInHeap * descriptorHandleIncrementSize);
+        uint8_t* mem = static_cast<uint8_t*>(m_Mapped);
+        EXT::vkGetDescriptorEXT(m_Context.device, &info, m_DescriptorProps.storageBufferDescriptorSize,
+                                mem + desc.offsetInHeap * m_DescriptorHandleIncrementSize);
     }
 
     void VulkanDescriptorHeap::WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept {
@@ -84,8 +90,9 @@ namespace RHINO::APIVulkan {
         info.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         info.data.pStorageBuffer = &bufferInfo;
 
-        uint8_t* mem = static_cast<uint8_t*>(mapped);
-        EXT::vkGetDescriptorEXT(device, &info, descriptorProps.storageBufferDescriptorSize, mem + desc.offsetInHeap * descriptorHandleIncrementSize);
+        uint8_t* mem = static_cast<uint8_t*>(m_Mapped);
+        EXT::vkGetDescriptorEXT(m_Context.device, &info, m_DescriptorProps.storageBufferDescriptorSize,
+                                mem + desc.offsetInHeap * m_DescriptorHandleIncrementSize);
     }
 
     void VulkanDescriptorHeap::WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept {
@@ -100,8 +107,9 @@ namespace RHINO::APIVulkan {
         info.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         info.data.pUniformBuffer = &bufferInfo;
 
-        uint8_t* mem = static_cast<uint8_t*>(mapped);
-        EXT::vkGetDescriptorEXT(device, &info, descriptorProps.uniformBufferDescriptorSize, mem + desc.offsetInHeap * descriptorHandleIncrementSize);
+        uint8_t* mem = static_cast<uint8_t*>(m_Mapped);
+        EXT::vkGetDescriptorEXT(m_Context.device, &info, m_DescriptorProps.uniformBufferDescriptorSize,
+                                mem + desc.offsetInHeap * m_DescriptorHandleIncrementSize);
     }
 
     void VulkanDescriptorHeap::WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept {
@@ -116,8 +124,9 @@ namespace RHINO::APIVulkan {
         info.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         info.data.pSampledImage = &textureInfo;
 
-        uint8_t* mem = static_cast<uint8_t*>(mapped);
-        EXT::vkGetDescriptorEXT(device, &info, descriptorProps.sampledImageDescriptorSize, mem + desc.offsetInHeap * descriptorHandleIncrementSize);
+        uint8_t* mem = static_cast<uint8_t*>(m_Mapped);
+        EXT::vkGetDescriptorEXT(m_Context.device, &info, m_DescriptorProps.sampledImageDescriptorSize,
+                                mem + desc.offsetInHeap * m_DescriptorHandleIncrementSize);
     }
 
     void VulkanDescriptorHeap::WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept {
@@ -132,8 +141,9 @@ namespace RHINO::APIVulkan {
         info.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         info.data.pStorageImage = &textureInfo;
 
-        uint8_t* mem = static_cast<uint8_t*>(mapped);
-        EXT::vkGetDescriptorEXT(device, &info, descriptorProps.storageImageDescriptorSize, mem + desc.offsetInHeap * descriptorHandleIncrementSize);
+        uint8_t* mem = static_cast<uint8_t*>(m_Mapped);
+        EXT::vkGetDescriptorEXT(m_Context.device, &info, m_DescriptorProps.storageImageDescriptorSize,
+                                mem + desc.offsetInHeap * m_DescriptorHandleIncrementSize);
     }
 
     void VulkanDescriptorHeap::WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept {
@@ -145,9 +155,9 @@ namespace RHINO::APIVulkan {
     }
 
     inline void VulkanDescriptorHeap::Release() noexcept {
-        vkUnmapMemory(m_Context.device, this->memory);
-        vkDestroyBuffer(m_Context.device, this->heap, m_Context.allocator);
-        vkFreeMemory(m_Context.device, this->memory, m_Context.allocator);
+        vkUnmapMemory(m_Context.device, this->m_Memory);
+        vkDestroyBuffer(m_Context.device, this->m_Heap, m_Context.allocator);
+        vkFreeMemory(m_Context.device, this->m_Memory, m_Context.allocator);
         delete this;
     }
 }// namespace RHINO::APIVulkan

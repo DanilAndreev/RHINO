@@ -46,7 +46,6 @@ namespace RHINO::APIVulkan {
         uint64_t GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept final;
 
     private:
-        uint32_t SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) noexcept;
         void SelectQueues(VkDeviceQueueCreateInfo queueInfos[3], uint32_t* infosCount) noexcept;
         VulkanObjectContext CreateVulkanObjectContext() const noexcept;
     private:

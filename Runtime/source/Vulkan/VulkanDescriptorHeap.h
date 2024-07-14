@@ -17,7 +17,8 @@ namespace RHINO::APIVulkan {
                                                          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
 
     public:
-        void Initialize() noexcept;
+        void Initialize(const char* name, DescriptorHeapType type, size_t descriptorsCount, VulkanObjectContext context) noexcept;
+        VkDeviceAddress GetHeapGPUStartHandle() noexcept;
 
     public:
         void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept final;
@@ -31,15 +32,15 @@ namespace RHINO::APIVulkan {
     public:
         void Release() noexcept final;
 
-    public:
-        uint32_t heapSize = 0;
-        VkBuffer heap = VK_NULL_HANDLE;
-        VkDeviceMemory memory = VK_NULL_HANDLE;
-        void* mapped = nullptr;
-        VkDeviceAddress heapGPUStartHandle = 0;
-        size_t descriptorHandleIncrementSize = 0;
+    private:
+        uint32_t m_HeapSize = 0;
+        VkBuffer m_Heap = VK_NULL_HANDLE;
+        VkDeviceMemory m_Memory = VK_NULL_HANDLE;
+        void* m_Mapped = nullptr;
+        VkDeviceAddress m_HeapGPUStartHandle = 0;
+        size_t m_DescriptorHandleIncrementSize = 0;
 
-        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{};
+        VkPhysicalDeviceDescriptorBufferPropertiesEXT m_DescriptorProps{};
         VulkanObjectContext m_Context = {};
     };
 

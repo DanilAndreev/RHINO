@@ -168,9 +168,6 @@ namespace RHINO::APIVulkan {
         return nullptr;
     }
 
-    void VulkanBackend::ReleaseRTPSO(RTPSO* pso) noexcept {
-    }
-
     ComputePSO* VulkanBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* result = new VulkanComputePSO{};
 
@@ -312,16 +309,18 @@ namespace RHINO::APIVulkan {
         VkMemoryAllocateFlagsInfo allocateFlagsInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
         allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
+        auto objectContext = CreateVulkanObjectContext();
+
         VkMemoryAllocateInfo alloc{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
         alloc.pNext = &allocateFlagsInfo;
         alloc.allocationSize = memReqs.size;
         switch (heapType) {
             case ResourceHeapType::Default:
-                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, objectContext);
                 break;
             case ResourceHeapType::Upload:
             case ResourceHeapType::Readback:
-                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, objectContext);
                 break;
         }
         vkAllocateMemory(m_Device, &alloc, m_Alloc, &result->memory);
@@ -354,60 +353,13 @@ namespace RHINO::APIVulkan {
 
     DescriptorHeap* VulkanBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept {
         auto* result = new VulkanDescriptorHeap{};
-        result->device = m_Device;
-
-        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
-        VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        props.pNext = &descriptorProps;
-        vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &props);
-
-        result->descriptorProps = descriptorProps;
-
-        result->descriptorHandleIncrementSize = CalculateDescriptorHandleIncrementSize(type, descriptorProps);
-
-        // TODO: 256 is just a magic number for RTX 3080TI.
-        //  For some reason descriptorProps.descriptorBufferOffsetAlignment != 256.
-        //  Research valid parameter for this one.
-        result->heapSize = RHINO_CEIL_TO_MULTIPLE_OF(result->descriptorHandleIncrementSize * descriptorsCount, 256);
-
-        VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        heapCreateInfo.flags = 0;
-        heapCreateInfo.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        if (type == DescriptorHeapType::Sampler) {
-            heapCreateInfo.usage |= VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT;
-        }
-        heapCreateInfo.size = result->heapSize;
-        heapCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Device, &heapCreateInfo, m_Alloc, &result->heap);
-
-        // Create the memory backing up the buffer handle
-        VkMemoryRequirements memReqs;
-        vkGetBufferMemoryRequirements(m_Device, result->heap, &memReqs);
-        VkPhysicalDeviceMemoryProperties memoryProps;
-        vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProps);
-
-        VkMemoryAllocateFlagsInfo allocateFlagsInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
-        allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
-
-        VkMemoryAllocateInfo alloc{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-        alloc.pNext = &allocateFlagsInfo;
-        alloc.allocationSize = memReqs.size;
-        alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        vkAllocateMemory(m_Device, &alloc, m_Alloc, &result->memory);
-
-        vkBindBufferMemory(m_Device, result->heap, result->memory, 0);
-
-        VkBufferDeviceAddressInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
-        bufferInfo.buffer = result->heap;
-        result->heapGPUStartHandle = vkGetBufferDeviceAddress(m_Device, &bufferInfo);
-
-        vkMapMemory(m_Device, result->memory, 0, VK_WHOLE_SIZE, 0, &result->mapped);
+        result->Initialize(name, type, descriptorsCount, CreateVulkanObjectContext());
         return result;
     }
 
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new VulkanCommandList{};
-        result->Initialize(name, m_PhysicalDevice, CreateVulkanObjectContext(), m_DefaultQueueCMDPool);
+        result->Initialize(name, CreateVulkanObjectContext(), m_DefaultQueueCMDPool);
         return result;
     }
 
@@ -444,12 +396,6 @@ namespace RHINO::APIVulkan {
         RHINO_VKS(vkCreateSemaphore(m_Device, &createInfo, m_Alloc, &result->semaphore));
 
         return result;
-    }
-
-    void VulkanBackend::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
-        auto* vulkanSemaphore = static_cast<VulkanSemaphore*>(semaphore);
-        vkDestroySemaphore(m_Device, vulkanSemaphore->semaphore, m_Alloc);
-        delete vulkanSemaphore;
     }
 
     void VulkanBackend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
@@ -510,17 +456,6 @@ namespace RHINO::APIVulkan {
         uint64_t result;
         vkGetSemaphoreCounterValue(m_Device, vulkanSemaphore->semaphore, &result);
         return result;
-    }
-
-    uint32_t VulkanBackend::SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) noexcept {
-        VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
-        vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &deviceMemoryProperties);
-        for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-        return std::numeric_limits<uint32_t>::max();
     }
 
     void VulkanBackend::SelectQueues(VkDeviceQueueCreateInfo queueInfos[3], uint32_t* infosCount) noexcept {

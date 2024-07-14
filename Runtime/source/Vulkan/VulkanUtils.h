@@ -4,6 +4,19 @@
 #include "VulkanDescriptorHeap.h"
 
 namespace RHINO::APIVulkan {
+    inline uint32_t SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, const VulkanObjectContext& context) noexcept {
+        VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
+        vkGetPhysicalDeviceMemoryProperties(context.physicalDevice, &deviceMemoryProperties);
+        for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++) {
+            if ((typeFilter & (1 << i)) && (deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                return i;
+            }
+        }
+        //TODO: handle this result and return error. This can be a valid issue on some low-end GPUs.
+        assert(0);
+        return std::numeric_limits<uint32_t>::max();
+    }
+
     inline size_t CalculateDescriptorHandleIncrementSize(DescriptorHeapType heapType, const VkPhysicalDeviceDescriptorBufferPropertiesEXT& descriptorProps) noexcept {
         size_t typesSize = 0;
         const VkDescriptorType* types;

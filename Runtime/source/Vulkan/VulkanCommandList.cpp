@@ -77,13 +77,13 @@ namespace RHINO::APIVulkan {
         VkDescriptorBufferBindingInfoEXT bindings[2] = {};
         auto* vulkanCBVSRVUAVHeap = static_cast<VulkanDescriptorHeap*>(CBVSRVUAVHeap);
         VkDescriptorBufferBindingInfoEXT bindingCBVSRVUAV{VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT};
-        bindingCBVSRVUAV.address = vulkanCBVSRVUAVHeap->heapGPUStartHandle;
+        bindingCBVSRVUAV.address = vulkanCBVSRVUAVHeap->GetHeapGPUStartHandle();
         bindingCBVSRVUAV.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
         bindings[0] = bindingCBVSRVUAV;
         if (SamplerHeap) {
             auto* vulkanSamplerHeap = static_cast<VulkanDescriptorHeap*>(SamplerHeap);
             VkDescriptorBufferBindingInfoEXT bindingSampler{VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT};
-            bindingSampler.address = vulkanSamplerHeap->heapGPUStartHandle;
+            bindingSampler.address = vulkanSamplerHeap->GetHeapGPUStartHandle();
             bindingSampler.usage = VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
             bindings[1] = bindingSampler;
         }
@@ -115,6 +115,8 @@ namespace RHINO::APIVulkan {
         VkImageMemoryBarrier imageBarrier{};
 
 
+
+
         switch (desc.type) {
             case ResourceBarrierType::UAV:
                  = desc.UAV.resource;
@@ -122,8 +124,8 @@ namespace RHINO::APIVulkan {
             case ResourceBarrierType::Transition:
                 barrier.Transition.pResource = desc.transition.resource;
             barrier.Transition.Subresource = 0;
-            barrier.Transition.StateBefore = Convert::ToD3D12ResourceState(desc.transition.stateBefore);
-            barrier.Transition.StateAfter = Convert::ToD3D12ResourceState(desc.transition.stateAfter);
+            barrier.Transition.StateBefore = Convert::ToVulkanResourceState(desc.transition.stateBefore);
+            barrier.Transition.StateAfter = Convert::ToVulkanResourceState(desc.transition.stateAfter);
             break;
         }
 
@@ -170,7 +172,7 @@ namespace RHINO::APIVulkan {
         buildInfo.ppGeometries = nullptr;
 
         VkAccelerationStructureBuildSizesInfoKHR outSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
+        vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
                                                 &outSizesInfo);
 
 
@@ -178,7 +180,7 @@ namespace RHINO::APIVulkan {
         bufferInfo.size = outSizesInfo.accelerationStructureSize;
         bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Device, &bufferInfo, m_Alloc, &result->buffer);
+        vkCreateBuffer(m_Context.device, &bufferInfo, m_Context.allocator, &result->buffer);
 
         // TODO: allocate buffer memory
 
@@ -190,7 +192,7 @@ namespace RHINO::APIVulkan {
         createInfo.size = outSizesInfo.accelerationStructureSize;
         createInfo.createFlags = 0;
 
-        vkCreateAccelerationStructureKHR(m_Device, &createInfo, m_Alloc, &result->accelerationStructure);
+        vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
 
         buildInfo.scratchData = {scratch->deviceAddress};
         buildInfo.dstAccelerationStructure = result->accelerationStructure;
@@ -233,14 +235,14 @@ namespace RHINO::APIVulkan {
         buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
 
         VkAccelerationStructureBuildSizesInfoKHR sizeInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr, &sizeInfo);
+        vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr, &sizeInfo);
 
         VkAccelerationStructureCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
         createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
         createInfo.size = sizeInfo.accelerationStructureSize;
         createInfo.createFlags = 0;
         createInfo.offset = 0;
-        vkCreateAccelerationStructureKHR(m_Device, &createInfo, m_Alloc, &result->accelerationStructure);
+        vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
 
         buildInfo.scratchData = {scratch->deviceAddress};
         buildInfo.dstAccelerationStructure = result->accelerationStructure;
