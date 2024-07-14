@@ -7,21 +7,22 @@
 #include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
-    void VulkanCommandList::Initialize(const char* name, VulkanObjectContext context,
-                                       VkCommandPool pool) noexcept {
-        m_Context = context;
+    void VulkanCommandList::Initialize(const char* name, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool pool,
+                                       VkAllocationCallbacks* alloc) noexcept {
+        m_Device = device;
+        m_Alloc = alloc;
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
         VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         props.pNext = &descriptorProps;
-        vkGetPhysicalDeviceProperties2(m_Context.physicalDevice, &props);
+        vkGetPhysicalDeviceProperties2(physicalDevice, &props);
         m_DescriptorProps = descriptorProps;
 
         VkCommandBufferAllocateInfo cmdAlloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
         cmdAlloc.commandPool = pool;
         cmdAlloc.commandBufferCount = 1;
         cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vkAllocateCommandBuffers(m_Context.device, &cmdAlloc, &m_Cmd);
+        vkAllocateCommandBuffers(m_Device, &cmdAlloc, &m_Cmd);
 
         VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -30,10 +31,9 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::Release() noexcept {
-        vkFreeCommandBuffers(m_Context.device, m_Pool, 1, &m_Cmd);
-        vkDestroyCommandPool(m_Context.device, m_Pool, m_Context.allocator);
+        vkFreeCommandBuffers(m_Device, m_Pool, 1, &m_Cmd);
+        vkDestroyCommandPool(m_Device, m_Pool, m_Alloc);
         // Command pool is managed by VulkanBackend instance and should be released by it.
-        delete this;
     }
 
     void VulkanCommandList::SubmitToQueue(VkQueue queue) noexcept {
@@ -77,13 +77,13 @@ namespace RHINO::APIVulkan {
         VkDescriptorBufferBindingInfoEXT bindings[2] = {};
         auto* vulkanCBVSRVUAVHeap = static_cast<VulkanDescriptorHeap*>(CBVSRVUAVHeap);
         VkDescriptorBufferBindingInfoEXT bindingCBVSRVUAV{VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT};
-        bindingCBVSRVUAV.address = vulkanCBVSRVUAVHeap->GetHeapGPUStartHandle();
+        bindingCBVSRVUAV.address = vulkanCBVSRVUAVHeap->heapGPUStartHandle;
         bindingCBVSRVUAV.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
         bindings[0] = bindingCBVSRVUAV;
         if (SamplerHeap) {
             auto* vulkanSamplerHeap = static_cast<VulkanDescriptorHeap*>(SamplerHeap);
             VkDescriptorBufferBindingInfoEXT bindingSampler{VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT};
-            bindingSampler.address = vulkanSamplerHeap->GetHeapGPUStartHandle();
+            bindingSampler.address = vulkanSamplerHeap->heapGPUStartHandle;
             bindingSampler.usage = VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
             bindings[1] = bindingSampler;
         }
@@ -111,29 +111,8 @@ namespace RHINO::APIVulkan {
         constexpr auto srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         constexpr auto dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
-        VkBufferMemoryBarrier bufferBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-        VkImageMemoryBarrier imageBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-
-
-        switch (desc.resource->GetResourceType()) {
-            case ResourceType::Buffer:
-                bufferBarrier.buffer = INTERPRET_AS<VulkanBuffer*>(desc.resource)->buffer;
-                bufferBarrier.offset = 0;
-                bufferBarrier.size = VK_WHOLE_SIZE;
-                bufferBarrier.srcAccessMask = Convert::ToVulkanResourceState(desc.transition.stateBefore);
-                bufferBarrier.dstAccessMask = Convert::ToVulkanResourceState(desc.transition.stateAfter);
-                bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                break;
-            case ResourceType::Texture2D:
-                break;
-            case ResourceType::Texture3D:
-                break;
-            case ResourceType::BLAS:
-            case ResourceType::TLAS:
-            default:
-                return;
-        }
+        VkBufferMemoryBarrier bufferBarrier{};
+        VkImageMemoryBarrier imageBarrier{};
 
 
         switch (desc.type) {
@@ -143,8 +122,8 @@ namespace RHINO::APIVulkan {
             case ResourceBarrierType::Transition:
                 barrier.Transition.pResource = desc.transition.resource;
             barrier.Transition.Subresource = 0;
-            barrier.Transition.StateBefore = Convert::ToVulkanResourceState(desc.transition.stateBefore);
-            barrier.Transition.StateAfter = Convert::ToVulkanResourceState(desc.transition.stateAfter);
+            barrier.Transition.StateBefore = Convert::ToD3D12ResourceState(desc.transition.stateBefore);
+            barrier.Transition.StateAfter = Convert::ToD3D12ResourceState(desc.transition.stateAfter);
             break;
         }
 
@@ -191,7 +170,7 @@ namespace RHINO::APIVulkan {
         buildInfo.ppGeometries = nullptr;
 
         VkAccelerationStructureBuildSizesInfoKHR outSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
+        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
                                                 &outSizesInfo);
 
 
@@ -199,7 +178,7 @@ namespace RHINO::APIVulkan {
         bufferInfo.size = outSizesInfo.accelerationStructureSize;
         bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Context.device, &bufferInfo, m_Context.allocator, &result->buffer);
+        vkCreateBuffer(m_Device, &bufferInfo, m_Alloc, &result->buffer);
 
         // TODO: allocate buffer memory
 
@@ -211,7 +190,7 @@ namespace RHINO::APIVulkan {
         createInfo.size = outSizesInfo.accelerationStructureSize;
         createInfo.createFlags = 0;
 
-        vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
+        vkCreateAccelerationStructureKHR(m_Device, &createInfo, m_Alloc, &result->accelerationStructure);
 
         buildInfo.scratchData = {scratch->deviceAddress};
         buildInfo.dstAccelerationStructure = result->accelerationStructure;
@@ -254,14 +233,14 @@ namespace RHINO::APIVulkan {
         buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
 
         VkAccelerationStructureBuildSizesInfoKHR sizeInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr, &sizeInfo);
+        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr, &sizeInfo);
 
         VkAccelerationStructureCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
         createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
         createInfo.size = sizeInfo.accelerationStructureSize;
         createInfo.createFlags = 0;
         createInfo.offset = 0;
-        vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
+        vkCreateAccelerationStructureKHR(m_Device, &createInfo, m_Alloc, &result->accelerationStructure);
 
         buildInfo.scratchData = {scratch->deviceAddress};
         buildInfo.dstAccelerationStructure = result->accelerationStructure;

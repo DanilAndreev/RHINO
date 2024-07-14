@@ -18,6 +18,7 @@ namespace RHINO::APID3D12 {
 
     public:
         void Initialize(const char* name, ID3D12Device5* device, D3D12GarbageCollector* garbageCollector) noexcept;
+        void Release() noexcept final;
         void SumbitToQueue(ID3D12CommandQueue* queue) noexcept;
 
     public:
@@ -28,9 +29,6 @@ namespace RHINO::APID3D12 {
         void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
         void Draw() noexcept final;
         void ResourceBarrier(const ResourceBarrierDesc& desc) noexcept final;
-
-    public:
-        void Release() noexcept final;
 
     public:
         void BuildRTPSO(RTPSO* pso) noexcept final;

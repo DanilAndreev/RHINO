@@ -93,15 +93,7 @@ namespace RHINO {
     };
 
     enum class ResourceState {
-        ConstantBuffer,
-        UnorderedAccess,
-        ShaderResource,
-        IndirectArgument,
-        CopyDest,
-        CopySource,
-        HostWrite,
-        HostRead,
-        RTAccelerationStructure,
+
     };
 
     // ---------------------------------------------------------------------------------- OBJECTS PRE-DECLARATION
@@ -114,13 +106,11 @@ namespace RHINO {
     };
 
     class Resource : public Object {
-    public:
         virtual ResourceType GetResourceType() = 0;
     };
 
     class Buffer : public Resource {};
     class Texture2D : public Resource {};
-    class Texture3D : public Resource {};
 
     class RTPSO : public Object {};
     class ComputePSO : public Object {};
@@ -255,14 +245,18 @@ namespace RHINO {
         const BLASInstanceDesc* blasInstances = nullptr;
     };
 
+    struct ResourceUAVBarrierDesc {
+        Resource* resource;
+    };
     struct ResourceTransitionBarrierDesc {
+        Resource* resource;
         ResourceState stateBefore;
         ResourceState stateAfter;
     };
     struct ResourceBarrierDesc {
         ResourceBarrierType type;
-        Resource* resource;
         union {
+            ResourceUAVBarrierDesc UAV;
             ResourceTransitionBarrierDesc transition;
         };
     };
