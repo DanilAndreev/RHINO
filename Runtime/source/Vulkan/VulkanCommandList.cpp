@@ -120,8 +120,10 @@ namespace RHINO::APIVulkan {
                 bufferBarrier.buffer = INTERPRET_AS<VulkanBuffer*>(desc.resource)->buffer;
                 bufferBarrier.offset = 0;
                 bufferBarrier.size = VK_WHOLE_SIZE;
-                bufferBarrier.srcAccessMask = VkAccessFlagBits::;
-                bufferBarrier.dstAccessMask = ;
+                bufferBarrier.srcAccessMask = Convert::ToVulkanResourceState(desc.transition.stateBefore);
+                bufferBarrier.dstAccessMask = Convert::ToVulkanResourceState(desc.transition.stateAfter);
+                bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 break;
             case ResourceType::Texture2D:
                 break;

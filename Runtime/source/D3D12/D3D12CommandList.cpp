@@ -95,7 +95,7 @@ namespace RHINO::APID3D12 {
                 break;
             case ResourceBarrierType::Transition:
                 barrier.Transition.pResource = resource;
-                barrier.Transition.Subresource = 0;
+                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
                 barrier.Transition.StateBefore = Convert::ToD3D12ResourceState(desc.transition.stateBefore);
                 barrier.Transition.StateAfter = Convert::ToD3D12ResourceState(desc.transition.stateAfter);
                 break;
