@@ -93,7 +93,15 @@ namespace RHINO {
     };
 
     enum class ResourceState {
-
+        ConstantBuffer,
+        UnorderedAccess,
+        ShaderResource,
+        IndirectArgument,
+        CopyDest,
+        CopySource,
+        HostWrite,
+        HostRead,
+        RTAccelerationStructure,
     };
 
     // ---------------------------------------------------------------------------------- OBJECTS PRE-DECLARATION

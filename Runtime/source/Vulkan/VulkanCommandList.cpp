@@ -111,10 +111,27 @@ namespace RHINO::APIVulkan {
         constexpr auto srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         constexpr auto dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
-        VkBufferMemoryBarrier bufferBarrier{};
-        VkImageMemoryBarrier imageBarrier{};
+        VkBufferMemoryBarrier bufferBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+        VkImageMemoryBarrier imageBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 
 
+        switch (desc.resource->GetResourceType()) {
+            case ResourceType::Buffer:
+                bufferBarrier.buffer = INTERPRET_AS<VulkanBuffer*>(desc.resource)->buffer;
+                bufferBarrier.offset = 0;
+                bufferBarrier.size = VK_WHOLE_SIZE;
+                bufferBarrier.srcAccessMask = VkAccessFlagBits::;
+                bufferBarrier.dstAccessMask = ;
+                break;
+            case ResourceType::Texture2D:
+                break;
+            case ResourceType::Texture3D:
+                break;
+            case ResourceType::BLAS:
+            case ResourceType::TLAS:
+            default:
+                return;
+        }
 
 
         switch (desc.type) {

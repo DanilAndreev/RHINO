@@ -57,6 +57,24 @@ namespace RHINO::APID3D12::Convert {
 
     inline D3D12_RESOURCE_STATES ToD3D12ResourceState(ResourceState state) noexcept {
         switch (state) {
+            case ResourceState::ConstantBuffer:
+                return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+            case ResourceState::UnorderedAccess:
+                return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+            case ResourceState::ShaderResource:
+                return D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+            case ResourceState::IndirectArgument:
+                return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+            case ResourceState::CopyDest:
+                return D3D12_RESOURCE_STATE_COPY_DEST;
+            case ResourceState::CopySource:
+                return D3D12_RESOURCE_STATE_COPY_SOURCE;
+            case ResourceState::HostWrite:
+                return D3D12_RESOURCE_STATE_COMMON;
+            case ResourceState::HostRead:
+                return D3D12_RESOURCE_STATE_COMMON;
+            case ResourceState::RTAccelerationStructure:
+                return D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
             default:
                 assert(0);
                 return D3D12_RESOURCE_STATE_COMMON;
