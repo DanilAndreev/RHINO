@@ -42,6 +42,26 @@ namespace RHINO::APID3D12::Convert {
                 return DXGI_FORMAT_R32G32B32A32_FLOAT;
         }
     }
+
+    inline D3D12_RESOURCE_BARRIER_TYPE ToD3D12ResourceBarrierType(ResourceBarrierType type) noexcept {
+        switch (type) {
+            case ResourceBarrierType::UAV:
+                return D3D12_RESOURCE_BARRIER_TYPE_UAV;
+            case ResourceBarrierType::Transition:
+                return D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            default:
+                assert(0);
+                return D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        }
+    }
+
+    inline D3D12_RESOURCE_STATES ToD3D12ResourceState(ResourceState state) noexcept {
+        switch (state) {
+            default:
+                assert(0);
+                return D3D12_RESOURCE_STATE_COMMON;
+        }
+    }
 } // namespace RHINO::APID3D12::Convert
 
 #endif // ENABLE_API_D3D12

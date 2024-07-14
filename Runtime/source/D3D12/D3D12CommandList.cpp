@@ -24,6 +24,7 @@ namespace RHINO::APID3D12 {
         m_Allocator->Release();
         m_Cmd->Release();
         m_Fence->Release();
+        delete this;
     }
 
     void D3D12CommandList::SumbitToQueue(ID3D12CommandQueue* queue) noexcept {
@@ -63,6 +64,24 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12CommandList::Draw() noexcept {}
+
+    void D3D12CommandList::ResourceBarrier(const ResourceBarrierDesc& desc) noexcept {
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type = Convert::ToD3D12ResourceBarrierType(desc.type);
+
+        switch (desc.type) {
+            case ResourceBarrierType::UAV:
+                barrier.UAV.pResource = desc.UAV.resource;
+                break;
+            case ResourceBarrierType::Transition:
+                barrier.Transition.pResource = desc.transition.resource;
+                barrier.Transition.Subresource = 0;
+                barrier.Transition.StateBefore = Convert::ToD3D12ResourceState(desc.transition.stateBefore);
+                barrier.Transition.StateAfter = Convert::ToD3D12ResourceState(desc.transition.stateAfter);
+                break;
+        }
+        m_Cmd->ResourceBarrier(1, &barrier);
+    }
 
     void D3D12CommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {\
         auto d3d12Src = static_cast<D3D12Buffer*>(src);

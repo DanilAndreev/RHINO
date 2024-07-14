@@ -118,6 +118,12 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
 
+    void D3D12DescriptorHeap::Release() noexcept {
+        CPUDescriptorHeap->Release();
+        GPUDescriptorHeap->Release();
+        delete this;
+    }
+
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::GetCPUHeapCPUHandle(UINT index) const noexcept {
         assert(CPUHeapCPUStartHandle.ptr != 0);
         D3D12_CPU_DESCRIPTOR_HANDLE result = CPUHeapCPUStartHandle;

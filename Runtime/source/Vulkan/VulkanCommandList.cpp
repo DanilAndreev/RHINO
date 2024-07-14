@@ -105,7 +105,34 @@ namespace RHINO::APIVulkan {
         vkCmdTraceRaysKHR(m_Cmd, &rayGenTable, &missTable, &higGroupTable, &callableTable, desc.width, desc.height, 1);
     }
 
-    void VulkanCommandList::Draw() noexcept {
+    void VulkanCommandList::Draw() noexcept {}
+
+    void VulkanCommandList::ResourceBarrier(const ResourceBarrierDesc& desc) noexcept {
+        constexpr auto srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        constexpr auto dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+        VkBufferMemoryBarrier bufferBarrier{};
+        VkImageMemoryBarrier imageBarrier{};
+
+
+        switch (desc.type) {
+            case ResourceBarrierType::UAV:
+                 = desc.UAV.resource;
+            break;
+            case ResourceBarrierType::Transition:
+                barrier.Transition.pResource = desc.transition.resource;
+            barrier.Transition.Subresource = 0;
+            barrier.Transition.StateBefore = Convert::ToD3D12ResourceState(desc.transition.stateBefore);
+            barrier.Transition.StateAfter = Convert::ToD3D12ResourceState(desc.transition.stateAfter);
+            break;
+        }
+
+        uint32_t bufferCount = 0;
+        VkBufferMemoryBarrier* pBufferBarrier = nullptr;
+        uint32_t imageCount = 0;
+        VkImageMemoryBarrier* pImageBarrier = nullptr;
+
+        vkCmdPipelineBarrier(m_Cmd, srcStage, dstStage, 0, 0, nullptr, bufferCount, pBufferBarrier, imageCount, pImageBarrier);
     }
 
     void VulkanCommandList::BuildRTPSO(RTPSO* pso) noexcept {

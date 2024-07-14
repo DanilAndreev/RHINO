@@ -24,29 +24,22 @@ namespace RHINO {
         // PSO MANAGEMENT
         virtual RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept = 0;
         virtual RTPSO* CreateSCARRTPSO(const void* scar, uint32_t sizeInBytes, const RTPSODesc& desc) noexcept = 0;
-        virtual void ReleaseRTPSO(RTPSO* pso) noexcept = 0;
         virtual ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept = 0;
         virtual ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes, const char* debugName) noexcept = 0;
-        virtual void ReleaseComputePSO(ComputePSO* pso) noexcept = 0;
 
     public:
         // RESOURCE MANAGEMENT
         virtual Buffer* CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride,
                                      const char* name) noexcept = 0;
-        virtual void ReleaseBuffer(Buffer* buffer) noexcept = 0;
         virtual void* MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept = 0;
         virtual void UnmapMemory(Buffer* buffer) noexcept = 0;
 
         virtual Texture2D* CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
                                            ResourceUsage usage, const char* name) noexcept = 0;
-        virtual void ReleaseTexture2D(Texture2D* texture) noexcept = 0;
-
         virtual DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept = 0;
-        virtual void ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept = 0;
 
         //TODO: add command list target queue setting;
         virtual CommandList* AllocateCommandList(const char* name) noexcept = 0;
-        virtual void ReleaseCommandList(CommandList* commandList) noexcept = 0;
 
     public:
         virtual ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept = 0;
@@ -59,7 +52,6 @@ namespace RHINO {
     public:
         // Sync API
         virtual Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept = 0;
-        virtual void ReleaseSyncSemaphore(Semaphore* semaphore) noexcept = 0;
 
         virtual void SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept = 0;
         virtual void SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept = 0;

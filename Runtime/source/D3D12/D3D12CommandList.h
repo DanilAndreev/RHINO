@@ -7,18 +7,18 @@
 
 namespace RHINO::APID3D12 {
     class D3D12CommandList : public CommandList {
-    public:
+    private:
         ID3D12Device5* m_Device = nullptr;
         ID3D12CommandAllocator* m_Allocator = nullptr;
         ID3D12GraphicsCommandList4* m_Cmd = nullptr;
-        ID3D12Fence* m_Fence;
+        ID3D12Fence* m_Fence = nullptr;
         size_t m_FenceNextVal = 0;
 
         D3D12GarbageCollector* m_GarbageCollector = nullptr;
 
     public:
         void Initialize(const char* name, ID3D12Device5* device, D3D12GarbageCollector* garbageCollector) noexcept;
-        void Release() noexcept;
+        void Release() noexcept final;
         void SumbitToQueue(ID3D12CommandQueue* queue) noexcept;
 
     public:
@@ -28,6 +28,7 @@ namespace RHINO::APID3D12 {
         void Dispatch(const DispatchDesc& desc) noexcept final;
         void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
         void Draw() noexcept final;
+        void ResourceBarrier(const ResourceBarrierDesc& desc) noexcept final;
 
     public:
         void BuildRTPSO(RTPSO* pso) noexcept final;

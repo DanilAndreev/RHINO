@@ -7,8 +7,8 @@ set(InterfaceHeaderFiles
 set(HeaderFiles
         source/pch.h
 
-        source/RHINOTypesImpl.h
         source/RHINOInterfaceImplBase.h
+        source/RHINOTypesImpl.h
         source/Utils/Common.h
         source/Utils/PlatformBase.h
 

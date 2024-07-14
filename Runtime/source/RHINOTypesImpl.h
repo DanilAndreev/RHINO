@@ -1,16 +1,20 @@
 #pragma once
 
-#include "RHINOTypes.h"
-
 namespace RHINO {
-    class Buffer {};
-    class Texture2D {};
+    class BufferBase : public Buffer {
+    public:
+        ResourceType GetResourceType() final { return ResourceType::Buffer; }
+    };
 
-    class BLAS{};
-    class TLAS{};
+    class Texture2DBase : public Texture2D {
+        ResourceType GetResourceType() final { return ResourceType::Texture2D; }
+    };
 
-    class RTPSO {};
-    class ComputePSO {};
+    class BLASBase : public BLAS {
+        ResourceType GetResourceType() final { return ResourceType::BLAS; }
+    };
 
-    class Semaphore {};
-}
+    class TLASBase : public TLAS {
+        ResourceType GetResourceType() final { return ResourceType::TLAS; }
+    };
+} // namespace RHINO

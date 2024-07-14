@@ -19,6 +19,7 @@ namespace RHINO::APIVulkan {
         void Dispatch(const DispatchDesc& desc) noexcept final;
         void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
         void Draw() noexcept final;
+        void ResourceBarrier(const ResourceBarrierDesc& desc) noexcept final;
 
     public:
         void BuildRTPSO(RTPSO* pso) noexcept final;

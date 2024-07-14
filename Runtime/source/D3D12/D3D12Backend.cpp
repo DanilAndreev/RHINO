@@ -210,15 +210,6 @@ namespace RHINO::APID3D12 {
         return result;
     }
 
-    void D3D12Backend::ReleaseRTPSO(RTPSO* pso) noexcept {
-        auto* d3d12PSO = static_cast<D3D12RTPSO*>(pso);
-        if (d3d12PSO->PSO)
-            d3d12PSO->PSO->Release();
-        if (d3d12PSO->shaderTable)
-            d3d12PSO->shaderTable->Release();
-        delete d3d12PSO;
-    }
-
     ComputePSO* D3D12Backend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* result = new D3D12ComputePSO{};
         result->rootSignature = CreateRootSignature(desc.spacesCount, desc.spacesDescs);
@@ -233,12 +224,6 @@ namespace RHINO::APID3D12 {
         SetDebugName(result->PSO, desc.debugName);
         SetDebugName(result->rootSignature, desc.debugName + ".RootSignature"s);
         return result;
-    }
-
-    void D3D12Backend::ReleaseComputePSO(ComputePSO* pso) noexcept {
-        auto* d3d12PSO = static_cast<D3D12ComputePSO*>(pso);
-        d3d12PSO->PSO->Release();
-        d3d12PSO->rootSignature->Release();
     }
 
     Buffer* D3D12Backend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage,
@@ -285,16 +270,8 @@ namespace RHINO::APID3D12 {
         return result;
     }
 
-    void D3D12Backend::ReleaseBuffer(Buffer* buffer) noexcept {
-        if (!buffer)
-            return;
-        auto* d3d12Buffer = static_cast<D3D12Buffer*>(buffer);
-        d3d12Buffer->buffer->Release();
-        delete d3d12Buffer;
-    }
-
     void* D3D12Backend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
-        auto* d3d12Buffer = static_cast<D3D12Buffer*>(buffer);
+        auto* d3d12Buffer = INTERPRET_AS<D3D12Buffer*>(buffer);
         void* result = nullptr;
         D3D12_RANGE range{};
         range.Begin = offset;
@@ -304,7 +281,7 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12Backend::UnmapMemory(Buffer* buffer) noexcept {
-        auto* d3d12Buffer = static_cast<D3D12Buffer*>(buffer);
+        auto* d3d12Buffer = INTERPRET_AS<D3D12Buffer*>(buffer);
         D3D12_RANGE range{};
         // range = ; //TODO: finish.
         d3d12Buffer->buffer->Unmap(0, &range);
@@ -343,14 +320,6 @@ namespace RHINO::APID3D12 {
         return result;
     }
 
-    void D3D12Backend::ReleaseTexture2D(Texture2D* texture) noexcept {
-        if (!texture)
-            return;
-        auto* d3d12Texture = static_cast<D3D12Texture2D*>(texture);
-        d3d12Texture->texture->Release();
-        delete d3d12Texture;
-    }
-
     DescriptorHeap* D3D12Backend::CreateDescriptorHeap(DescriptorHeapType heapType, size_t descriptorsCount,
                                                        const char* name) noexcept {
         auto* result = new D3D12DescriptorHeap{};
@@ -378,24 +347,10 @@ namespace RHINO::APID3D12 {
         return result;
     }
 
-    void D3D12Backend::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {
-        if (!heap)
-            return;
-        delete heap;
-    }
-
     CommandList* D3D12Backend::AllocateCommandList(const char* name) noexcept {
         auto* result = new D3D12CommandList{};
         result->Initialize(name, m_Device, &m_GarbageCollector);
         return result;
-    }
-
-    void D3D12Backend::ReleaseCommandList(CommandList* commandList) noexcept {
-        if (!commandList)
-            return;
-        auto* d3d12CommandList = static_cast<D3D12CommandList*>(commandList);
-        d3d12CommandList->Release();
-        delete d3d12CommandList;
     }
 
     ASPrebuildInfo D3D12Backend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
@@ -447,7 +402,7 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12Backend::SubmitCommandList(CommandList* cmd) noexcept {
-        auto d3d12CMD = static_cast<D3D12CommandList*>(cmd);
+        auto d3d12CMD = INTERPRET_AS<D3D12CommandList*>(cmd);
         d3d12CMD->SumbitToQueue(m_DefaultQueue);
     }
 
@@ -457,25 +412,18 @@ namespace RHINO::APID3D12 {
         return result;
     }
 
-    void D3D12Backend::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
-        auto* d3d12Semaphore = static_cast<D3D12Semaphore*>(semaphore);
-        d3d12Semaphore->fence->Release();
-        delete d3d12Semaphore;
-    }
-
-
     void D3D12Backend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
-        auto* d3d12Semaphore = static_cast<D3D12Semaphore*>(semaphore);
+        auto* d3d12Semaphore = INTERPRET_AS<D3D12Semaphore*>(semaphore);
         m_DefaultQueue->Signal(d3d12Semaphore->fence, value);
     }
 
     void D3D12Backend::SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept {
-        auto* d3d12Semaphore = static_cast<D3D12Semaphore*>(semaphore);
+        auto* d3d12Semaphore = INTERPRET_AS<D3D12Semaphore*>(semaphore);
         d3d12Semaphore->fence->Signal(value);
     }
 
     bool D3D12Backend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
-        const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
+        const auto* d3d12Semaphore = INTERPRET_AS<const D3D12Semaphore*>(semaphore);
 
         HANDLE event = CreateEventA(nullptr, true, false, "RHINO.WaitForSemaphore");
         d3d12Semaphore->fence->SetEventOnCompletion(value, event);
@@ -485,12 +433,12 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12Backend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
-        const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
+        const auto* d3d12Semaphore = INTERPRET_AS<const D3D12Semaphore*>(semaphore);
         m_DefaultQueue->Wait(d3d12Semaphore->fence, value);
     }
 
     uint64_t D3D12Backend::GetSemaphoreCompleatedValue(const Semaphore* semaphore) noexcept {
-        const auto* d3d12Semaphore = static_cast<const D3D12Semaphore*>(semaphore);
+        const auto* d3d12Semaphore = INTERPRET_AS<const D3D12Semaphore*>(semaphore);
         return d3d12Semaphore->fence->GetCompletedValue();
     }
 
