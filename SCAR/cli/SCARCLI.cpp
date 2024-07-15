@@ -6,10 +6,17 @@
 #include <vector>
 #include <filesystem>
 
-class JSONDescView {
+class JSONDescLoader {
 public:
-    explicit JSONDescView(const nlohmann::json& inputDesc) {
+    explicit JSONDescLoader(const std::filesystem::path& inputFilepath) {
+        std::filesystem::path filepath = std::filesystem::absolute(inputFilepath);
         //TODO: add json schema validator pass before deserializing
+        std::ifstream psoDescFile{filepath};
+        if (!psoDescFile.is_open()) {
+            throw std::runtime_error{"Failed to open PSO desc file."};
+        }
+        nlohmann::json inputDesc = nlohmann::json::parse(psoDescFile);
+        psoDescFile.close();
 
         std::string psoType = inputDesc["psoType"];
         if (psoType == "Library") {
@@ -32,7 +39,11 @@ public:
                 }
                 m_Settings.librarySettings.entrypointsCount = m_EntrypointsRefs.size();
                 m_Settings.librarySettings.entrypoints = m_EntrypointsRefs.data();
-                m_InputFilepath = libSettings["shaderSourceFilepath"];
+                std::filesystem::path shaderFilepath = std::string{libSettings["shaderSourceFilepath"]};
+                if (!shaderFilepath.is_absolute()) {
+                    shaderFilepath = filepath.parent_path() / shaderFilepath;
+                }
+                m_InputFilepath = shaderFilepath.string();
                 m_Settings.librarySettings.inputFilepath = m_InputFilepath.c_str();
                 m_Settings.librarySettings.maxAttributeSizeInBytes = libSettings["maxAttributeSizeInBytes"];
                 m_Settings.librarySettings.maxPayloadSizeInBytes = libSettings["maxPayloadSizeInBytes"];
@@ -125,9 +136,8 @@ int main(int argc, char* argv[]) {
         std::cerr << "SCAR Failed: " << e.what() << std::endl;
     }
 
-    std::ifstream psoDescFile{psoDescFilepath};
-    assert(psoDescFile.is_open());
-    JSONDescView descView{nlohmann::json::parse(psoDescFile)};
+
+    JSONDescLoader descView{psoDescFilepath};
     settings.psoType = descView.GetCompileSettingsView().psoType;
     settings.rootSignature = descView.GetCompileSettingsView().rootSignature;
     switch (settings.psoType) {
@@ -141,7 +151,6 @@ int main(int argc, char* argv[]) {
             settings.librarySettings = descView.GetCompileSettingsView().librarySettings;
             break;
     }
-    psoDescFile.close();
 
     std::vector<const char*> globalDefines{};
     globalDefines.resize(globalDefinesS.size());
