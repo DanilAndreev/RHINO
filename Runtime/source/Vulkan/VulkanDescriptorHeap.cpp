@@ -61,7 +61,7 @@ namespace RHINO::APIVulkan {
         return m_HeapGPUStartHandle;
     }
 
-    void VulkanDescriptorHeap::WriteSRV(const RHINO::WriteBufferDescriptorDesc& desc) noexcept {
+    void VulkanDescriptorHeap::WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept {
         auto* vulkanBuffer = static_cast<VulkanBuffer*>(desc.buffer);
 
         VkDescriptorAddressInfoEXT bufferInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT};
@@ -151,10 +151,14 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanDescriptorHeap::WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept {
-        //TODO: implement
+        // TODO: implement
     }
 
-    inline void VulkanDescriptorHeap::Release() noexcept {
+    void VulkanDescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
+        // TODO: implement
+    }
+
+    void VulkanDescriptorHeap::Release() noexcept {
         vkUnmapMemory(m_Context.device, this->m_Memory);
         vkDestroyBuffer(m_Context.device, this->m_Heap, m_Context.allocator);
         vkFreeMemory(m_Context.device, this->m_Memory, m_Context.allocator);

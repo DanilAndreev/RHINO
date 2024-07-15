@@ -1,5 +1,6 @@
 #pragma once
 #include "RHINOTypesImpl.h"
+#include "VulkanAPI.h"
 
 #ifdef ENABLE_API_VULKAN
 
@@ -94,7 +95,7 @@ namespace RHINO::APIVulkan {
 
     public:
         void Release() noexcept final {
-            vkDestroyAccelerationStructureKHR(this->context.device, this->accelerationStructure, this->context.allocator);
+            EXT::vkDestroyAccelerationStructureKHR(this->context.device, this->accelerationStructure, this->context.allocator);
             vkDestroyBuffer(this->context.device, this->buffer, this->context.allocator);
             delete this;
         }
@@ -108,7 +109,7 @@ namespace RHINO::APIVulkan {
 
     public:
         void Release() noexcept final {
-            vkDestroyAccelerationStructureKHR(this->context.device, this->accelerationStructure, this->context.allocator);
+            EXT::vkDestroyAccelerationStructureKHR(this->context.device, this->accelerationStructure, this->context.allocator);
             vkDestroyBuffer(this->context.device, this->buffer, this->context.allocator);
             delete this;
         }

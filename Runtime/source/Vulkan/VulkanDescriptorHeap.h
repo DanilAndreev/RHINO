@@ -28,6 +28,7 @@ namespace RHINO::APIVulkan {
         void WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept final;
         void WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept final;
         void WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept final;
+        void WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept final;
 
     public:
         void Release() noexcept final;

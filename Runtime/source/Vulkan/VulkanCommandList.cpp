@@ -7,22 +7,21 @@
 #include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
-    void VulkanCommandList::Initialize(const char* name, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool pool,
-                                       VkAllocationCallbacks* alloc) noexcept {
-        m_Device = device;
-        m_Alloc = alloc;
+    void VulkanCommandList::Initialize(const char* name, VulkanObjectContext context,
+                                       VkCommandPool pool) noexcept {
+        m_Context = context;
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
         VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         props.pNext = &descriptorProps;
-        vkGetPhysicalDeviceProperties2(physicalDevice, &props);
+        vkGetPhysicalDeviceProperties2(m_Context.physicalDevice, &props);
         m_DescriptorProps = descriptorProps;
 
         VkCommandBufferAllocateInfo cmdAlloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
         cmdAlloc.commandPool = pool;
         cmdAlloc.commandBufferCount = 1;
         cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vkAllocateCommandBuffers(m_Device, &cmdAlloc, &m_Cmd);
+        vkAllocateCommandBuffers(m_Context.device, &cmdAlloc, &m_Cmd);
 
         VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -31,9 +30,10 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::Release() noexcept {
-        vkFreeCommandBuffers(m_Device, m_Pool, 1, &m_Cmd);
-        vkDestroyCommandPool(m_Device, m_Pool, m_Alloc);
+        vkFreeCommandBuffers(m_Context.device, m_Pool, 1, &m_Cmd);
+        vkDestroyCommandPool(m_Context.device, m_Pool, m_Context.allocator);
         // Command pool is managed by VulkanBackend instance and should be released by it.
+        delete this;
     }
 
     void VulkanCommandList::SubmitToQueue(VkQueue queue) noexcept {
@@ -100,9 +100,9 @@ namespace RHINO::APIVulkan {
         VkStridedDeviceAddressRegionKHR higGroupTable = {};
         VkStridedDeviceAddressRegionKHR callableTable = {NULL};
 
-        //TODO: calculate addresses;
+        // TODO: calculate addresses;
 
-        vkCmdTraceRaysKHR(m_Cmd, &rayGenTable, &missTable, &higGroupTable, &callableTable, desc.width, desc.height, 1);
+        EXT::vkCmdTraceRaysKHR(m_Cmd, &rayGenTable, &missTable, &higGroupTable, &callableTable, desc.width, desc.height, 1);
     }
 
     void VulkanCommandList::Draw() noexcept {}
@@ -111,23 +111,42 @@ namespace RHINO::APIVulkan {
         constexpr auto srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         constexpr auto dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
-        VkBufferMemoryBarrier bufferBarrier{};
-        VkImageMemoryBarrier imageBarrier{};
+        VkBufferMemoryBarrier bufferBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+        VkImageMemoryBarrier imageBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 
 
-
-
-        switch (desc.type) {
-            case ResourceBarrierType::UAV:
-                 = desc.UAV.resource;
-            break;
-            case ResourceBarrierType::Transition:
-                barrier.Transition.pResource = desc.transition.resource;
-            barrier.Transition.Subresource = 0;
-            barrier.Transition.StateBefore = Convert::ToVulkanResourceState(desc.transition.stateBefore);
-            barrier.Transition.StateAfter = Convert::ToVulkanResourceState(desc.transition.stateAfter);
-            break;
+        switch (desc.resource->GetResourceType()) {
+            case ResourceType::Buffer:
+                bufferBarrier.buffer = INTERPRET_AS<VulkanBuffer*>(desc.resource)->buffer;
+                bufferBarrier.offset = 0;
+                bufferBarrier.size = VK_WHOLE_SIZE;
+                bufferBarrier.srcAccessMask = Convert::ToVulkanResourceState(desc.transition.stateBefore);
+                bufferBarrier.dstAccessMask = Convert::ToVulkanResourceState(desc.transition.stateAfter);
+                bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                break;
+            case ResourceType::Texture2D:
+                break;
+            case ResourceType::Texture3D:
+                break;
+            case ResourceType::BLAS:
+            case ResourceType::TLAS:
+            default:
+                return;
         }
+
+
+        // switch (desc.type) {
+        //     case ResourceBarrierType::UAV:
+        //          = desc.UAV.resource;
+        //     break;
+        //     case ResourceBarrierType::Transition:
+        //         barrier.Transition.pResource = desc.transition.resource;
+        //     barrier.Transition.Subresource = 0;
+        //     barrier.Transition.StateBefore = Convert::ToVulkanResourceState(desc.transition.stateBefore);
+        //     barrier.Transition.StateAfter = Convert::ToVulkanResourceState(desc.transition.stateAfter);
+        //     break;
+        // }
 
         uint32_t bufferCount = 0;
         VkBufferMemoryBarrier* pBufferBarrier = nullptr;
@@ -172,8 +191,8 @@ namespace RHINO::APIVulkan {
         buildInfo.ppGeometries = nullptr;
 
         VkAccelerationStructureBuildSizesInfoKHR outSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
-                                                &outSizesInfo);
+        EXT::vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
+                                                     &outSizesInfo);
 
 
         VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
@@ -192,11 +211,12 @@ namespace RHINO::APIVulkan {
         createInfo.size = outSizesInfo.accelerationStructureSize;
         createInfo.createFlags = 0;
 
-        vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
+        EXT::vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
 
         buildInfo.scratchData = {scratch->deviceAddress};
         buildInfo.dstAccelerationStructure = result->accelerationStructure;
-        vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildInfo, nullptr);
+        EXT::vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildInfo, nullptr);
+        return result;
     }
 
     TLAS* VulkanCommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
@@ -212,14 +232,14 @@ namespace RHINO::APIVulkan {
             nativeInstanceDesc.mask = instanceDesc.instanceMask;
             nativeInstanceDesc.instanceCustomIndex = instanceDesc.instanceID;
             nativeInstanceDesc.instanceShaderBindingTableRecordOffset = 0;
-            nativeInstanceDesc.accelerationStructureReference = ;
+            // nativeInstanceDesc.accelerationStructureReference = ;
             memcpy(nativeInstanceDesc.transform.matrix, instanceDesc.transform, sizeof(instanceDesc.transform));
 
             //TODO: copy it to mapped buffer and upload
         }
 
         VkAccelerationStructureGeometryInstancesDataKHR instancesDesc{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR};
-        instancesDesc.data.deviceAddress = instBufferAddr;
+        // instancesDesc.data.deviceAddress = instBufferAddr;
         instancesDesc.arrayOfPointers = VK_FALSE;
 
         VkAccelerationStructureGeometryKHR geoDesc{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
@@ -235,18 +255,20 @@ namespace RHINO::APIVulkan {
         buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
 
         VkAccelerationStructureBuildSizesInfoKHR sizeInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr, &sizeInfo);
+        EXT::vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
+                                                     &sizeInfo);
 
         VkAccelerationStructureCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR};
         createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
         createInfo.size = sizeInfo.accelerationStructureSize;
         createInfo.createFlags = 0;
         createInfo.offset = 0;
-        vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
+        EXT::vkCreateAccelerationStructureKHR(m_Context.device, &createInfo, m_Context.allocator, &result->accelerationStructure);
 
         buildInfo.scratchData = {scratch->deviceAddress};
         buildInfo.dstAccelerationStructure = result->accelerationStructure;
-        vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildInfo, nullptr);
+        EXT::vkCmdBuildAccelerationStructuresKHR(m_Cmd, 1, &buildInfo, nullptr);
+        return result;
     }
 } // namespace RHINO::APIVulkan
 

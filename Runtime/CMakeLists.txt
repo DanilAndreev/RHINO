@@ -80,7 +80,7 @@ if(APPLE)
 else()
     message("RHINO AVAILABLE APIs: Vulkan, D3D12.")
     add_library(RHINO ${SourceFiles} ${HeaderFiles} ${InterfaceHeaderFiles})
-    target_compile_definitions(RHINO PRIVATE ENABLE_API_D3D12=1) # ENABLE_API_VULKAN=1
+    target_compile_definitions(RHINO PRIVATE ENABLE_API_D3D12=1 ENABLE_API_VULKAN=1) #
     target_link_libraries(RHINO PRIVATE d3d12.lib dxgi.lib)
 
     find_package(Vulkan REQUIRED)
