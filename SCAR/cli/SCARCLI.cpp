@@ -75,8 +75,11 @@ public:
             }
         }
         for (size_t spaceID = 0; spaceID < m_SpacesDesc.size(); ++spaceID) {
-            m_SpacesDesc[spaceID].rangeDescCount = offsetInRangeDescsPerSpaceDesc[spaceID];
+            m_SpacesDesc[spaceID].rangeDescs = m_RangeDescs.data() + offsetInRangeDescsPerSpaceDesc[spaceID];
         }
+        m_RootSignatureDesc.spacesCount = m_SpacesDesc.size();
+        m_RootSignatureDesc.spacesDescs = m_SpacesDesc.data();
+        m_Settings.rootSignature = &m_RootSignatureDesc;
     }
     [[nodiscard]] const SCAR::CompileSettings& GetCompileSettingsView() const noexcept { return m_Settings; }
 private:
@@ -87,6 +90,7 @@ private:
 
     std::vector<RHINO::DescriptorRangeDesc> m_RangeDescs{};
     std::vector<RHINO::DescriptorSpaceDesc> m_SpacesDesc{};
+    SCAR::PSORootSignatureDesc m_RootSignatureDesc{};
 };
 
 int main(int argc, char* argv[]) {
