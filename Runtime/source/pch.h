@@ -17,7 +17,6 @@
 
 #include "Utils/PlatformBase.h"
 #include "Utils/Common.h"
-#include "RHINOTypesImpl.h"
 
 
 #ifdef ENABLE_API_D3D12

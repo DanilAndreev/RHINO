@@ -37,10 +37,10 @@ namespace RHINO {
                 assert(0 && "Invalid API or selected API is not supported on this platform.");
                 return nullptr;
         }
-        const char* validationEnv = std::getenv("RHINO_ENABLE_VALIDATION");
-        if (validationEnv != nullptr && std::string{validationEnv} == "1") {
-            result = new DebugLayer::DebugLayer{result};
-        }
+        // const char* validationEnv = std::getenv("RHINO_ENABLE_VALIDATION");
+        // if (validationEnv != nullptr && std::string{validationEnv} == "1") {
+        //     result = new DebugLayer::DebugLayer{result};
+        // }
         return result;
     }
 }// namespace RHINO

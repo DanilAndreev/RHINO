@@ -83,6 +83,35 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
+    inline VkAccessFlags ToVulkanResourceState(ResourceState state) noexcept {
+        // TODO: possibly refactor to use common read/write flags VK_ACCESS_MEMORY_READ_BIT and VK_ACCESS_MEMORY_WRITE_BIT
+
+        switch (state) {
+            case ResourceState::ConstantBuffer:
+                return VK_ACCESS_UNIFORM_READ_BIT;
+            case ResourceState::UnorderedAccess:
+                return VK_ACCESS_SHADER_WRITE_BIT;
+            case ResourceState::ShaderResource:
+                return VK_ACCESS_SHADER_READ_BIT;
+            case ResourceState::IndirectArgument:
+                return VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+            case ResourceState::CopyDest:
+                return VK_ACCESS_TRANSFER_WRITE_BIT;
+            case ResourceState::CopySource:
+                return VK_ACCESS_TRANSFER_READ_BIT;
+            case ResourceState::HostWrite:
+                return VK_ACCESS_HOST_WRITE_BIT;
+            case ResourceState::HostRead:
+                return VK_ACCESS_HOST_READ_BIT;
+            case ResourceState::RTAccelerationStructure:
+                return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+
+            default:
+                assert(0);
+                return VK_ACCESS_NONE;
+        }
+    }
+
     inline VkIndexType ToVkIndexType(IndexFormat format) noexcept {
         switch (format) {
             case IndexFormat::R32_UINT:

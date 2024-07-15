@@ -168,9 +168,6 @@ namespace RHINO::APIVulkan {
         return nullptr;
     }
 
-    void VulkanBackend::ReleaseRTPSO(RTPSO* pso) noexcept {
-    }
-
     ComputePSO* VulkanBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* result = new VulkanComputePSO{};
 
@@ -292,14 +289,6 @@ namespace RHINO::APIVulkan {
         return result;
     }
 
-    void VulkanBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {
-        auto* vulkanComputePSO = static_cast<VulkanComputePSO*>(pso);
-        vkDestroyPipelineLayout(m_Device, vulkanComputePSO->layout, m_Alloc);
-        vkDestroyPipeline(m_Device, vulkanComputePSO->PSO, m_Alloc);
-        vkDestroyShaderModule(m_Device, vulkanComputePSO->shaderModule, m_Alloc);
-        delete vulkanComputePSO;
-    }
-
     Buffer* VulkanBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept {
         auto* result = new VulkanBuffer{};
         result->size = size;
@@ -320,16 +309,18 @@ namespace RHINO::APIVulkan {
         VkMemoryAllocateFlagsInfo allocateFlagsInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
         allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
+        auto objectContext = CreateVulkanObjectContext();
+
         VkMemoryAllocateInfo alloc{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
         alloc.pNext = &allocateFlagsInfo;
         alloc.allocationSize = memReqs.size;
         switch (heapType) {
             case ResourceHeapType::Default:
-                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, objectContext);
                 break;
             case ResourceHeapType::Upload:
             case ResourceHeapType::Readback:
-                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, objectContext);
                 break;
         }
         vkAllocateMemory(m_Device, &alloc, m_Alloc, &result->memory);
@@ -341,14 +332,6 @@ namespace RHINO::APIVulkan {
         result->deviceAddress = vkGetBufferDeviceAddress(m_Device, &bufferInfo);
 
         return result;
-    }
-
-    void VulkanBackend::ReleaseBuffer(Buffer* buffer) noexcept {
-        if (!buffer) return;
-        auto* vulkanBuffer = static_cast<VulkanBuffer*>(buffer);
-        vkDestroyBuffer(m_Device, vulkanBuffer->buffer, m_Alloc);
-        vkFreeMemory(m_Device, vulkanBuffer->memory, m_Alloc);
-        delete vulkanBuffer;
     }
 
     void* VulkanBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
@@ -368,83 +351,16 @@ namespace RHINO::APIVulkan {
         return nullptr;
     }
 
-    void VulkanBackend::ReleaseTexture2D(Texture2D* texture) noexcept {
-    }
-
     DescriptorHeap* VulkanBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept {
         auto* result = new VulkanDescriptorHeap{};
-        result->device = m_Device;
-
-        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
-        VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        props.pNext = &descriptorProps;
-        vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &props);
-
-        result->descriptorProps = descriptorProps;
-
-        result->descriptorHandleIncrementSize = CalculateDescriptorHandleIncrementSize(type, descriptorProps);
-
-        // TODO: 256 is just a magic number for RTX 3080TI.
-        //  For some reason descriptorProps.descriptorBufferOffsetAlignment != 256.
-        //  Research valid parameter for this one.
-        result->heapSize = RHINO_CEIL_TO_MULTIPLE_OF(result->descriptorHandleIncrementSize * descriptorsCount, 256);
-
-        VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        heapCreateInfo.flags = 0;
-        heapCreateInfo.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        if (type == DescriptorHeapType::Sampler) {
-            heapCreateInfo.usage |= VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT;
-        }
-        heapCreateInfo.size = result->heapSize;
-        heapCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Device, &heapCreateInfo, m_Alloc, &result->heap);
-
-        // Create the memory backing up the buffer handle
-        VkMemoryRequirements memReqs;
-        vkGetBufferMemoryRequirements(m_Device, result->heap, &memReqs);
-        VkPhysicalDeviceMemoryProperties memoryProps;
-        vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProps);
-
-        VkMemoryAllocateFlagsInfo allocateFlagsInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
-        allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
-
-        VkMemoryAllocateInfo alloc{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-        alloc.pNext = &allocateFlagsInfo;
-        alloc.allocationSize = memReqs.size;
-        alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        vkAllocateMemory(m_Device, &alloc, m_Alloc, &result->memory);
-
-        vkBindBufferMemory(m_Device, result->heap, result->memory, 0);
-
-        VkBufferDeviceAddressInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
-        bufferInfo.buffer = result->heap;
-        result->heapGPUStartHandle = vkGetBufferDeviceAddress(m_Device, &bufferInfo);
-
-        vkMapMemory(m_Device, result->memory, 0, VK_WHOLE_SIZE, 0, &result->mapped);
+        result->Initialize(name, type, descriptorsCount, CreateVulkanObjectContext());
         return result;
-    }
-
-    void VulkanBackend::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {
-        if (!heap) return;
-        auto* vulkanDescriptorHeap = static_cast<VulkanDescriptorHeap*>(heap);
-        vkUnmapMemory(m_Device, vulkanDescriptorHeap->memory);
-        vkDestroyBuffer(m_Device, vulkanDescriptorHeap->heap, m_Alloc);
-        vkFreeMemory(m_Device, vulkanDescriptorHeap->memory, m_Alloc);
-        delete heap;
     }
 
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new VulkanCommandList{};
-        result->Initialize(name, m_PhysicalDevice, m_Device, m_DefaultQueueCMDPool, m_Alloc);
+        result->Initialize(name, CreateVulkanObjectContext(), m_DefaultQueueCMDPool);
         return result;
-    }
-
-    void VulkanBackend::ReleaseCommandList(CommandList* commandList) noexcept {
-        if (!commandList)
-            return;
-        auto* vulkanCMD = static_cast<VulkanCommandList*>(commandList);
-        vulkanCMD->Release();
-        delete vulkanCMD;
     }
 
     void VulkanBackend::SubmitCommandList(CommandList* cmd) noexcept {
@@ -480,12 +396,6 @@ namespace RHINO::APIVulkan {
         RHINO_VKS(vkCreateSemaphore(m_Device, &createInfo, m_Alloc, &result->semaphore));
 
         return result;
-    }
-
-    void VulkanBackend::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
-        auto* vulkanSemaphore = static_cast<VulkanSemaphore*>(semaphore);
-        vkDestroySemaphore(m_Device, vulkanSemaphore->semaphore, m_Alloc);
-        delete vulkanSemaphore;
     }
 
     void VulkanBackend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
@@ -548,17 +458,6 @@ namespace RHINO::APIVulkan {
         return result;
     }
 
-    uint32_t VulkanBackend::SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) noexcept {
-        VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
-        vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &deviceMemoryProperties);
-        for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-        return std::numeric_limits<uint32_t>::max();
-    }
-
     void VulkanBackend::SelectQueues(VkDeviceQueueCreateInfo queueInfos[3], uint32_t* infosCount) noexcept {
         uint32_t queuesCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queuesCount, nullptr);
@@ -571,25 +470,35 @@ namespace RHINO::APIVulkan {
         uint32_t copyQueueIndex = ~0;
 
         for (size_t i = 0; i < queuesCount; ++i) {
-            if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 3 && graphicsQueueIndex == ~0 && computeQueueIndex == ~0 && copyQueueIndex == ~0) {
+            if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) &&
+                queues[i].queueCount >= 3 && graphicsQueueIndex == ~0 && computeQueueIndex == ~0 && copyQueueIndex == ~0) {
                 graphicsQueueIndex = i;
                 computeQueueIndex = i;
                 copyQueueIndex = i;
                 break;
-            } else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT) && queues[i].queueCount >= 2 && graphicsQueueIndex == ~0 && computeQueueIndex == ~0) {
+            }
+            else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT) && queues[i].queueCount >= 2 &&
+                     graphicsQueueIndex == ~0 && computeQueueIndex == ~0) {
                 graphicsQueueIndex = i;
                 computeQueueIndex = i;
-            } else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 && computeQueueIndex == ~0 && copyQueueIndex == ~0) {
+            }
+            else if (queues[i].queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 &&
+                     computeQueueIndex == ~0 && copyQueueIndex == ~0) {
                 computeQueueIndex = i;
                 copyQueueIndex = i;
-            } else if (queues[i].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 && graphicsQueueIndex == ~0 && copyQueueIndex == ~0) {
+            }
+            else if (queues[i].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT) && queues[i].queueCount >= 2 &&
+                     graphicsQueueIndex == ~0 && copyQueueIndex == ~0) {
                 graphicsQueueIndex = i;
                 copyQueueIndex = i;
-            } else if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            }
+            else if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 graphicsQueueIndex = i;
-            } else if (queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            }
+            else if (queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
                 computeQueueIndex = i;
-            } else if (queues[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+            }
+            else if (queues[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
                 copyQueueIndex = i;
             }
         }
@@ -601,7 +510,8 @@ namespace RHINO::APIVulkan {
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             queueInfos[0].pQueuePriorities = priorities;
             *infosCount = 1;
-        } else if (graphicsQueueIndex == computeQueueIndex) {
+        }
+        else if (graphicsQueueIndex == computeQueueIndex) {
             *infosCount = 2;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -613,7 +523,8 @@ namespace RHINO::APIVulkan {
             queueInfos[1].queueCount = 1;
             queueInfos[1].queueFamilyIndex = copyQueueIndex;
             queueInfos[1].pQueuePriorities = priorities;
-        } else if (graphicsQueueIndex == copyQueueIndex) {
+        }
+        else if (graphicsQueueIndex == copyQueueIndex) {
             *infosCount = 2;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -625,7 +536,8 @@ namespace RHINO::APIVulkan {
             queueInfos[1].queueCount = 1;
             queueInfos[1].queueFamilyIndex = computeQueueIndex;
             queueInfos[1].pQueuePriorities = priorities;
-        } else if (computeQueueIndex == copyQueueIndex) {
+        }
+        else if (computeQueueIndex == copyQueueIndex) {
             *infosCount = 2;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -637,7 +549,8 @@ namespace RHINO::APIVulkan {
             queueInfos[1].queueCount = 1;
             queueInfos[1].queueFamilyIndex = graphicsQueueIndex;
             queueInfos[1].pQueuePriorities = priorities;
-        } else {
+        }
+        else {
             *infosCount = 3;
 
             queueInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -655,6 +568,14 @@ namespace RHINO::APIVulkan {
             queueInfos[2].queueFamilyIndex = computeQueueIndex;
             queueInfos[2].pQueuePriorities = priorities;
         }
+    }
+
+    VulkanObjectContext VulkanBackend::CreateVulkanObjectContext() const noexcept {
+        VulkanObjectContext result{};
+        result.physicalDevice = m_PhysicalDevice;
+        result.device = m_Device;
+        result.allocator = m_Alloc;
+        return result;
     }
 
     ASPrebuildInfo VulkanBackend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
@@ -685,7 +606,7 @@ namespace RHINO::APIVulkan {
 
         VkAccelerationStructureBuildSizesInfoKHR outSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
 
-        vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
+        EXT::vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
                                                 &outSizesInfo);
         ASPrebuildInfo result{};
         result.scratchBufferSizeInBytes = outSizesInfo.buildScratchSize;

@@ -24,6 +24,7 @@ namespace RHINO::APID3D12 {
         m_Allocator->Release();
         m_Cmd->Release();
         m_Fence->Release();
+        delete this;
     }
 
     void D3D12CommandList::SumbitToQueue(ID3D12CommandQueue* queue) noexcept {
@@ -63,6 +64,44 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12CommandList::Draw() noexcept {}
+
+    void D3D12CommandList::ResourceBarrier(const ResourceBarrierDesc& desc) noexcept {
+        ID3D12Resource* resource = nullptr;
+        switch (desc.resource->GetResourceType()) {
+            case ResourceType::Buffer:
+                resource = INTERPRET_AS<D3D12Buffer*>(desc.resource)->buffer;
+            break;
+            case ResourceType::Texture2D:
+                resource = INTERPRET_AS<D3D12Texture2D*>(desc.resource)->texture;
+            break;
+            case ResourceType::Texture3D:
+                resource = INTERPRET_AS<D3D12Texture3D*>(desc.resource)->texture;
+            break;
+            case ResourceType::BLAS:
+                resource = INTERPRET_AS<D3D12BLAS*>(desc.resource)->buffer;
+            break;
+            case ResourceType::TLAS:
+                resource = INTERPRET_AS<D3D12TLAS*>(desc.resource)->buffer;
+            break;
+            default:
+                return;
+        }
+
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type = Convert::ToD3D12ResourceBarrierType(desc.type);
+        switch (desc.type) {
+            case ResourceBarrierType::UAV:
+                barrier.UAV.pResource = resource;
+            break;
+            case ResourceBarrierType::Transition:
+                barrier.Transition.pResource = resource;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barrier.Transition.StateBefore = Convert::ToD3D12ResourceState(desc.transition.stateBefore);
+            barrier.Transition.StateAfter = Convert::ToD3D12ResourceState(desc.transition.stateAfter);
+            break;
+        }
+        m_Cmd->ResourceBarrier(1, &barrier);
+    }
 
     void D3D12CommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {\
         auto d3d12Src = static_cast<D3D12Buffer*>(src);

@@ -4,6 +4,12 @@ namespace RHINO {
         return size;
     }
 
+    template<typename OutT, typename InT>
+    OutT INTERPRET_AS(InT obj) noexcept {
+        assert(dynamic_cast<OutT>(obj) != nullptr);
+        return static_cast<OutT>(obj);
+    }
+
 #ifdef __clang__
     template<typename T>
     void UnusedVarHelper(const T& var __attribute__((unused))){};

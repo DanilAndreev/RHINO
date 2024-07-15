@@ -11,18 +11,15 @@
     bool operator!(enumType a);
 
 namespace RHINO {
-    class Buffer;
-    class Texture2D;
-    class DescriptorHeap;
-
-    class RTPSO;
-    class ComputePSO;
-    class CommandList;
-
-    class BLAS;
-    class TLAS;
-
-    class Semaphore;
+    // ---------------------------------------------------------------------------------- ENUMS DECLARATION
+    enum class ResourceType {
+        Buffer,
+        Texture2D,
+        Texture3D,
+        BLAS,
+        TLAS,
+        Count,
+    };
 
     enum class TextureFormat {
         R32G32B32A32_FLOAT,
@@ -84,18 +81,59 @@ namespace RHINO {
 
     enum class DescriptorRangeType { CBV, SRV, UAV, Sampler };
 
-    enum class ResourceType {
-        Buffer,
-        Texture2D,
-        Texture3D,
-        Count,
-    };
-
     enum class RTShaderTableRecordType {
         RayGeneration = 0,
         HitGroup = 1,
         Miss = 2,
     };
+
+    enum class ResourceBarrierType {
+        UAV,
+        Transition,
+    };
+
+    enum class ResourceState {
+        ConstantBuffer,
+        UnorderedAccess,
+        ShaderResource,
+        IndirectArgument,
+        CopyDest,
+        CopySource,
+        HostWrite,
+        HostRead,
+        RTAccelerationStructure,
+    };
+
+    // ---------------------------------------------------------------------------------- OBJECTS PRE-DECLARATION
+
+    class Object {
+    protected:
+        virtual ~Object() = default;
+    public:
+        virtual void Release() noexcept = 0;
+    };
+
+    class Resource : public Object {
+    public:
+        virtual ResourceType GetResourceType() = 0;
+    };
+
+    class Buffer : public Resource {};
+    class Texture2D : public Resource {};
+    class Texture3D : public Resource {};
+
+    class RTPSO : public Object {};
+    class ComputePSO : public Object {};
+
+    class BLAS : public Resource {};
+    class TLAS : public Resource {};
+
+    class Semaphore : public Object {};
+
+    class DescriptorHeap;
+    class CommandList;
+
+    // ---------------------------------------------------------------------------------- DESC STRUCTS + INTERFACES
 
     struct Dim3D {
         size_t width = 0;
@@ -217,15 +255,25 @@ namespace RHINO {
         const BLASInstanceDesc* blasInstances = nullptr;
     };
 
-    class CommandList {
-    public:
-        virtual ~CommandList() noexcept = default;
+    struct ResourceTransitionBarrierDesc {
+        ResourceState stateBefore;
+        ResourceState stateAfter;
+    };
+    struct ResourceBarrierDesc {
+        ResourceBarrierType type;
+        Resource* resource;
+        union {
+            ResourceTransitionBarrierDesc transition;
+        };
+    };
 
+    class CommandList : public Object {
     public:
         virtual void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept = 0;
         virtual void Dispatch(const DispatchDesc& desc) noexcept = 0;
         virtual void DispatchRays(const DispatchRaysDesc& desc) noexcept = 0;
         virtual void Draw() noexcept = 0;
+        virtual void ResourceBarrier(const ResourceBarrierDesc& desc) noexcept = 0;
         virtual void SetComputePSO(ComputePSO* pso) noexcept = 0;
         virtual void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept = 0;
 
@@ -260,10 +308,7 @@ namespace RHINO {
         size_t offsetInHeap = 0;
     };
 
-    class DescriptorHeap {
-    public:
-        virtual ~DescriptorHeap() noexcept = default;
-
+    class DescriptorHeap : public Object {
     public:
         virtual void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept = 0;
         virtual void WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept = 0;

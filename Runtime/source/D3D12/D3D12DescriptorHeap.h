@@ -15,6 +15,9 @@ namespace RHINO::APID3D12 {
         void WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept final;
 
     public:
+        void Release() noexcept final;
+
+    public:
         [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHeapCPUHandle(UINT index) const noexcept;
         [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetGPUHeapCPUHandle(UINT index) const noexcept;
         [[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHeapGPUHandle(UINT index) const noexcept;
