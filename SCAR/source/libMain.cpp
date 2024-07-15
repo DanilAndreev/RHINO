@@ -5,6 +5,7 @@
 #include "CompilationChain.h"
 #include "ICompilationPipeline.h"
 #include "pipelines/LibILCompilationPipeline.h"
+#include "pipelines/ComputeILCompilationPipeline.h"
 #include "steps/DxilToMetallibStep.h"
 #include "steps/HlslToDxilStep.h"
 #include "steps/HlslToSpirvStep.h"
@@ -54,6 +55,8 @@ namespace SCAR {
     ICompilationPipeline* ConstructCompilationPipeline(CompilationChain* chain, ArchivePSOType psoType) {
         assert(chain);
         switch (psoType) {
+            case ArchivePSOType::Compute:
+                return new ComputeILCompilationPipeline{chain};
             case ArchivePSOType::Library:
                 return new LibILCompilationPipeline{chain};
             case ArchivePSOType::Graphics:

@@ -29,6 +29,15 @@ public:
 
         switch (m_Settings.psoType) {
             case SCAR::ArchivePSOType::Compute: {
+                const nlohmann::json& computeSettings = inputDesc["computeSettings"];
+                m_EntrypointsStorage.emplace_back(std::string{computeSettings["entrypoint"]});
+                m_Settings.computeSettings.entrypoint = m_EntrypointsStorage[0].c_str();
+                std::filesystem::path shaderFilepath = std::string{computeSettings["shaderSourceFilepath"]};
+                if (!shaderFilepath.is_absolute()) {
+                    shaderFilepath = filepath.parent_path() / shaderFilepath;
+                }
+                m_InputFilepath = shaderFilepath.string();
+                m_Settings.computeSettings.inputFilepath = m_InputFilepath.c_str();
                 break;
             }
             case SCAR::ArchivePSOType::Library: {
