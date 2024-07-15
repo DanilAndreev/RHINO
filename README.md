@@ -37,7 +37,14 @@ the execution of program on the GPU side.
 #### MacOS
 - Xcode latest version | [download](https://apps.apple.com/ua/app/xcode/id497799835?mt=12)
 
-### To set up projects and build
-``` 
-Coming Soon 
+### To use RHINO as dependency use:
+```bash
+git submodule add git@github.com:DanilAndreev/RHINO.git [path/to/install]
 ```
+```cmake
+add_subdirectory(path/to/install RHINO)
+target_link_libraries(YourTarget PRIVATE RHINO)
+```
+
+### SCAR
+> See README.md in ```/SCAR``` directory.
