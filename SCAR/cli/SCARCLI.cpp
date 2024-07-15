@@ -226,6 +226,5 @@ int main(int argc, char* argv[]) {
         std::cerr << res.errorsStr << std::endl;
     }
     SCAR::ReleaseCompilationResult(res);
-
-    return 0;
+    return res.success ? 0 : -1;
 }
