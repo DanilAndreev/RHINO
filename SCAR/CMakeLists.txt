@@ -68,12 +68,16 @@ else()
     # DXC
     target_include_directories(SCARs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/inc)
     target_link_libraries(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/lib/dxcompiler.lib)
+    add_custom_command(TARGET SCARs POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/bin/dxcompiler.dll $<TARGET_FILE_DIR:SCARs>
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/bin/dxil.dll $<TARGET_FILE_DIR:SCARs>
+            COMMAND_EXPAND_LISTS
+    )
 
     # Install
     install(FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/bin/dxcompiler.dll
             ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/win32/bin/dxil.dll
-            ${CMAKE_CURRENT_SOURCE_DIR}/external/FXC/bin/d3dcompiler_47.dll
             TYPE BIN)
 endif()
 
