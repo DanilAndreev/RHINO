@@ -10,6 +10,10 @@ namespace RHINO {
         ResourceType GetResourceType() final { return ResourceType::Texture2D; }
     };
 
+    class Texture3DBase : public Texture3D {
+        ResourceType GetResourceType() final { return ResourceType::Texture3D; }
+    };
+
     class BLASBase : public BLAS {
         ResourceType GetResourceType() final { return ResourceType::BLAS; }
     };

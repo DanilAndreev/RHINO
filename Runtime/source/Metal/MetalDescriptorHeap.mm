@@ -61,6 +61,10 @@ namespace RHINO::APIMetal {
     void MetalDescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
         // TODO: implement
     }
+
+    void MetalDescriptorHeap::Release() noexcept {
+        delete this;
+    }
 } // namespace RHINO::APIMetal
 
 #endif // ENABLE_API_METAL

@@ -14,8 +14,9 @@ namespace RHINO::APIMetal {
 
     void MetalCommandList::SubmitToQueue() noexcept { [m_Cmd commit]; }
 
-    void MetalCommandList::Release() noexcept {}
-
+    void MetalCommandList::Release() noexcept {
+        delete this;
+    }
 
     void MetalCommandList::Dispatch(const DispatchDesc& desc) noexcept {
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
@@ -168,6 +169,10 @@ namespace RHINO::APIMetal {
 
     void MetalCommandList::BuildRTPSO(RTPSO* pso) noexcept {
         // TODO: implement
+    }
+
+    void MetalCommandList::ResourceBarrier(const ResourceBarrierDesc& desc) noexcept {
+        //NOOP
     }
 } // namespace RHINO::APIMetal
 

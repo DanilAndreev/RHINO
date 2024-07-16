@@ -24,23 +24,17 @@ namespace RHINO::APIMetal {
 
     public:
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
-        void ReleaseRTPSO(RTPSO* pso) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
-        void ReleaseComputePSO(ComputePSO* pso) noexcept final;
 
     public:
         Buffer* CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept final;
-        void ReleaseBuffer(Buffer* buffer) noexcept final;
         void* MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept final;
         void UnmapMemory(Buffer* buffer) noexcept final;
 
         Texture2D* CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
                                    const char* name) noexcept final;
-        void ReleaseTexture2D(Texture2D* texture) noexcept final;
         DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept final;
-        void ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept final;
         CommandList* AllocateCommandList(const char* name) noexcept final;
-        void ReleaseCommandList(CommandList* cmd) noexcept final;
 
     public:
         // JOB SUBMISSION
@@ -50,7 +44,6 @@ namespace RHINO::APIMetal {
 
     public:
         Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept final;
-        void ReleaseSyncSemaphore(Semaphore* semaphore) noexcept final;
         void SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept final;
         void SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept final;
         bool SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept final;

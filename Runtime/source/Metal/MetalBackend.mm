@@ -21,8 +21,6 @@ namespace RHINO::APIMetal {
 
     RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
 
-    void MetalBackend::ReleaseRTPSO(RTPSO* pso) noexcept {}
-
     ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* result = new MetalComputePSO{};
 
@@ -70,8 +68,6 @@ namespace RHINO::APIMetal {
         return result;
     }
 
-    void MetalBackend::ReleaseComputePSO(ComputePSO* pso) noexcept {}
-
     Buffer* MetalBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage,
                                             size_t structuredStride, const char* name) noexcept {
         auto* result = new MetalBuffer{};
@@ -79,8 +75,6 @@ namespace RHINO::APIMetal {
         [result->buffer setLabel:[NSString stringWithUTF8String:name]];
         return result;
     }
-
-    void MetalBackend::ReleaseBuffer(Buffer* buffer) noexcept { delete buffer; }
 
     Texture2D* MetalBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
                                              ResourceUsage usage, const char* name) noexcept {
@@ -90,8 +84,6 @@ namespace RHINO::APIMetal {
         result->texture = [m_Device newTextureWithDescriptor:descriptor];
         return result;
     }
-
-    void MetalBackend::ReleaseTexture2D(Texture2D* texture) noexcept { delete texture; }
 
     DescriptorHeap* MetalBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount,
                                                        const char* name) noexcept {
@@ -106,18 +98,10 @@ namespace RHINO::APIMetal {
         return result;
     }
 
-    void MetalBackend::ReleaseDescriptorHeap(DescriptorHeap* heap) noexcept {}
-
     CommandList* MetalBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new MetalCommandList{};
         result->Initialize(m_Device, m_DefaultQueue);
         return result;
-    }
-
-    void MetalBackend::ReleaseCommandList(CommandList* cmd) noexcept {
-        auto* metalCmd = static_cast<MetalCommandList*>(cmd);
-        metalCmd->Release();
-        delete metalCmd;
     }
 
     void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {
@@ -171,11 +155,6 @@ namespace RHINO::APIMetal {
         auto* result = new MetalSemaphore{};
         result->event = [m_Device newSharedEvent];
         return result;
-    }
-
-    void MetalBackend::ReleaseSyncSemaphore(Semaphore* semaphore) noexcept {
-        auto* metalSemaphore = static_cast<MetalSemaphore*>(semaphore);
-        delete metalSemaphore;
     }
 
     void MetalBackend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {

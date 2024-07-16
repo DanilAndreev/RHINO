@@ -22,7 +22,6 @@ namespace RHINO::APIMetal {
     public:
         void Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept;
         void SubmitToQueue() noexcept;
-        void Release() noexcept;
 
     public:
         void Dispatch(const DispatchDesc& desc) noexcept final;
@@ -31,6 +30,10 @@ namespace RHINO::APIMetal {
         void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept final;
         void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
         void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
+        void ResourceBarrier(const RHINO::ResourceBarrierDesc &desc) noexcept final;
+
+    public:
+        void Release() noexcept final;
 
     public:
         BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
