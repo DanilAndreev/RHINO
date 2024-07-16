@@ -49,6 +49,7 @@ namespace RHINO::APIMetal {
         auto size = MTLSizeMake(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
         // TODO: validate correctness
         auto threadgroupSize = MTLSizeMake(m_CurComputePSO->pso.maxTotalThreadsPerThreadgroup, 1, 1);
+        [encoder setComputePipelineState:m_CurComputePSO->pso];
         [encoder dispatchThreadgroups:size threadsPerThreadgroup:threadgroupSize];
         [encoder endEncoding];
     }
@@ -61,7 +62,7 @@ namespace RHINO::APIMetal {
     }
 
     void MetalCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
-        auto* metalCBVSRVUAVHeap = static_cast<MetalDescriptorHeap*>(CBVSRVUAVHeap);
+        m_CBVSRVUAVHeap = static_cast<MetalDescriptorHeap*>(CBVSRVUAVHeap);
         auto* metalSamplerHeap = static_cast<MetalDescriptorHeap*>(CBVSRVUAVHeap);
 
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
@@ -69,8 +70,9 @@ namespace RHINO::APIMetal {
             // [encoder setBuffer: ]
         }
         else {
-            [encoder setBuffer:metalCBVSRVUAVHeap->m_ArgBuf offset:0 atIndex:kIRArgumentBufferBindPoint];
+            [encoder setBuffer:m_CBVSRVUAVHeap->m_ArgBuf offset:0 atIndex:kIRArgumentBufferBindPoint];
         }
+        [encoder endEncoding];
     }
 
     void MetalCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
