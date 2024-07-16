@@ -8,10 +8,17 @@
 
 
 namespace RHINO::APIMetal {
+    // Max size of D3D12 Root Signature in DWRODS
+    // Good value to upbound size for Top Level Arg Buffer emulating Root Signature.
+    constexpr size_t MAX_ROOT_SIGNATURE_SIZE_IN_RECORDS = 64;
+    using RootSignatureRecordT = uint64_t;
+
     class MetalCommandList final : public CommandList {
     private:
         id<MTLCommandBuffer> m_Cmd = nil;
         id<MTLDevice> m_Device = nil;
+        // Top Level Argument Buffer emulating D3D12 Root Signature.
+        id<MTLBuffer> m_RootSignature = nil;
 
         MetalComputePSO* m_CurComputePSO = nullptr;
         MetalDescriptorHeap* m_CBVSRVUAVHeap = nullptr;

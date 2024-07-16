@@ -56,7 +56,10 @@ namespace SCAR {
         IRVersionedRootSignatureDescriptor rsVersionedDesc{};
         rsVersionedDesc.version = IRRootSignatureVersion_1_1;
         rsVersionedDesc.desc_1_1 = rootSignatureDesc;
-        return IRRootSignatureCreateFromDescriptor(&rsVersionedDesc, &pError);
+        auto result = IRRootSignatureCreateFromDescriptor(&rsVersionedDesc, &pError);
+        assert(!pError);
+        std::cout << IRVersionedRootSignatureDescriptorAllocStringAndSerialize(&rsVersionedDesc) << std::endl;
+        return result;
     }
 
     bool DxilToMetallibStep::Execute(const CompileSettings& settings, const ChainSettings& chSettings,
@@ -99,6 +102,16 @@ namespace SCAR {
         // Retrieve Metallib:
         IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
         IRObjectGetMetalLibBinary(pOutIR, shaderStage, pMetallib);
+
+        auto refl = IRShaderReflectionCreate();
+        IRObjectGetReflection(pOutIR, shaderStage, refl);
+        const auto reflResCount = IRShaderReflectionGetResourceCount(refl);
+        std::vector<IRResourceLocation> reflLocs{reflResCount};
+        IRShaderReflectionGetResourceLocations(refl, reflLocs.data());
+
+        const auto rsResCount = IRRootSignatureGetResourceCount(rootSignature);
+        std::vector<IRResourceLocation> rsLocs{rsResCount};
+        IRRootSignatureGetResourceLocations(rootSignature, rsLocs.data());
 
         context.dataLength = IRMetalLibGetBytecodeSize(pMetallib);
         context.data.reset(new uint8_t[context.dataLength]);
