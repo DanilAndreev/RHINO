@@ -81,12 +81,14 @@ namespace RHINO::APIMetal {
                                                        const char* name) noexcept {
         auto* result = new MetalDescriptorHeap{};
 
-        result->resources.resize(descriptorsCount);
+        result->m_Resources.resize(descriptorsCount);
 
-//        result->m_ArgBuf = [m_Device newBufferWithLength:result->encoder.encodedLength * descriptorsCount options:0];
-        result->m_ArgBuf = [m_Device newBufferWithLength:sizeof(IRDescriptorTableEntry) * descriptorsCount
+//        result->m_DescriptorHeap = [m_Device newBufferWithLength:result->encoder.encodedLength * descriptorsCount options:0];
+        result->m_DescriptorHeap = [m_Device newBufferWithLength:sizeof(IRDescriptorTableEntry) * descriptorsCount
                                                  options:MTLResourceStorageModeShared];
-        [result->m_ArgBuf setLabel:[NSString stringWithUTF8String:name]];
+//        result->m_DescriptorHeap = [m_Device newBufferWithLength:sizeof(uint64_t) * descriptorsCount
+//                                                 options:MTLResourceStorageModeShared];
+        [result->m_DescriptorHeap setLabel:[NSString stringWithUTF8String:name]];
         return result;
     }
 

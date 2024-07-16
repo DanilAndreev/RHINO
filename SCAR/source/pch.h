@@ -3,6 +3,7 @@
 #include <SCARVersion.h>
 #include <SCAR.h>
 
+#include <iostream>
 #include <cstdint>
 #include <filesystem>
 #include <string>
