@@ -26,13 +26,17 @@ namespace RHINO::APIMetal {
         auto* result = new MetalComputePSO{};
 
         result->spaceDescs.resize(desc.spacesCount);
-        for (size_t space = 0; space < desc.spacesCount; ++space) {
-            result->spaceDescs[space] = desc.spacesDescs[space];
-            auto* rangeDescsStart = &(*result->rangeDescsStorage.rbegin()) + 1;
-            for (size_t i = 0; i < desc.spacesDescs[space].rangeDescCount; ++i) {
-                result->rangeDescsStorage.push_back(desc.spacesDescs[space].rangeDescs[i]);
+        std::vector<size_t> offsetInRangeDescsPerDescriptorSpace{};
+        for (size_t spaceID = 0; spaceID < desc.spacesCount; ++spaceID) {
+            result->spaceDescs[spaceID] = desc.spacesDescs[spaceID];
+            offsetInRangeDescsPerDescriptorSpace.push_back(result->rangeDescsStorage.size());
+            for (size_t i = 0; i < desc.spacesDescs[spaceID].rangeDescCount; ++i) {
+                result->rangeDescsStorage.push_back(desc.spacesDescs[spaceID].rangeDescs[i]);
             }
-            result->spaceDescs[space].rangeDescs = rangeDescsStart;
+        }
+        for (size_t spaceID = 0; spaceID < desc.spacesCount; ++spaceID) {
+            auto addr = result->rangeDescsStorage.data() + offsetInRangeDescsPerDescriptorSpace[spaceID];
+            result->spaceDescs[spaceID].rangeDescs = addr;
         }
 
         NSError* error = nil;
@@ -42,30 +46,17 @@ namespace RHINO::APIMetal {
                                                             dispatch_get_main_queue(), emptyHandler);
         id<MTLLibrary> lib = [m_Device newLibraryWithData:dispatchData error:&error];
         if (!lib || error) {
+            assert(0);
             //TODO: show error.
             return nullptr;
         }
 
-        NSString* functionName = [NSString stringWithUTF8String:desc.debugName];
+        NSString* functionName = [NSString stringWithUTF8String:desc.CS.entrypoint];
         id<MTLFunction> shaderModule = [lib newFunctionWithName:functionName];
 
         MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
         descriptor.computeFunction = shaderModule;
-
-        auto handler = ^(id<MTLComputePipelineState> pso,
-                         MTLComputePipelineReflection* r, NSError* e) {
-          if (error) {
-              // error = e;
-              assert(0);
-              //TODO: assign to outer scope.
-          } else {
-              result->pso = pso;
-          }
-        };
-
-        [m_Device newComputePipelineStateWithDescriptor:descriptor
-                                                options:0
-                                      completionHandler:handler];
+        result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
         return result;
     }
 
