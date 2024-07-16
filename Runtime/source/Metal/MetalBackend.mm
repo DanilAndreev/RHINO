@@ -16,9 +16,21 @@ namespace RHINO::APIMetal {
         m_DefaultQueue = [m_Device newCommandQueue];
         m_AsyncComputeQueue = [m_Device newCommandQueue];
         m_CopyQueue = [m_Device newCommandQueue];
+
+        {
+            NSError* error = nil;
+            auto manager = [MTLCaptureManager sharedCaptureManager];
+            MTLCaptureDescriptor* captureDescriptor = [[MTLCaptureDescriptor alloc] init];
+            captureDescriptor.destination = MTLCaptureDestinationDeveloperTools;
+            captureDescriptor.captureObject = m_Device;
+            [manager startCaptureWithDescriptor:captureDescriptor error:&error];
+        }
     }
 
-    void MetalBackend::Release() noexcept {}
+    void MetalBackend::Release() noexcept {
+        auto manager= [MTLCaptureManager sharedCaptureManager];
+        [manager stopCapture];
+    }
 
     RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
 

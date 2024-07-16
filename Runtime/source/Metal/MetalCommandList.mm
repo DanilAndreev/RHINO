@@ -12,6 +12,7 @@ namespace RHINO::APIMetal {
         m_Device = device;
         m_RootSignature = [m_Device newBufferWithLength:MAX_ROOT_SIGNATURE_SIZE_IN_RECORDS * sizeof(RootSignatureRecordT)
                                                 options:MTLResourceStorageModeManaged];
+        [m_RootSignature setLabel: @"RootSignature"];
         m_Cmd = [queue commandBuffer];
     }
 
@@ -86,6 +87,8 @@ namespace RHINO::APIMetal {
 
         [encoder setBuffer:m_RootSignature offset:0 atIndex:kIRArgumentBufferBindPoint];
 
+        [encoder useResource:m_RootSignature usage:MTLResourceUsageRead];
+        [encoder useResource:m_CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
         [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
         [encoder useResources:usedCBVSRVs.data() count:usedCBVSRVs.size() usage:MTLResourceUsageRead | MTLResourceUsageSample];
 
