@@ -216,6 +216,7 @@ int main(int argc, char* argv[]) {
             out.write(static_cast<const char*>(res.archive.data), res.archive.archiveSizeInBytes);
             out.close();
         } else {
+            assert(0);
             //TODO: print to STDOUT in b64 format
         }
     }
