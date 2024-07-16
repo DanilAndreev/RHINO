@@ -12,6 +12,7 @@
 
 namespace RHINO::APIMetal {
     void MetalBackend::Initialize() noexcept {
+        m_Device = MTLCopyAllDevices()[0];
         m_DefaultQueue = [m_Device newCommandQueue];
         m_AsyncComputeQueue = [m_Device newCommandQueue];
         m_CopyQueue = [m_Device newCommandQueue];
