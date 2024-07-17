@@ -9,10 +9,23 @@ namespace SCAR {
                                                   const RHINO::DescriptorSpaceDesc* spaces) noexcept {
         IRError* pError = nullptr;
 
-        std::vector<IRDescriptorRange1> rangeDescs{};
+        // TODO: if root constants defined: add root constants root param
+
+        std::vector<IRDescriptorRange1> rangeDescsStorage{};
+        std::vector<IRRootParameter1> rootParamsDescs{};
+        rootParamsDescs.reserve(spacesCount + 1);
+        std::vector<size_t> offsetsInRangeDescsPerSpaceIdx{spacesCount};
+
         for (size_t spaceIdx = 0; spaceIdx < spacesCount; ++spaceIdx) {
+            IRRootParameter1& rootParamDesc = rootParamsDescs.emplace_back();
+            rootParamDesc.ParameterType = IRRootParameterTypeDescriptorTable;
+            rootParamDesc.DescriptorTable.NumDescriptorRanges = spaces[spaceIdx].rangeDescCount;
+            offsetsInRangeDescsPerSpaceIdx[spaceIdx] = rangeDescsStorage.size();
+
+            //TODO: assert that ranges in one space exclusively CBVSRVUAV or SMP.
+
             for (size_t i = 0; i < spaces[spaceIdx].rangeDescCount; ++i) {
-                IRDescriptorRange1 rangeDesc{};
+                IRDescriptorRange1& rangeDesc = rangeDescsStorage.emplace_back();
                 rangeDesc.NumDescriptors = spaces[spaceIdx].rangeDescs[i].descriptorsCount;
                 rangeDesc.RegisterSpace = spaces[spaceIdx].space;
                 rangeDesc.OffsetInDescriptorsFromTableStart = spaces[spaceIdx].offsetInDescriptorsFromTableStart +
@@ -32,21 +45,17 @@ namespace SCAR {
                         rangeDesc.RangeType = IRDescriptorRangeTypeSampler;
                         break;
                 }
-                rangeDescs.push_back(rangeDesc);
             }
         }
+        for (size_t spaceIdx = 0; spaceIdx < spacesCount; ++spaceIdx) {
+            auto* rangesPtr = rangeDescsStorage.data() + offsetsInRangeDescsPerSpaceIdx[spaceIdx];
+            rootParamsDescs[spaceIdx].DescriptorTable.pDescriptorRanges = rangesPtr;
+        }
 
-        // TODO: bind samplers as saparate table.
-        IRRootParameter1 rootParamDesc{};
-
-        // Descriptor table
-        rootParamDesc.ParameterType = IRRootParameterTypeDescriptorTable;
-        rootParamDesc.DescriptorTable.NumDescriptorRanges = rangeDescs.size();
-        rootParamDesc.DescriptorTable.pDescriptorRanges = rangeDescs.data();
 
         IRRootSignatureDescriptor1 rootSignatureDesc{};
-        rootSignatureDesc.NumParameters = 1;
-        rootSignatureDesc.pParameters = &rootParamDesc;
+        rootSignatureDesc.NumParameters = rootParamsDescs.size();
+        rootSignatureDesc.pParameters = rootParamsDescs.data();
         rootSignatureDesc.NumStaticSamplers = 0;
         rootSignatureDesc.pStaticSamplers = nullptr;
         rootSignatureDesc.Flags = IRRootSignatureFlags(IRRootSignatureFlagDenyHullShaderRootAccess |
@@ -102,12 +111,6 @@ namespace SCAR {
         // Retrieve Metallib:
         IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
         IRObjectGetMetalLibBinary(pOutIR, shaderStage, pMetallib);
-
-        auto refl = IRShaderReflectionCreate();
-        IRObjectGetReflection(pOutIR, shaderStage, refl);
-        const auto reflResCount = IRShaderReflectionGetResourceCount(refl);
-        std::vector<IRResourceLocation> reflLocs{reflResCount};
-        IRShaderReflectionGetResourceLocations(refl, reflLocs.data());
 
         const auto rsResCount = IRRootSignatureGetResourceCount(rootSignature);
         std::vector<IRResourceLocation> rsLocs{rsResCount};
