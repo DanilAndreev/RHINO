@@ -5,6 +5,8 @@
 #import <Metal/Metal.h>
 #include "RHINOTypesImpl.h"
 
+#include <metal_irconverter/metal_irconverter.h>
+
 namespace RHINO::APIMetal {
     class MetalBuffer : public BufferBase {
     public:
@@ -38,12 +40,15 @@ namespace RHINO::APIMetal {
 
     class MetalRootSignature : public RootSignature {
     public:
+        IRRootSignature* rootSignature = nullptr;
+
         std::vector<DescriptorSpaceDesc> spaceDescs{};
         // Just vector with all root signature ranges stored. Read by space from  spaceDescs.
         std::vector<DescriptorRangeDesc> rangeDescsStorage{};
 
     public:
         void Release() noexcept final {
+            IRRootSignatureDestroy(this->rootSignature);
             delete this;
         }
     };
