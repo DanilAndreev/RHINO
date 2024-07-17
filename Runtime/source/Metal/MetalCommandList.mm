@@ -51,30 +51,32 @@ namespace RHINO::APIMetal {
         {
             RootSignatureRecordT rootSignatureContent[MAX_ROOT_SIGNATURE_SIZE_IN_RECORDS] = {};
 
-            for (size_t spaceID = 0; spaceID < m_CurComputePSO->spaceDescs.size(); ++spaceID) {
-                const DescriptorSpaceDesc& space = m_CurComputePSO->spaceDescs[spaceID];
+//            for (size_t spaceID = 0; spaceID < m_CurComputePSO->spaceDescs.size(); ++spaceID) {
+//                const DescriptorSpaceDesc& space = m_CurComputePSO->spaceDescs[spaceID];
+//
+//                for (size_t i = 0; i < space.rangeDescCount; ++i) {
+//                    size_t offInDescriptors = space.offsetInDescriptorsFromTableStart + space.rangeDescs[i].baseRegisterSlot;
+//                    switch (space.rangeDescs[i].rangeType) {
+//                        case DescriptorRangeType::CBV:
+//                        case DescriptorRangeType::SRV:
+//                        case DescriptorRangeType::UAV: {
+//                            offInDescriptors += m_CBVSRVUAVHeapOffset;
+//                            const size_t offInBytes = offInDescriptors * sizeof(rootSignatureContent[0]);
+//                            rootSignatureContent[0] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress + offInBytes;
+//                            break;
+//                        }
+//                        case DescriptorRangeType::Sampler: {
+//                            offInDescriptors += m_SamplerHeapOffset;
+//                            const size_t offInBytes = offInDescriptors * sizeof(rootSignatureContent[0]);
+//                            if (m_SamplerHeap)
+//                                rootSignatureContent[0] = m_SamplerHeap->GetHeapBuffer().gpuAddress + offInBytes;
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
 
-                for (size_t i = 0; i < space.rangeDescCount; ++i) {
-                    size_t offInDescriptors = space.offsetInDescriptorsFromTableStart + space.rangeDescs[i].baseRegisterSlot;
-                    switch (space.rangeDescs[i].rangeType) {
-                        case DescriptorRangeType::CBV:
-                        case DescriptorRangeType::SRV:
-                        case DescriptorRangeType::UAV: {
-                            offInDescriptors += m_CBVSRVUAVHeapOffset;
-                            const size_t offInBytes = offInDescriptors * sizeof(rootSignatureContent[0]);
-                            rootSignatureContent[0] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress + offInBytes;
-                            break;
-                        }
-                        case DescriptorRangeType::Sampler: {
-                            offInDescriptors += m_SamplerHeapOffset;
-                            const size_t offInBytes = offInDescriptors * sizeof(rootSignatureContent[0]);
-                            if (m_SamplerHeap)
-                                rootSignatureContent[0] = m_SamplerHeap->GetHeapBuffer().gpuAddress + offInBytes;
-                            break;
-                        }
-                    }
-                }
-            }
+            rootSignatureContent[0] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress;
 
             assert(m_RootSignature.allocatedSize >= sizeof(rootSignatureContent));
             memcpy(m_RootSignature.contents, rootSignatureContent, sizeof(rootSignatureContent));
@@ -86,6 +88,7 @@ namespace RHINO::APIMetal {
         }
 
         [encoder setBuffer:m_RootSignature offset:0 atIndex:kIRArgumentBufferBindPoint];
+        [encoder setBuffer:m_CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
 
         [encoder useResource:m_RootSignature usage:MTLResourceUsageRead];
         [encoder useResource:m_CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
