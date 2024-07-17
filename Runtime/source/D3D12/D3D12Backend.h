@@ -16,6 +16,7 @@ namespace RHINO::APID3D12 {
         void Release() noexcept final;
 
     public:
+        RootSignature* SerializeRootSignature(const RootSignatureDesc& desc) noexcept final;
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
 

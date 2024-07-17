@@ -65,10 +65,23 @@ namespace RHINO::APID3D12 {
         }
     };
 
+    class D3D12RootSignature : public RootSignature {
+    public:
+        ID3D12RootSignature* rootSignature = nullptr;
+
+        std::vector<DescriptorSpaceDesc> spaceDescs{};
+        // Just vector with all root signature ranges stored. Read by space from  spaceDescs.
+        std::vector<DescriptorRangeDesc> rangeDescsStorage{};
+
+    public:
+        void Release() noexcept final {
+            this->rootSignature->Release();
+        }
+    };
+
     class D3D12RTPSO : public RTPSO {
     public:
         ID3D12StateObject* PSO = nullptr;
-        ID3D12RootSignature* rootSignature = nullptr;
         ID3D12Resource* shaderTable = nullptr;
         std::vector<std::pair<RTShaderTableRecordType, std::wstring>> tableLayout;
         size_t tableRecordStride = 0;
@@ -85,13 +98,11 @@ namespace RHINO::APID3D12 {
 
     class D3D12ComputePSO : public ComputePSO {
     public:
-        ID3D12RootSignature* rootSignature = nullptr;
         ID3D12PipelineState* PSO = nullptr;
 
     public:
         void Release() noexcept final {
             this->PSO->Release();
-            this->rootSignature->Release();
             delete this;
         }
     };
