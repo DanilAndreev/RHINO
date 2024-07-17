@@ -88,6 +88,7 @@ namespace RHINO::APID3D12 {
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type = Convert::ToD3D12ResourceBarrierType(desc.type);
+        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
         switch (desc.type) {
             case ResourceBarrierType::UAV:
                 barrier.UAV.pResource = resource;
