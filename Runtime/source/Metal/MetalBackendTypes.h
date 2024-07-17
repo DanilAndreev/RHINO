@@ -64,6 +64,7 @@ namespace RHINO::APIMetal {
     class MetalComputePSO : public ComputePSO {
     public:
         id<MTLComputePipelineState> pso = nil;
+        uint32_t localWorkgroupSize[3] = {};
 
     public:
         void Release() noexcept final {
