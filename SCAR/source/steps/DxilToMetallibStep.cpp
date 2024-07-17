@@ -15,7 +15,7 @@ namespace SCAR {
         std::vector<IRRootParameter1> rootParamsDescs{};
         rootParamsDescs.reserve(spacesCount + 1);
         std::vector<size_t> offsetsInRangeDescsPerSpaceIdx{};
-        offsetsInRangeDescsPerSpaceIdx.resize(desc.spacesCount);
+        offsetsInRangeDescsPerSpaceIdx.resize(spacesCount);
 
         for (size_t spaceIdx = 0; spaceIdx < spacesCount; ++spaceIdx) {
             IRRootParameter1& rootParamDesc = rootParamsDescs.emplace_back();
