@@ -47,8 +47,6 @@ namespace SCAR {
         size_t includeDirectoriesCount = 0;
         const char** includeDirectories = nullptr;
 
-        PSORootSignatureDesc* rootSignature = nullptr;
-
         union {
             GraphicsCompileSettings graphicsSetting;
             ComputeCompileSettings computeSettings;

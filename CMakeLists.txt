@@ -4,4 +4,4 @@ project(Runtime)
 set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(Runtime)
-# add_subdirectory(SCAR)
+add_subdirectory(SCAR)

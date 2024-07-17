@@ -13,7 +13,6 @@ set(HeaderFiles
         source/ICompilationPipeline.h
 
         source/steps/HlslToDxilStep.h
-        source/steps/DxilToMetallibStep.h
         source/steps/HlslToSpirvStep.h
         source/steps/DXCCommon.hpp
 
@@ -30,7 +29,6 @@ set(SourceFiles
         source/CompilationChain.cpp
 
         source/steps/HlslToDxilStep.cpp
-        source/steps/DxilToMetallibStep.cpp
         source/steps/HlslToSpirvStep.cpp
 
         source/archiver/PSOArchiver.cpp
@@ -38,7 +36,6 @@ set(SourceFiles
         source/pipelines/ComputeILCompilationPipeline.cpp
         source/pipelines/LibILCompilationPipeline.cpp
 
-        source/serializers/SerializeRootSignature.cpp
         source/serializers/SerializeEntrypoints.cpp
 )
 
@@ -52,10 +49,6 @@ if(APPLE)
     target_include_directories(SCARs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/include)
     target_link_libraries(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/DXC/osx/lib/libdxcompiler.dylib)
     target_compile_definitions(SCARs PRIVATE __EMULATE_UUID)
-
-    # metal-shaderconverter
-    target_include_directories(SCARs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external/metal-shaderconverter/osx/include)
-    target_link_libraries(SCARs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/metal-shaderconverter/osx/lib/libmetalirconverter.dylib)
 
     # Install
     install(FILES

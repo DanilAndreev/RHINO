@@ -22,8 +22,6 @@ static const char* str(SCAR::RecordType recordType) noexcept {
             return "CSAssembly";
         case SCAR::RecordType::LibAssembly:
             return "LibAssembly";
-        case SCAR::RecordType::RootSignature:
-            return "RootSignature";
         case SCAR::RecordType::ShadersEntrypoints:
             return "ShadersEntrypoints";
         case SCAR::RecordType::RTAttributes:
@@ -115,29 +113,6 @@ void PrintTable(const SCAR::ArchiveReader& reader, size_t indent = 0) noexcept {
     }
 }
 
-void PrintRootSignature(const SCAR::ArchiveReader& reader, size_t indent = 0) noexcept {
-    std::string IS{};
-    IS.resize(indent, ' ');
-
-    std::cout << IS << "RootSignarute Record Deserialization:\n";
-    for (const RHINO::DescriptorSpaceDesc& s: reader.CreateRootSignatureView()) {
-        std::cout << IS << "  Space" << s.space << "\n";
-        std::cout << IS << "    OffsetInDescriptorsFromTableStart: " << s.offsetInDescriptorsFromTableStart << "\n";
-        if (s.rangeDescCount) {
-            std::cout << "    Ranges:\n";
-            for (size_t i = 0; i < s.rangeDescCount; ++i) {
-                const RHINO::DescriptorRangeDesc& r = s.rangeDescs[i];
-                std::cout << IS << "      Range" << i << " " << str(r.rangeType)
-                          << " | BaseRegisterSlot: " << r.baseRegisterSlot
-                          << " DescriptorsCount: " << r.descriptorsCount << "\n";
-            }
-        }
-        else {
-            std::cout << IS << "  Ranges: Empty\n";
-        }
-    }
-}
-
 int main(int argc, char* argv[]) {
     std::filesystem::path archiveFilepath;
 
@@ -176,7 +151,4 @@ int main(int argc, char* argv[]) {
 
     PrintTable(reader, 2);
     std::cout << "\n";
-    if (reader.HasRecord(SCAR::RecordType::RootSignature)) {
-        PrintRootSignature(reader, 0);
-    }
 }
