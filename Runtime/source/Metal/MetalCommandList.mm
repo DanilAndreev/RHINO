@@ -84,8 +84,8 @@ namespace RHINO::APIMetal {
 
         auto size = MTLSizeMake(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
 
-        // TODO: validate correctness
-        auto threadgroupSize = MTLSizeMake(m_CurComputePSO->pso.maxTotalThreadsPerThreadgroup, 1, 1);
+        auto threadgroupSize = MTLSizeMake(m_CurComputePSO->localWorkgroupSize[0], m_CurComputePSO->localWorkgroupSize[1],
+                                           m_CurComputePSO->localWorkgroupSize[2]);
         [encoder setComputePipelineState:m_CurComputePSO->pso];
         [encoder dispatchThreadgroups:size threadsPerThreadgroup:threadgroupSize];
 

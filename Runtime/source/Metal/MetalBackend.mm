@@ -142,6 +142,16 @@ namespace RHINO::APIMetal {
         IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
         IRObjectGetMetalLibBinary(outIR, IRShaderStageCompute, pMetallib);
 
+        IRShaderReflection* reflection = IRShaderReflectionCreate();
+        IRObjectGetReflection(outIR, IRShaderStageCompute, reflection);
+
+        IRVersionedCSInfo csInfo{};
+        IRShaderReflectionCopyComputeInfo(reflection, IRReflectionVersion_1_0, &csInfo);
+        result->localWorkgroupSize[0] = csInfo.info_1_0.tg_size[0];
+        result->localWorkgroupSize[1] = csInfo.info_1_0.tg_size[1];
+        result->localWorkgroupSize[2] = csInfo.info_1_0.tg_size[2];
+
+        IRShaderReflectionDestroy(reflection);
         IRObjectDestroy(pDXIL);
         IRObjectDestroy(outIR);
 
@@ -149,6 +159,7 @@ namespace RHINO::APIMetal {
         auto emptyHandler = ^{};
 
         dispatch_data_t dispatchData = IRMetalLibGetBytecodeData(pMetallib);
+
         id<MTLLibrary> lib = [m_Device newLibraryWithData:dispatchData error:&error];
         if (!lib || error) {
             assert(0);
@@ -179,6 +190,18 @@ namespace RHINO::APIMetal {
                                              ResourceUsage usage, const char* name) noexcept {
         auto* result = new MetalTexture2D{};
         MTLTextureDescriptor* descriptor = [[MTLTextureDescriptor alloc] init];
+        descriptor.arrayLength = 1;
+        descriptor.mipmapLevelCount = mips;
+        descriptor.width = dimensions.width;
+        descriptor.height = dimensions.height;
+        descriptor.depth = 1;
+        descriptor.cpuCacheMode = MTLCPUCacheModeDefaultCache;
+        descriptor.pixelFormat = Convert::ToMTLPixelFormat(format);
+        descriptor.resourceOptions = 0;
+        descriptor.sampleCount = 1;
+        descriptor.textureType = MTLTextureType2DArray;
+        descriptor.storageMode = MTLStorageModePrivate;
+        descriptor.usage = Convert::ToMTLResourceUsage(usage);
 
         result->texture = [m_Device newTextureWithDescriptor:descriptor];
         return result;
