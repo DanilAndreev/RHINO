@@ -36,6 +36,18 @@ namespace RHINO::APIMetal {
         }
     };
 
+    class MetalRootSignature : public RootSignature {
+    public:
+        std::vector<DescriptorSpaceDesc> spaceDescs{};
+        // Just vector with all root signature ranges stored. Read by space from  spaceDescs.
+        std::vector<DescriptorRangeDesc> rangeDescsStorage{};
+
+    public:
+        void Release() noexcept final {
+            delete this;
+        }
+    };
+
     class MetalRTPSO : public RTPSO {
     public:
     public:
@@ -47,11 +59,6 @@ namespace RHINO::APIMetal {
     class MetalComputePSO : public ComputePSO {
     public:
         id<MTLComputePipelineState> pso = nil;
-
-        // ROOT SIGNATURE
-        std::vector<DescriptorSpaceDesc> spaceDescs{};
-        // Just vector with all root signature ranges stored. Read by space from  spaceDescs.
-        std::vector<DescriptorRangeDesc> rangeDescsStorage{};
 
     public:
         void Release() noexcept final {

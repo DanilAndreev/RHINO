@@ -5,14 +5,21 @@
 #import <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 #include "MetalConverters.h"
+#include "MetalUtils.h"
+
 
 namespace RHINO::APIMetal {
 
     void MetalCommandList::Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept {
         m_Device = device;
-        m_RootSignature = [m_Device newBufferWithLength:MAX_ROOT_SIGNATURE_SIZE_IN_RECORDS * sizeof(RootSignatureRecordT)
-                                                options:MTLResourceStorageModeManaged];
-        [m_RootSignature setLabel: @"RootSignature"];
+        m_RootSignaturesRing = [m_Device newBufferWithLength:sizeof(RootSignatureT) * ROOT_SIGNATURE_RING_SIZE
+                                                     options:MTLResourceStorageModeManaged];
+        [m_RootSignaturesRing setLabel: @"RootSignatureRing"];
+        for (size_t i = 0; i < ROOT_SIGNATURE_RING_SIZE; ++i) {
+            m_RootSignaturesRingSync[i] = [m_Device newSharedEvent];
+            [m_RootSignaturesRingSync[i] setSignaledValue: 1];
+        }
+
         m_Cmd = [queue commandBuffer];
     }
 
@@ -26,13 +33,17 @@ namespace RHINO::APIMetal {
         delete this;
     }
 
+    void MetalCommandList::SetRootSignature(RHINO::RootSignature* rootSignature) noexcept {
+        m_CurRootSignature = INTERPRET_AS<MetalRootSignature*>(rootSignature);
+    }
+
     void MetalCommandList::Dispatch(const DispatchDesc& desc) noexcept {
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
 
         std::vector<id<MTLResource>> usedUAVs;
         std::vector<id<MTLResource>> usedCBVSRVs;
         std::vector<id<MTLResource>> usedSMPs;
-        for (const DescriptorSpaceDesc& space: m_CurComputePSO->spaceDescs) {
+        for (const DescriptorSpaceDesc& space: m_CurRootSignature->spaceDescs) {
             for (size_t i = 0; i < space.rangeDescCount; ++i) {
                 size_t pos = space.rangeDescs[i].baseRegisterSlot + space.offsetInDescriptorsFromTableStart;
                 switch (space.rangeDescs[i].rangeType) {
@@ -51,55 +62,18 @@ namespace RHINO::APIMetal {
             }
         }
 
-        // TODO: split PSO to RootSignature and actual PSO and read those data from RS
-        {
-            RootSignatureRecordT rootSignatureContent[MAX_ROOT_SIGNATURE_SIZE_IN_RECORDS] = {};
+        const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
+        [encoder setBuffer:m_RootSignaturesRing offset:rootSignatureOffset atIndex:kIRArgumentBufferBindPoint];
+        [encoder useResource:m_RootSignaturesRing usage:MTLResourceUsageRead];
 
-//            for (size_t spaceID = 0; spaceID < m_CurComputePSO->spaceDescs.size(); ++spaceID) {
-//                const DescriptorSpaceDesc& space = m_CurComputePSO->spaceDescs[spaceID];
-//
-//                for (size_t i = 0; i < space.rangeDescCount; ++i) {
-//                    size_t offInDescriptors = space.offsetInDescriptorsFromTableStart + space.rangeDescs[i].baseRegisterSlot;
-//                    switch (space.rangeDescs[i].rangeType) {
-//                        case DescriptorRangeType::CBV:
-//                        case DescriptorRangeType::SRV:
-//                        case DescriptorRangeType::UAV: {
-//                            offInDescriptors += m_CBVSRVUAVHeapOffset;
-//                            const size_t offInBytes = offInDescriptors * sizeof(rootSignatureContent[0]);
-//                            rootSignatureContent[0] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress + offInBytes;
-//                            break;
-//                        }
-//                        case DescriptorRangeType::Sampler: {
-//                            offInDescriptors += m_SamplerHeapOffset;
-//                            const size_t offInBytes = offInDescriptors * sizeof(rootSignatureContent[0]);
-//                            if (m_SamplerHeap)
-//                                rootSignatureContent[0] = m_SamplerHeap->GetHeapBuffer().gpuAddress + offInBytes;
-//                            break;
-//                        }
-//                    }
-//                }
-//            }
-
-            rootSignatureContent[0] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress;
-
-            assert(m_RootSignature.allocatedSize >= sizeof(rootSignatureContent));
-            memcpy(m_RootSignature.contents, rootSignatureContent, sizeof(rootSignatureContent));
-            NSRange range{};
-            range.location = 0;
-            range.length = sizeof(rootSignatureContent);
-            [m_RootSignature didModifyRange:range];
-
-        }
-
-        [encoder setBuffer:m_RootSignature offset:0 atIndex:kIRArgumentBufferBindPoint];
         [encoder setBuffer:m_CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
-
-        [encoder useResource:m_RootSignature usage:MTLResourceUsageRead];
         [encoder useResource:m_CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+
         [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
         [encoder useResources:usedCBVSRVs.data() count:usedCBVSRVs.size() usage:MTLResourceUsageRead | MTLResourceUsageSample];
 
         auto size = MTLSizeMake(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
+
         // TODO: validate correctness
         auto threadgroupSize = MTLSizeMake(m_CurComputePSO->pso.maxTotalThreadsPerThreadgroup, 1, 1);
         [encoder setComputePipelineState:m_CurComputePSO->pso];
@@ -119,6 +93,25 @@ namespace RHINO::APIMetal {
         m_CBVSRVUAVHeapOffset = 0;
         m_SamplerHeap = INTERPRET_AS<MetalDescriptorHeap*>(CBVSRVUAVHeap);
         m_SamplerHeapOffset = 0;
+
+        RootSignatureT rootSignatureContent{};
+        rootSignatureContent.records[0] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress;
+        if (m_SamplerHeap) {
+            rootSignatureContent.records[1] = m_SamplerHeap->GetHeapBuffer().gpuAddress;
+        }
+
+        if (++m_CurrentRingRootSignatureIndex > ROOT_SIGNATURE_RING_SIZE) {
+            m_CurrentRingRootSignatureIndex = 0;
+        }
+        WaitForMTLSharedEventValue(m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex], 1, ~0ul);
+        [m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex] setSignaledValue:0];
+
+        auto* rootSignaturesRingMem = static_cast<RootSignatureT*>(m_RootSignaturesRing.contents);
+        memcpy(rootSignaturesRingMem + m_CurrentRingRootSignatureIndex, &rootSignatureContent, sizeof(rootSignatureContent));
+        NSRange range{};
+        range.location = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
+        range.length = sizeof(RootSignatureT);
+        [m_RootSignaturesRing didModifyRange:range];
     }
 
     void MetalCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {

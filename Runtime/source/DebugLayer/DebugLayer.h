@@ -9,6 +9,7 @@ namespace RHINO::DebugLayer {
         Texture3D,
         DescriptorHeap,
         CommandList,
+        RootSignature,
         ComputePSO,
         RTPSO,
     };
@@ -43,6 +44,11 @@ namespace RHINO::DebugLayer {
         std::string name = "UnnamedCommandList";
     };
 
+    struct RootSignatureMeta {
+        DLResourceType type = DLResourceType::RootSignature;
+        std::string name = "UnnamedRootSignature";
+    };
+
     struct ComputePSOMeta {
         DLResourceType type = DLResourceType::ComputePSO;
         std::string name = "UnnamedComputePSO";
@@ -60,6 +66,7 @@ namespace RHINO::DebugLayer {
     public:
         void Initialize() noexcept final;
         void Release() noexcept final;
+        RootSignature* SerializeRootSignature(const RHINO::RootSignatureDesc &desc) noexcept final;
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         RTPSO* CreateSCARRTPSO(const void* scar, uint32_t sizeInBytes, const RTPSODesc& desc) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;

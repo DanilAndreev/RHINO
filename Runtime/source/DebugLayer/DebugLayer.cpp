@@ -79,9 +79,7 @@ namespace RHINO::DebugLayer {
     //     m_ResourcesMeta.erase(pso);
     // }
 
-    ComputePSO* DebugLayer::CompileComputePSO(const ComputePSODesc& desc) noexcept {
-        auto* result = m_Wrapped->CompileComputePSO(desc);
-
+    RootSignature* DebugLayer::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
         std::set<size_t> usedSpaces{};
         for (size_t space = 0; space < desc.spacesCount; ++space) {
             if (usedSpaces.contains(desc.spacesDescs[space].space)) {
@@ -102,6 +100,15 @@ namespace RHINO::DebugLayer {
                    std::to_string(space) + "]");
             }
         }
+
+        auto* result = m_Wrapped->SerializeRootSignature(desc);
+        auto* meta = new RootSignatureMeta{DLResourceType::RootSignature, desc.debugName};
+        m_ResourcesMeta[result] = DebugMetadata{.meta = meta};
+        return result;
+    }
+
+    ComputePSO* DebugLayer::CompileComputePSO(const ComputePSODesc& desc) noexcept {
+        auto* result = m_Wrapped->CompileComputePSO(desc);
 
         auto* meta = new ComputePSOMeta{DLResourceType::ComputePSO, desc.debugName};
         m_ResourcesMeta[result] = DebugMetadata{.meta = meta};

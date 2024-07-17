@@ -22,6 +22,8 @@ namespace RHINO {
 
     public:
         // PSO MANAGEMENT
+        virtual RootSignature* SerializeRootSignature(const RootSignatureDesc& desc) noexcept = 0;
+
         virtual RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept = 0;
         virtual RTPSO* CreateSCARRTPSO(const void* scar, uint32_t sizeInBytes, const RTPSODesc& desc) noexcept = 0;
         virtual ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept = 0;
