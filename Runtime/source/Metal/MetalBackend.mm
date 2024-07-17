@@ -179,6 +179,18 @@ namespace RHINO::APIMetal {
                                              ResourceUsage usage, const char* name) noexcept {
         auto* result = new MetalTexture2D{};
         MTLTextureDescriptor* descriptor = [[MTLTextureDescriptor alloc] init];
+        descriptor.arrayLength = 1;
+        descriptor.mipmapLevelCount = mips;
+        descriptor.width = dimensions.width;
+        descriptor.height = dimensions.height;
+        descriptor.depth = 1;
+        descriptor.cpuCacheMode = MTLCPUCacheModeDefaultCache;
+        descriptor.pixelFormat = Convert::ToMTLPixelFormat(format);
+        descriptor.resourceOptions = 0;
+        descriptor.sampleCount = 1;
+        descriptor.textureType = MTLTextureType2DArray;
+        descriptor.storageMode = MTLStorageModePrivate;
+        descriptor.usage = Convert::ToMTLResourceUsage(usage);
 
         result->texture = [m_Device newTextureWithDescriptor:descriptor];
         return result;
