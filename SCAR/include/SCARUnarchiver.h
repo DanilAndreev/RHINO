@@ -45,7 +45,6 @@ namespace SCAR {
         LibAssembly,
 
         // Configuration payload
-        RootSignature,
         ShadersEntrypoints,
         RTAttributes,
     };
@@ -55,11 +54,6 @@ namespace SCAR {
         RecordFlags flags;
         const uint8_t* data;
         uint32_t dataSize;
-    };
-
-    struct PSORootSignatureDesc {
-        size_t spacesCount = 0;
-        const RHINO::DescriptorSpaceDesc* spacesDescs = nullptr;
     };
 
     class ArchiveReader {
@@ -86,7 +80,6 @@ namespace SCAR {
                     case RecordType::PSAssembly:
                     case RecordType::CSAssembly:
                     case RecordType::LibAssembly:
-                    case RecordType::RootSignature:
                     case RecordType::ShadersEntrypoints:
                     case RecordType::RTAttributes:
                         record.flags = *ReadItem<RecordFlags>(cursor);
@@ -117,22 +110,6 @@ namespace SCAR {
         [[nodiscard]] const ArchivePSOType& GetPSOType() const noexcept { return *m_PSOType; }
 
 #ifdef SCAR_RHINO_ADDONS
-        [[nodiscard]] std::vector<RHINO::DescriptorSpaceDesc> CreateRootSignatureView() const noexcept {
-            const uint8_t* start = GetRecord(RecordType::RootSignature).data;
-            const auto rootSignature = reinterpret_cast<const SCAR::PSORootSignatureDesc*>(start);
-            const auto spacesOffset = reinterpret_cast<size_t>(rootSignature->spacesDescs);
-            const auto* serializedSpacesDescs =
-                    reinterpret_cast<const RHINO::DescriptorSpaceDesc*>(start + spacesOffset);
-
-            std::vector<RHINO::DescriptorSpaceDesc> spacesDescs{rootSignature->spacesCount};
-            for (size_t space = 0; space < rootSignature->spacesCount; ++space) {
-                spacesDescs[space] = serializedSpacesDescs[space];
-                const auto rangesOffset = reinterpret_cast<size_t>(spacesDescs[space].rangeDescs);
-                spacesDescs[space].rangeDescs =
-                        reinterpret_cast<const RHINO::DescriptorRangeDesc*>(start + rangesOffset);
-            }
-            return spacesDescs;
-        }
         [[nodiscard]] std::vector<const char*> CreateEntrypointsView() const noexcept {
             Record record = GetRecord(RecordType::ShadersEntrypoints);
             const auto* start = reinterpret_cast<const char*>(record.data);

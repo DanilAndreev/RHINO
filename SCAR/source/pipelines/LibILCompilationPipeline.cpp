@@ -33,9 +33,6 @@ namespace SCAR {
         PSOArchiver archiver{settings.psoType, settings.psoLang};
         archiver.AddRecord(RecordType::LibAssembly, RecordFlags::None, shaderModuleAssembly, context.dataLength);
         delete shaderModuleAssembly;
-        archiver.AddRecord(RecordType::RootSignature, RecordFlags::None,
-                           SerializeRootSignature(*settings.rootSignature));
-
         std::vector<std::string> entrypoints{librarySettings.entrypoints, librarySettings.entrypoints + librarySettings.entrypointsCount};
         archiver.AddRecord(RecordType::ShadersEntrypoints, RecordFlags::MultipleValues, SerializeEntrypoints(entrypoints));
         return archiver.Archive();

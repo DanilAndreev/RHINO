@@ -62,44 +62,6 @@ public:
                 // TODO: implement.
                 break;
         }
-
-        const nlohmann::json& rootSignature = inputDesc["rootSignature"];
-        std::vector<nlohmann::json> inputSpaces = rootSignature["spacesDescs"];
-        std::vector<size_t> offsetInRangeDescsPerSpaceDesc{};
-        for (size_t spaceID = 0; spaceID < inputSpaces.size(); ++spaceID) {
-            const nlohmann::json& inputSpaceDesc = inputSpaces[spaceID];
-            RHINO::DescriptorSpaceDesc& spaceDesc = m_SpacesDesc.emplace_back();
-            spaceDesc.space = inputSpaceDesc["space"];
-            spaceDesc.offsetInDescriptorsFromTableStart = inputSpaceDesc["offsetInDescriptorsFromTableStart"];
-
-            offsetInRangeDescsPerSpaceDesc.emplace_back(m_RangeDescs.size());
-            std::vector<nlohmann::json> ranges = inputSpaceDesc["rangeDescs"];
-            for (size_t i = 0; i < ranges.size(); ++i) {
-                const nlohmann::json& inputRangeDesc = ranges[i];
-                RHINO::DescriptorRangeDesc& rangeDesc = m_RangeDescs.emplace_back();
-                std::string rangeType = inputRangeDesc["rangeType"];
-                if (rangeType == "CBV") {
-                    rangeDesc.rangeType = RHINO::DescriptorRangeType::CBV;
-                } else if (rangeType == "SRV") {
-                    rangeDesc.rangeType = RHINO::DescriptorRangeType::SRV;
-                } else if (rangeType == "UAV") {
-                    rangeDesc.rangeType = RHINO::DescriptorRangeType::UAV;
-                } else if (rangeType == "Sampler") {
-                    rangeDesc.rangeType = RHINO::DescriptorRangeType::Sampler;
-                } else {
-                    throw std::runtime_error("Invalid rangeType param");
-                }
-                spaceDesc.rangeDescCount = ranges.size();
-                rangeDesc.baseRegisterSlot = inputRangeDesc["baseRegisterSlot"];
-                rangeDesc.descriptorsCount = inputRangeDesc["descriptorsCount"];
-            }
-        }
-        for (size_t spaceID = 0; spaceID < m_SpacesDesc.size(); ++spaceID) {
-            m_SpacesDesc[spaceID].rangeDescs = m_RangeDescs.data() + offsetInRangeDescsPerSpaceDesc[spaceID];
-        }
-        m_RootSignatureDesc.spacesCount = m_SpacesDesc.size();
-        m_RootSignatureDesc.spacesDescs = m_SpacesDesc.data();
-        m_Settings.rootSignature = &m_RootSignatureDesc;
     }
     [[nodiscard]] const SCAR::CompileSettings& GetCompileSettingsView() const noexcept { return m_Settings; }
 private:
@@ -107,10 +69,6 @@ private:
     std::vector<std::string> m_EntrypointsStorage{};
     std::vector<const char*> m_EntrypointsRefs{};
     std::string m_InputFilepath{};
-
-    std::vector<RHINO::DescriptorRangeDesc> m_RangeDescs{};
-    std::vector<RHINO::DescriptorSpaceDesc> m_SpacesDesc{};
-    SCAR::PSORootSignatureDesc m_RootSignatureDesc{};
 };
 
 int main(int argc, char* argv[]) {
@@ -148,7 +106,6 @@ int main(int argc, char* argv[]) {
 
     JSONDescLoader descView{psoDescFilepath};
     settings.psoType = descView.GetCompileSettingsView().psoType;
-    settings.rootSignature = descView.GetCompileSettingsView().rootSignature;
     switch (settings.psoType) {
         case SCAR::ArchivePSOType::Compute:
             settings.computeSettings = descView.GetCompileSettingsView().computeSettings;

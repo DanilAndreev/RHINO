@@ -11,10 +11,6 @@ namespace RHINO::SCARTools {
             m_IsValid = false;
             return;
         }
-        if (!reader.HasRecord(SCAR::RecordType::RootSignature)) {
-            m_IsValid = false;
-            return;
-        }
         if (!reader.HasRecord(SCAR::RecordType::ShadersEntrypoints)) {
             m_IsValid = false;
             return;
@@ -33,10 +29,6 @@ namespace RHINO::SCARTools {
         m_Desc = desc;
         m_Desc.shaderModulesCount = m_ShaderModulesView.size();
         m_Desc.shaderModules = m_ShaderModulesView.data();
-
-        // m_RootSignatureView = reader.CreateRootSignatureView();
-        // m_Desc.spacesCount = m_RootSignatureView.size();
-        // m_Desc.spacesDescs = m_RootSignatureView.data();
     }
 
     const RTPSODesc& SCARRTPSOArchiveView::GetPatchedDesc() const noexcept { return m_Desc; }

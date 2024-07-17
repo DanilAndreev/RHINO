@@ -6,7 +6,6 @@
 #include "ICompilationPipeline.h"
 #include "pipelines/LibILCompilationPipeline.h"
 #include "pipelines/ComputeILCompilationPipeline.h"
-#include "steps/DxilToMetallibStep.h"
 #include "steps/HlslToDxilStep.h"
 #include "steps/HlslToSpirvStep.h"
 
@@ -43,7 +42,6 @@ namespace SCAR {
 #ifdef __clang__
             case ArchivePSOLang::MetalLib: {
                 auto* chainHead = new HlslToDxilStep{};
-                chainHead->SetNext(new DxilToMetallibStep{});
                 return chainHead;
             }
 #endif // __clang__
