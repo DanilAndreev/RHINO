@@ -16,7 +16,11 @@ namespace RHINO::APIMetal {
         m_Cmd = [queue commandBuffer];
     }
 
-    void MetalCommandList::SubmitToQueue() noexcept { [m_Cmd commit]; }
+    void MetalCommandList::SubmitToQueue() noexcept {
+        [m_Cmd commit];
+        //TODO: remove and use semaphores
+        [m_Cmd waitUntilCompleted];
+    }
 
     void MetalCommandList::Release() noexcept {
         delete this;
