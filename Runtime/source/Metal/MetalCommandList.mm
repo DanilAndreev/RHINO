@@ -17,7 +17,7 @@ namespace RHINO::APIMetal {
         [m_RootSignaturesRing setLabel: @"RootSignatureRing"];
         for (size_t i = 0; i < ROOT_SIGNATURE_RING_SIZE; ++i) {
             m_RootSignaturesRingSync[i] = [m_Device newSharedEvent];
-            [m_RootSignaturesRingSync[i] setSignaledValue: 1];
+            [m_RootSignaturesRingSync[i] setSignaledValue: 0];
         }
 
         m_Cmd = [queue commandBuffer];
@@ -65,6 +65,8 @@ namespace RHINO::APIMetal {
         const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
         [encoder setBuffer:m_RootSignaturesRing offset:rootSignatureOffset atIndex:kIRArgumentBufferBindPoint];
         [encoder useResource:m_RootSignaturesRing usage:MTLResourceUsageRead];
+        m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;
+
 
         [encoder setBuffer:m_CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
         [encoder useResource:m_CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
@@ -78,7 +80,10 @@ namespace RHINO::APIMetal {
         auto threadgroupSize = MTLSizeMake(m_CurComputePSO->pso.maxTotalThreadsPerThreadgroup, 1, 1);
         [encoder setComputePipelineState:m_CurComputePSO->pso];
         [encoder dispatchThreadgroups:size threadsPerThreadgroup:threadgroupSize];
+
         [encoder endEncoding];
+        [m_Cmd encodeSignalEvent:m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex]
+                           value:m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex]];
     }
 
     void MetalCommandList::Draw() noexcept {}
@@ -95,15 +100,23 @@ namespace RHINO::APIMetal {
         m_SamplerHeapOffset = 0;
 
         RootSignatureT rootSignatureContent{};
-        rootSignatureContent.records[0] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress;
-        if (m_SamplerHeap) {
-            rootSignatureContent.records[1] = m_SamplerHeap->GetHeapBuffer().gpuAddress;
+        for (size_t spaceIdx = 0; spaceIdx < m_CurRootSignature->spaceDescs.size(); ++spaceIdx) {
+            if (m_CurRootSignature->spaceDescs[spaceIdx].rangeDescs[0].rangeType == DescriptorRangeType::Sampler) {
+                rootSignatureContent.records[spaceIdx] = m_SamplerHeap->GetHeapBuffer().gpuAddress;
+            } else {
+                rootSignatureContent.records[spaceIdx] = m_CBVSRVUAVHeap->GetHeapBuffer().gpuAddress;
+            }
         }
 
-        if (++m_CurrentRingRootSignatureIndex > ROOT_SIGNATURE_RING_SIZE) {
-            m_CurrentRingRootSignatureIndex = 0;
+        if (m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] != 0) {
+            if (++m_CurrentRingRootSignatureIndex > ROOT_SIGNATURE_RING_SIZE) {
+                m_CurrentRingRootSignatureIndex = 0;
+            }
         }
-        WaitForMTLSharedEventValue(m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex], 1, ~0ul);
+        WaitForMTLSharedEventValue(m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex],
+                                   m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex],
+                                   ~0ul);
+        m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] = 0;
         [m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex] setSignaledValue:0];
 
         auto* rootSignaturesRingMem = static_cast<RootSignatureT*>(m_RootSignaturesRing.contents);
@@ -205,6 +218,8 @@ namespace RHINO::APIMetal {
     }
 
     void MetalCommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
+        // m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;
+        // [encoder signal:m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex];
         // TODO: implement
     }
 

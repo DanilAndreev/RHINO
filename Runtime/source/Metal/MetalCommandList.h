@@ -32,6 +32,8 @@ namespace RHINO::APIMetal {
         // Top Level Argument Buffers ring emulating D3D12 Root Signatures.
         id<MTLBuffer> m_RootSignaturesRing = nil;
         id<MTLSharedEvent> m_RootSignaturesRingSync[ROOT_SIGNATURE_RING_SIZE] = {};
+        // Semaphore signaled value that must be waited before reseting semaphore.
+        size_t m_RootSignaturesRingSyncWaitValue[ROOT_SIGNATURE_RING_SIZE] = {};
         size_t m_CurrentRingRootSignatureIndex = 0;
     public:
         void Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept;
