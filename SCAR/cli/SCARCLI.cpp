@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <base64.h>
 
 class JSONDescLoader {
 public:
@@ -134,37 +135,6 @@ int main(int argc, char* argv[]) {
     settings.includeDirectoriesCount = includeDirectories.size();
     settings.includeDirectories = includeDirectories.data();
 
-    // // -------------------------- START TESTS
-    // const RHINO::DescriptorRangeDesc space0rd[] = {
-    //     RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::SRV, 0, 1},
-    //     RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::UAV, 1, 1},
-    //     RHINO::DescriptorRangeDesc{RHINO::DescriptorRangeType::CBV, 2, 1},
-    // };
-    //
-    // const RHINO::DescriptorSpaceDesc spaces[] = {
-    //     RHINO::DescriptorSpaceDesc{0, 0, std::size(space0rd), space0rd},
-    // };
-    //
-    // SCAR::PSORootSignatureDesc rootSignature{};
-    // rootSignature.spacesCount = std::size(spaces);
-    // rootSignature.spacesDescs = spaces;
-    //
-    // const char* entrypoints[] = {"MyRaygenShader", "MyMissShader", "MyClosestHitShader"};
-    //
-    // settings.rootSignature = &rootSignature;
-    // settings.psoLang = SCAR::ArchivePSOLang::DXIL;
-    // settings.psoType = SCAR::ArchivePSOType::Library;
-    // settings.librarySettings.entrypointsCount = std::size(entrypoints);
-    // settings.librarySettings.entrypoints = entrypoints;
-    // settings.librarySettings.inputFilepath = "rt.hlsl";
-    // settings.librarySettings.maxAttributeSizeInBytes = 32;
-    // settings.librarySettings.maxPayloadSizeInBytes = 32;
-    //
-    //
-    // outFilepath = "out.scar";
-    //
-    // //----------------------------END TESTS
-
     const SCAR::CompilationResult res = SCAR::Compile(&settings);
 
     if (res.success) {
@@ -173,7 +143,8 @@ int main(int argc, char* argv[]) {
             out.write(static_cast<const char*>(res.archive.data), res.archive.archiveSizeInBytes);
             out.close();
         } else {
-            assert(0);
+            auto* data = static_cast<uint8_t*>(res.archive.data);
+            std::cout << macaron::Base64::Encode(data, res.archive.archiveSizeInBytes) << std::endl;
             //TODO: print to STDOUT in b64 format
         }
     }

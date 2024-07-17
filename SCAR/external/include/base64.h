@@ -32,7 +32,7 @@ namespace macaron {
 class Base64 {
  public:
 
-  static std::string Encode(const std::string data) {
+  static std::string Encode(const uint8_t* data, size_t dataSize) {
     static constexpr char sEncodingTable[] = {
       'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
       'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -44,7 +44,7 @@ class Base64 {
       '4', '5', '6', '7', '8', '9', '+', '/'
     };
 
-    size_t in_len = data.size();
+    size_t in_len = dataSize;
     size_t out_len = 4 * ((in_len + 2) / 3);
     std::string ret(out_len, '\0');
     size_t i;
@@ -72,7 +72,7 @@ class Base64 {
     return ret;
   }
 
-  static std::string Decode(const std::string& input, std::string& out) {
+  static std::string Decode(const std::string& input, std::vector<uint8_t>& out) {
     static constexpr unsigned char kDecodingTable[] = {
       64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
       64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
