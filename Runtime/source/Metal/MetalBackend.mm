@@ -206,12 +206,12 @@ namespace RHINO::APIMetal {
     }
 
     void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {
-        auto* metalCmd = static_cast<MetalCommandList*>(cmd);
+        auto* metalCmd = INTERPRET_AS<MetalCommandList*>(cmd);
         metalCmd->SubmitToQueue();
     }
 
     void* MetalBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
-        auto* metalBuffer = static_cast<MetalBuffer*>(buffer);
+        auto* metalBuffer = INTERPRET_AS<MetalBuffer*>(buffer);
         return metalBuffer->buffer.contents;
     }
 
@@ -260,31 +260,31 @@ namespace RHINO::APIMetal {
     }
 
     void MetalBackend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
-        auto* metalSemaphore = static_cast<MetalSemaphore*>(semaphore);
+        auto* metalSemaphore = INTERPRET_AS<MetalSemaphore*>(semaphore);
         id<MTLCommandBuffer> cmd = [m_DefaultQueue commandBuffer];
         [cmd encodeSignalEvent: metalSemaphore->event value: value];
         [cmd commit];
     }
 
     void MetalBackend::SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept {
-        auto* metalSemaphore = static_cast<MetalSemaphore*>(semaphore);
+        auto* metalSemaphore = INTERPRET_AS<MetalSemaphore*>(semaphore);
         [metalSemaphore->event setSignaledValue: value];
     }
 
     bool MetalBackend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
-        const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
+        const auto* metalSemaphore = INTERPRET_AS<const MetalSemaphore*>(semaphore);
         return WaitForMTLSharedEventValue(metalSemaphore->event, value, timeout);
     }
 
     void MetalBackend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
-        const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
+        const auto* metalSemaphore = INTERPRET_AS<const MetalSemaphore*>(semaphore);
         id<MTLCommandBuffer> cmd = [m_DefaultQueue commandBuffer];
         [cmd encodeWaitForEvent: metalSemaphore->event value: value];
         [cmd commit];
     }
 
     uint64_t MetalBackend::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
-        const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
+        const auto* metalSemaphore = INTERPRET_AS<const MetalSemaphore*>(semaphore);
         [metalSemaphore->event signaledValue];
         return true;
     }
