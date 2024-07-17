@@ -122,6 +122,7 @@ namespace RHINO {
     class Texture2D : public Resource {};
     class Texture3D : public Resource {};
 
+    class RootSignature: public Object {};
     class RTPSO : public Object {};
     class ComputePSO : public Object {};
 
@@ -161,8 +162,7 @@ namespace RHINO {
     };
 
     struct ComputePSODesc {
-        size_t spacesCount = 0;
-        const DescriptorSpaceDesc* spacesDescs = nullptr;
+        RootSignature* rootSignature = nullptr;
         ShaderModule CS = {};
         const char* debugName = "UnnamedComputePSO";
     };
@@ -188,6 +188,12 @@ namespace RHINO {
             RTRayGenerationDesc rayGeneration;
             RTMissDesc miss;
         };
+    };
+
+    struct RootSignatureDesc {
+        size_t spacesCount = 0;
+        const DescriptorSpaceDesc* spacesDescs = nullptr;
+        const char* debugName;
     };
 
     struct RTPSODesc {
@@ -275,6 +281,8 @@ namespace RHINO {
         virtual void Draw() noexcept = 0;
         virtual void ResourceBarrier(const ResourceBarrierDesc& desc) noexcept = 0;
         virtual void SetComputePSO(ComputePSO* pso) noexcept = 0;
+
+        virtual void SetRootSignature(RootSignature* rootSignature) noexcept = 0;
         virtual void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept = 0;
 
     public:

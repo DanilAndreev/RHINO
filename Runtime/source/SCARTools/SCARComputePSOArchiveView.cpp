@@ -22,9 +22,9 @@ namespace RHINO::SCARTools {
         m_Desc.CS.bytecode = cs.data;
         m_Desc.CS.bytecodeSize = cs.dataSize;
 
-        m_RootSignatureView = reader.CreateRootSignatureView();
-        m_Desc.spacesCount = m_RootSignatureView.size();
-        m_Desc.spacesDescs = m_RootSignatureView.data();
+        // m_RootSignatureView = reader.CreateRootSignatureView();
+        // m_Desc.spacesCount = m_RootSignatureView.size();
+        // m_Desc.spacesDescs = m_RootSignatureView.data();
 
         m_Desc.debugName = debugName;
     }

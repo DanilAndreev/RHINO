@@ -5,6 +5,7 @@
 #include "MetalCommandList.h"
 #include "MetalDescriptorHeap.h"
 #include "MetalConverters.h"
+#include "MetalUtils.h"
 
 #import <SCARTools/SCARComputePSOArchiveView.h>
 
@@ -32,10 +33,8 @@ namespace RHINO::APIMetal {
         [manager stopCapture];
     }
 
-    RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
-
-    ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
-        auto* result = new MetalComputePSO{};
+    RootSignature* MetalBackend::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
+        auto* result = new MetalRootSignature{};
 
         result->spaceDescs.resize(desc.spacesCount);
         std::vector<size_t> offsetInRangeDescsPerDescriptorSpace{};
@@ -50,6 +49,14 @@ namespace RHINO::APIMetal {
             auto addr = result->rangeDescsStorage.data() + offsetInRangeDescsPerDescriptorSpace[spaceID];
             result->spaceDescs[spaceID].rangeDescs = addr;
         }
+
+        return result;
+    }
+
+    RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
+
+    ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
+        auto* result = new MetalComputePSO{};
 
         NSError* error = nil;
         auto emptyHandler = ^{};
@@ -160,6 +167,7 @@ namespace RHINO::APIMetal {
     Semaphore* MetalBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
         auto* result = new MetalSemaphore{};
         result->event = [m_Device newSharedEvent];
+        [result->event setSignaledValue: initialValue];
         return result;
     }
 
@@ -177,9 +185,7 @@ namespace RHINO::APIMetal {
 
     bool MetalBackend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
         const auto* metalSemaphore = static_cast<const MetalSemaphore*>(semaphore);
-        // TODO: Uncommit after MacOS 15 [:harold:]
-        // return [metalSemaphore->event waitUntilSignaledValue:value timeoutMS:timeout];
-        return true;
+        return WaitForMTLSharedEventValue(metalSemaphore->event, value, timeout);
     }
 
     void MetalBackend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {

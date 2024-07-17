@@ -23,6 +23,7 @@ namespace RHINO::APIMetal {
         void Release() noexcept final;
 
     public:
+        RootSignature* SerializeRootSignature(const RHINO::RootSignatureDesc &desc) noexcept final;
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
 

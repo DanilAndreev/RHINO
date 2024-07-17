@@ -8,24 +8,31 @@
 
 
 namespace RHINO::APIMetal {
+    constexpr size_t ROOT_SIGNATURE_RING_SIZE = 10;
     // Max size of D3D12 Root Signature in DWRODS
     // Good value to upbound size for Top Level Arg Buffer emulating Root Signature.
-    constexpr size_t MAX_ROOT_SIGNATURE_SIZE_IN_RECORDS = 64;
+    constexpr size_t ROOT_SIGNATURE_SIZE_IN_RECORDS = 64;
     using RootSignatureRecordT = uint64_t;
+    struct RootSignatureT {
+        RootSignatureRecordT records[ROOT_SIGNATURE_SIZE_IN_RECORDS] = {};
+    };
 
     class MetalCommandList final : public CommandList {
     private:
         id<MTLCommandBuffer> m_Cmd = nil;
         id<MTLDevice> m_Device = nil;
-        // Top Level Argument Buffer emulating D3D12 Root Signature.
-        id<MTLBuffer> m_RootSignature = nil;
 
+        MetalRootSignature* m_CurRootSignature = nullptr;
         MetalComputePSO* m_CurComputePSO = nullptr;
         MetalDescriptorHeap* m_CBVSRVUAVHeap = nullptr;
         size_t m_CBVSRVUAVHeapOffset = 0;
         MetalDescriptorHeap* m_SamplerHeap = nullptr;
         size_t m_SamplerHeapOffset = 0;
 
+        // Top Level Argument Buffers ring emulating D3D12 Root Signatures.
+        id<MTLBuffer> m_RootSignaturesRing = nil;
+        id<MTLSharedEvent> m_RootSignaturesRingSync[ROOT_SIGNATURE_RING_SIZE] = {};
+        size_t m_CurrentRingRootSignatureIndex = 0;
     public:
         void Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept;
         void SubmitToQueue() noexcept;
@@ -38,6 +45,7 @@ namespace RHINO::APIMetal {
         void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
         void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
         void ResourceBarrier(const RHINO::ResourceBarrierDesc &desc) noexcept final;
+        void SetRootSignature(RHINO::RootSignature *rootSignature) noexcept final;
 
     public:
         void Release() noexcept final;
