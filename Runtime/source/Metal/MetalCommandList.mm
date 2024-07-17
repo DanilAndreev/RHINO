@@ -44,20 +44,30 @@ namespace RHINO::APIMetal {
         std::vector<id<MTLResource>> usedCBVSRVs;
         std::vector<id<MTLResource>> usedSMPs;
         for (const DescriptorSpaceDesc& space: m_CurRootSignature->spaceDescs) {
-            for (size_t i = 0; i < space.rangeDescCount; ++i) {
-                size_t pos = space.rangeDescs[i].baseRegisterSlot + space.offsetInDescriptorsFromTableStart;
-                switch (space.rangeDescs[i].rangeType) {
+            for (size_t spaceIdx = 0; spaceIdx < space.rangeDescCount; ++spaceIdx) {
+                size_t pos = space.rangeDescs[spaceIdx].baseRegisterSlot + space.offsetInDescriptorsFromTableStart;
+                switch (space.rangeDescs[spaceIdx].rangeType) {
                     case DescriptorRangeType::CBV:
-                    case DescriptorRangeType::SRV:
-                        usedCBVSRVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos]);
+                    case DescriptorRangeType::SRV: {
+                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                            usedCBVSRVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
+                        }
                         break;
-                    case DescriptorRangeType::UAV:
-                        usedUAVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos]);
+                    }
+                    case DescriptorRangeType::UAV: {
+                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                            usedUAVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
+                        }
                         break;
-                    case DescriptorRangeType::Sampler:
-                        if (m_SamplerHeap)
-                            usedSMPs.push_back(m_SamplerHeap->m_Resources[m_SamplerHeapOffset + pos]);
+                    }
+                    case DescriptorRangeType::Sampler: {
+                        if (m_SamplerHeap) {
+                            for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                                usedSMPs.push_back(m_SamplerHeap->m_Resources[m_SamplerHeapOffset + pos + i]);
+                            }
+                        }
                         break;
+                    }
                 }
             }
         }
