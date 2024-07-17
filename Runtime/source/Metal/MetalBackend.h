@@ -5,6 +5,7 @@
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 #include "RHINOInterfaceImplBase.h"
+#include "MetalBackendTypes.h"
 
 namespace RHINO::APIMetal {
     class MetalTexture2D;
@@ -14,6 +15,8 @@ namespace RHINO::APIMetal {
         id<MTLCommandQueue> m_DefaultQueue;
         id<MTLCommandQueue> m_AsyncComputeQueue;
         id<MTLCommandQueue> m_CopyQueue;
+
+        IRCompiler* m_IRCompiler = nullptr;
 
     public:
         MetalBackend() noexcept {}

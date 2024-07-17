@@ -7,12 +7,12 @@
 #include "MetalConverters.h"
 #include "MetalUtils.h"
 
-#import <SCARTools/SCARComputePSOArchiveView.h>
-
 #import <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 namespace RHINO::APIMetal {
     void MetalBackend::Initialize() noexcept {
+        m_IRCompiler = IRCompilerCreate();
+
         m_Device = MTLCopyAllDevices()[0];
         m_DefaultQueue = [m_Device newCommandQueue];
         m_AsyncComputeQueue = [m_Device newCommandQueue];
@@ -29,12 +29,77 @@ namespace RHINO::APIMetal {
     }
 
     void MetalBackend::Release() noexcept {
+        IRCompilerDestroy(m_IRCompiler);
+        m_IRCompiler = nullptr;
+
         auto manager= [MTLCaptureManager sharedCaptureManager];
         [manager stopCapture];
     }
 
     RootSignature* MetalBackend::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
+        IRError* pError = nullptr;
         auto* result = new MetalRootSignature{};
+
+        // TODO: if root constants defined: add root constants root param
+
+        std::vector<IRDescriptorRange1> rangeDescsStorage{};
+        std::vector<IRRootParameter1> rootParamsDescs{};
+        rootParamsDescs.reserve(desc.spacesCount + 1);
+        std::vector<size_t> offsetsInRangeDescsPerSpaceIdx{};
+        offsetsInRangeDescsPerSpaceIdx.resize(desc.spacesCount);
+
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            IRRootParameter1& rootParamDesc = rootParamsDescs.emplace_back();
+            rootParamDesc.ParameterType = IRRootParameterTypeDescriptorTable;
+            rootParamDesc.DescriptorTable.NumDescriptorRanges = desc.spacesDescs[spaceIdx].rangeDescCount;
+            offsetsInRangeDescsPerSpaceIdx[spaceIdx] = rangeDescsStorage.size();
+
+            //TODO: assert that ranges in one space exclusively CBVSRVUAV or SMP.
+
+            for (size_t i = 0; i < desc.spacesDescs[spaceIdx].rangeDescCount; ++i) {
+                IRDescriptorRange1& rangeDesc = rangeDescsStorage.emplace_back();
+                rangeDesc.NumDescriptors = desc.spacesDescs[spaceIdx].rangeDescs[i].descriptorsCount;
+                rangeDesc.RegisterSpace = desc.spacesDescs[spaceIdx].space;
+                rangeDesc.OffsetInDescriptorsFromTableStart = desc.spacesDescs[spaceIdx].offsetInDescriptorsFromTableStart +
+                                                              desc.spacesDescs[spaceIdx].rangeDescs[i].baseRegisterSlot;
+                rangeDesc.BaseShaderRegister = desc.spacesDescs[spaceIdx].rangeDescs[i].baseRegisterSlot;
+                switch (desc.spacesDescs[spaceIdx].rangeDescs[i].rangeType) {
+                    case RHINO::DescriptorRangeType::SRV:
+                        rangeDesc.RangeType = IRDescriptorRangeTypeSRV;
+                        break;
+                    case RHINO::DescriptorRangeType::UAV:
+                        rangeDesc.RangeType = IRDescriptorRangeTypeUAV;
+                        break;
+                    case RHINO::DescriptorRangeType::CBV:
+                        rangeDesc.RangeType = IRDescriptorRangeTypeCBV;
+                        break;
+                    case RHINO::DescriptorRangeType::Sampler:
+                        rangeDesc.RangeType = IRDescriptorRangeTypeSampler;
+                        break;
+                }
+            }
+        }
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            auto* rangesPtr = rangeDescsStorage.data() + offsetsInRangeDescsPerSpaceIdx[spaceIdx];
+            rootParamsDescs[spaceIdx].DescriptorTable.pDescriptorRanges = rangesPtr;
+        }
+
+        IRRootSignatureDescriptor1 rootSignatureDesc{};
+        rootSignatureDesc.NumParameters = rootParamsDescs.size();
+        rootSignatureDesc.pParameters = rootParamsDescs.data();
+        rootSignatureDesc.NumStaticSamplers = 0;
+        rootSignatureDesc.pStaticSamplers = nullptr;
+        rootSignatureDesc.Flags = IRRootSignatureFlags(IRRootSignatureFlagDenyHullShaderRootAccess |
+                                                       IRRootSignatureFlagDenyDomainShaderRootAccess |
+                                                       IRRootSignatureFlagDenyGeometryShaderRootAccess);
+
+        IRVersionedRootSignatureDescriptor rsVersionedDesc{};
+        rsVersionedDesc.version = IRRootSignatureVersion_1_1;
+        rsVersionedDesc.desc_1_1 = rootSignatureDesc;
+        result->rootSignature = IRRootSignatureCreateFromDescriptor(&rsVersionedDesc, &pError);
+        if (pError) {
+            return nullptr;
+        }
 
         result->spaceDescs.resize(desc.spacesCount);
         std::vector<size_t> offsetInRangeDescsPerDescriptorSpace{};
@@ -56,13 +121,34 @@ namespace RHINO::APIMetal {
     RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
 
     ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
+        auto* metalRootSignature = INTERPRET_AS<MetalRootSignature*>(desc.rootSignature);
+
+        IRError* pError = nullptr;
         auto* result = new MetalComputePSO{};
+
+        IRCompilerSetGlobalRootSignature(m_IRCompiler, metalRootSignature->rootSignature);
+        IRCompilerSetEntryPointName(m_IRCompiler, desc.CS.entrypoint);
+        IRObject* pDXIL = IRObjectCreateFromDXIL(desc.CS.bytecode, desc.CS.bytecodeSize, IRBytecodeOwnershipNone);
+        IRObject* outIR = IRCompilerAllocCompileAndLink(m_IRCompiler, desc.CS.entrypoint, pDXIL, &pError);
+
+        if (!outIR) {
+            // Inspect pError to determine cause.
+            assert(0);
+            IRErrorDestroy(pError);
+            return nullptr;
+        }
+
+        // Retrieve Metallib:
+        IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
+        IRObjectGetMetalLibBinary(outIR, IRShaderStageCompute, pMetallib);
+
+        IRObjectDestroy(pDXIL);
+        IRObjectDestroy(outIR);
 
         NSError* error = nil;
         auto emptyHandler = ^{};
 
-        dispatch_data_t dispatchData = dispatch_data_create(desc.CS.bytecode, desc.CS.bytecodeSize,
-                                                            dispatch_get_main_queue(), emptyHandler);
+        dispatch_data_t dispatchData = IRMetalLibGetBytecodeData(pMetallib);
         id<MTLLibrary> lib = [m_Device newLibraryWithData:dispatchData error:&error];
         if (!lib || error) {
             assert(0);
@@ -76,6 +162,8 @@ namespace RHINO::APIMetal {
         MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
         descriptor.computeFunction = shaderModule;
         result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
+
+        IRMetalLibBinaryDestroy(pMetallib);
         return result;
     }
 
