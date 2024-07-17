@@ -115,9 +115,9 @@ namespace RHINO::DebugLayer {
 
         return result;
     }
-    ComputePSO* DebugLayer::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
+    ComputePSO* DebugLayer::CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes, RootSignature* rootSignature,
                                                   const char* debugName) noexcept {
-        auto* result = m_Wrapped->CompileSCARComputePSO(scar, sizeInBytes, debugName);
+        auto* result = m_Wrapped->CompileSCARComputePSO(scar, sizeInBytes, rootSignature, debugName);
         return result;
     }
 

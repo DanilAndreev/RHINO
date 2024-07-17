@@ -70,7 +70,7 @@ namespace RHINO::DebugLayer {
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         RTPSO* CreateSCARRTPSO(const void* scar, uint32_t sizeInBytes, const RTPSODesc& desc) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
-        ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes,
+        ComputePSO* CompileSCARComputePSO(const void* scar, uint32_t sizeInBytes, RootSignature* rootSignature,
                                           const char* debugName) noexcept final;
         Buffer* CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept final;
         void* MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept final;

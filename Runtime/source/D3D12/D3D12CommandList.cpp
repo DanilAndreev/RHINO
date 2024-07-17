@@ -40,7 +40,6 @@ namespace RHINO::APID3D12 {
     void D3D12CommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
         auto* d3d12PSO = static_cast<D3D12RTPSO*>(desc.pso);
 
-        m_Cmd->SetComputeRootSignature(d3d12PSO->rootSignature);
         m_Cmd->SetPipelineState1(d3d12PSO->PSO);
         SetHeap(desc.CDBSRVUAVHeap, desc.samplerHeap);
 
@@ -111,21 +110,31 @@ namespace RHINO::APID3D12 {
 
     void D3D12CommandList::SetComputePSO(ComputePSO* pso) noexcept {
         auto* d3d12ComputePSO = static_cast<D3D12ComputePSO*>(pso);
-        m_Cmd->SetComputeRootSignature(d3d12ComputePSO->rootSignature);
         m_Cmd->SetPipelineState(d3d12ComputePSO->PSO);
+    }
+
+    void D3D12CommandList::SetRootSignature(RootSignature* rootSignature) noexcept {
+        m_CurRootSignature = INTERPRET_AS<D3D12RootSignature*>(rootSignature);
+        m_Cmd->SetComputeRootSignature(m_CurRootSignature->rootSignature);
     }
 
     void D3D12CommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
         auto* d3d12CBVSRVUAVHeap = static_cast<D3D12DescriptorHeap*>(CBVSRVUAVHeap);
         auto* d3d12SamplerHeap = static_cast<D3D12DescriptorHeap*>(samplerHeap);
+
         if (!samplerHeap) {
             m_Cmd->SetDescriptorHeaps(1, &d3d12CBVSRVUAVHeap->GPUDescriptorHeap);
-            m_Cmd->SetComputeRootDescriptorTable(0, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
         } else {
             ID3D12DescriptorHeap* heaps[] = {d3d12CBVSRVUAVHeap->GPUDescriptorHeap, d3d12SamplerHeap->GPUDescriptorHeap};
             m_Cmd->SetDescriptorHeaps(2, heaps);
-            m_Cmd->SetComputeRootDescriptorTable(0, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
-            m_Cmd->SetComputeRootDescriptorTable(1, d3d12SamplerHeap->GPUHeapGPUStartHandle);
+        }
+
+        for (size_t spaceIdx = 0; spaceIdx < m_CurRootSignature->spaceDescs.size(); ++spaceIdx) {
+            if (m_CurRootSignature->spaceDescs[spaceIdx].rangeDescs[0].rangeType == DescriptorRangeType::Sampler) {
+                m_Cmd->SetComputeRootDescriptorTable(spaceIdx, d3d12SamplerHeap->GPUHeapGPUStartHandle);
+            } else {
+                m_Cmd->SetComputeRootDescriptorTable(spaceIdx, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
+            }
         }
     }
 

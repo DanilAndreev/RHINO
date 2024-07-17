@@ -155,6 +155,12 @@ namespace RHINO {
         const DescriptorRangeDesc* rangeDescs = nullptr;
     };
 
+    struct RootSignatureDesc {
+        size_t spacesCount = 0;
+        const DescriptorSpaceDesc* spacesDescs = nullptr;
+        const char* debugName = "UnnmedRootSignature";
+    };
+
     struct ShaderModule {
         size_t bytecodeSize = 0;
         const uint8_t* bytecode = nullptr;
@@ -190,15 +196,8 @@ namespace RHINO {
         };
     };
 
-    struct RootSignatureDesc {
-        size_t spacesCount = 0;
-        const DescriptorSpaceDesc* spacesDescs = nullptr;
-        const char* debugName;
-    };
-
     struct RTPSODesc {
-        size_t spacesCount = 0;
-        const DescriptorSpaceDesc* spacesDescs = nullptr;
+        RootSignature* rootSignature = nullptr;
         size_t shaderModulesCount = 0;
         const ShaderModule* shaderModules = nullptr;
         size_t recordsCount = 0;

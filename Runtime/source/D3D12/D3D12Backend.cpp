@@ -41,13 +41,99 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12Backend::Release() noexcept {
-        //TODO: finish garbage collector thread and wait for it.
+        // TODO: finish garbage collector thread and wait for it.
         m_GarbageCollector.Release();
+    }
+
+    RootSignature* D3D12Backend::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
+        auto* result = new D3D12RootSignature{};
+
+        // TODO: if root constants defined: add root constants root param
+
+        std::vector<D3D12_DESCRIPTOR_RANGE> rangeDescsStorage{};
+        std::vector<D3D12_ROOT_PARAMETER> rootParamsDescs{};
+        rootParamsDescs.reserve(desc.spacesCount + 1);
+        std::vector<size_t> offsetsInRangeDescsPerSpaceIdx{};
+        offsetsInRangeDescsPerSpaceIdx.resize(desc.spacesCount);
+
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            D3D12_ROOT_PARAMETER& rootParamDesc = rootParamsDescs.emplace_back();
+            rootParamDesc.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            rootParamDesc.DescriptorTable.NumDescriptorRanges = desc.spacesDescs[spaceIdx].rangeDescCount;
+            offsetsInRangeDescsPerSpaceIdx[spaceIdx] = rangeDescsStorage.size();
+
+            //TODO: assert that ranges in one space exclusively CBVSRVUAV or SMP.
+
+            for (size_t i = 0; i < desc.spacesDescs[spaceIdx].rangeDescCount; ++i) {
+                D3D12_DESCRIPTOR_RANGE& rangeDesc = rangeDescsStorage.emplace_back();
+                rangeDesc.NumDescriptors = desc.spacesDescs[spaceIdx].rangeDescs[i].descriptorsCount;
+                rangeDesc.RegisterSpace = desc.spacesDescs[spaceIdx].space;
+                rangeDesc.OffsetInDescriptorsFromTableStart = desc.spacesDescs[spaceIdx].offsetInDescriptorsFromTableStart +
+                                                              desc.spacesDescs[spaceIdx].rangeDescs[i].baseRegisterSlot;
+                rangeDesc.BaseShaderRegister = desc.spacesDescs[spaceIdx].rangeDescs[i].baseRegisterSlot;
+                switch (desc.spacesDescs[spaceIdx].rangeDescs[i].rangeType) {
+                    case DescriptorRangeType::SRV:
+                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+                        break;
+                    case DescriptorRangeType::UAV:
+                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+                        break;
+                    case DescriptorRangeType::CBV:
+                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+                        break;
+                    case DescriptorRangeType::Sampler:
+                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+                        break;
+                }
+            }
+        }
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            auto* rangesPtr = rangeDescsStorage.data() + offsetsInRangeDescsPerSpaceIdx[spaceIdx];
+            rootParamsDescs[spaceIdx].DescriptorTable.pDescriptorRanges = rangesPtr;
+        }
+
+        D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
+        rootSignatureDesc.NumParameters = rootParamsDescs.size();
+        rootSignatureDesc.pParameters = rootParamsDescs.data();
+        rootSignatureDesc.NumStaticSamplers = 0;
+        rootSignatureDesc.pStaticSamplers = nullptr;
+        rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+                                  D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+                                  D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+        //D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+
+        ID3DBlob* serializedRootSig = nullptr;
+        RHINO_D3DS(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &serializedRootSig,
+                                               nullptr));
+
+        RHINO_D3DS(m_Device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(),
+                                                 serializedRootSig->GetBufferSize(), IID_PPV_ARGS(&result->rootSignature)));
+        serializedRootSig->Release();
+        RHINO_GPU_DEBUG(SetDebugName(result->rootSignature, desc.debugName));
+
+        // Serializing CPU root signature desc.
+        result->spaceDescs.resize(desc.spacesCount);
+        std::vector<size_t> offsetInRangeDescsPerDescriptorSpace{};
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            result->spaceDescs[spaceIdx] = desc.spacesDescs[spaceIdx];
+            offsetInRangeDescsPerDescriptorSpace.push_back(result->rangeDescsStorage.size());
+            for (size_t i = 0; i < desc.spacesDescs[spaceIdx].rangeDescCount; ++i) {
+                result->rangeDescsStorage.push_back(desc.spacesDescs[spaceIdx].rangeDescs[i]);
+            }
+        }
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            auto addr = result->rangeDescsStorage.data() + offsetInRangeDescsPerDescriptorSpace[spaceIdx];
+            result->spaceDescs[spaceIdx].rangeDescs = addr;
+        }
+
+        return result;
     }
 
     RTPSO* D3D12Backend::CreateRTPSO(const RTPSODesc& desc) noexcept {
         static const std::wstring SHADER_ID_PREFIX = L"shdr";
         static const std::wstring HITGROUP_ID_PREFIX = L"htgrp";
+
+        auto* d3d12RootSignature = INTERPRET_AS<D3D12RootSignature*>(desc.rootSignature);
 
         auto* result = new D3D12RTPSO{};
 
@@ -107,8 +193,7 @@ namespace RHINO::APID3D12 {
         shaderConfig->Config(desc.maxPayloadSizeInBytes, desc.maxAttributeSizeInBytes);
 
         auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-        result->rootSignature = CreateRootSignature(desc.spacesCount, desc.spacesDescs);
-        globalRootSignature->SetRootSignature(result->rootSignature);
+        globalRootSignature->SetRootSignature(d3d12RootSignature->rootSignature);
 
         auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
         pipelineConfig->Config(desc.maxTraceRecursionDepth);
@@ -149,18 +234,18 @@ namespace RHINO::APID3D12 {
     }
 
     ComputePSO* D3D12Backend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
+        auto* d3d12RootSignature = INTERPRET_AS<D3D12RootSignature*>(desc.rootSignature);
+
         auto* result = new D3D12ComputePSO{};
-        result->rootSignature = CreateRootSignature(desc.spacesCount, desc.spacesDescs);
 
         D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
-        psoDesc.pRootSignature = result->rootSignature;
+        psoDesc.pRootSignature = d3d12RootSignature->rootSignature;
         psoDesc.CS.pShaderBytecode = desc.CS.bytecode;
         psoDesc.CS.BytecodeLength = desc.CS.bytecodeSize;
 
         m_Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&result->PSO));
 
         SetDebugName(result->PSO, desc.debugName);
-        SetDebugName(result->rootSignature, desc.debugName + ".RootSignature"s);
         return result;
     }
 
@@ -378,64 +463,6 @@ namespace RHINO::APID3D12 {
     uint64_t D3D12Backend::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
         const auto* d3d12Semaphore = INTERPRET_AS<const D3D12Semaphore*>(semaphore);
         return d3d12Semaphore->fence->GetCompletedValue();
-    }
-
-    ID3D12RootSignature* D3D12Backend::CreateRootSignature(size_t spacesCount,
-                                                           const DescriptorSpaceDesc* spaces) noexcept {
-        std::vector<D3D12_DESCRIPTOR_RANGE> rangeDescs{};
-
-        for (size_t spaceIdx = 0; spaceIdx < spacesCount; ++spaceIdx) {
-            for (size_t i = 0; i < spaces[spaceIdx].rangeDescCount; ++i) {
-                D3D12_DESCRIPTOR_RANGE rangeDesc{};
-                rangeDesc.NumDescriptors = spaces[spaceIdx].rangeDescs[i].descriptorsCount;
-                rangeDesc.RegisterSpace = spaces[spaceIdx].space;
-                rangeDesc.OffsetInDescriptorsFromTableStart = spaces[spaceIdx].offsetInDescriptorsFromTableStart +
-                                                              spaces[spaceIdx].rangeDescs[i].baseRegisterSlot;
-                rangeDesc.BaseShaderRegister = spaces[spaceIdx].rangeDescs[i].baseRegisterSlot;
-                switch (spaces[spaceIdx].rangeDescs[i].rangeType) {
-                    case DescriptorRangeType::SRV:
-                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-                        break;
-                    case DescriptorRangeType::UAV:
-                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-                        break;
-                    case DescriptorRangeType::CBV:
-                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-                        break;
-                    case DescriptorRangeType::Sampler:
-                        rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-                        break;
-                }
-                rangeDescs.push_back(rangeDesc);
-            }
-        }
-
-        // TODO: bind samplers as saparate table.
-        D3D12_ROOT_PARAMETER rootParamDesc{};
-
-        // Descriptor table
-        rootParamDesc.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        rootParamDesc.DescriptorTable.NumDescriptorRanges = rangeDescs.size();
-        rootParamDesc.DescriptorTable.pDescriptorRanges = rangeDescs.data();
-
-        D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
-        rootSignatureDesc.NumParameters = 1;
-        rootSignatureDesc.pParameters = &rootParamDesc;
-        rootSignatureDesc.NumStaticSamplers = 0;
-        rootSignatureDesc.pStaticSamplers = nullptr;
-        rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-                                  D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-                                  D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-        //D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-
-        ID3DBlob* serializedRootSig = nullptr;
-        RHINO_D3DS(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &serializedRootSig,
-                                               nullptr));
-
-        ID3D12RootSignature* result = nullptr;
-        RHINO_D3DS(m_Device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(),
-                                                 serializedRootSig->GetBufferSize(), IID_PPV_ARGS(&result)));
-        return result;
     }
 } // namespace RHINO::APID3D12
 
