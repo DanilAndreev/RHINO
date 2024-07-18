@@ -221,7 +221,45 @@ namespace RHINO {
     };
 
     enum class TextureFilter {
+        MinMagMipPoint,
+        MinMagPointMipLinear,
+        MinPointMagLinearMipPoint,
+        MinPointMagMipLinear,
+        MinLinearMagMipPoint,
+        MinLinearMagPointMipLinear,
+        MinMagLinearMipPoint,
+        MinMagMipLinear,
+        Anisotrophic,
 
+        ComparisonMinMagMipPoint,
+        ComparisonMinMagPointMipLinear,
+        ComparisonMinPointMagLinearMipPoint,
+        ComparisonMinPointMagMipLinear,
+        ComparisonMinLinearMagMipPoint,
+        ComparisonMinLinearMagPointMipLinear,
+        ComparisonMinMagLinearMipPoint,
+        ComparisonMinMagMipLinear,
+        ComparisonAnisotrophic,
+
+        MinimunMinMagMipPoint,
+        MinimunMinMagPointMipLinear,
+        MinimunMinPointMagLinearMipPoint,
+        MinimunMinPointMagMipLinear,
+        MinimunMinLinearMagMipPoint,
+        MinimunMinLinearMagPointMipLinear,
+        MinimunMinMagLinearMipPoint,
+        MinimunMinMagMipLinear,
+        MinimunAnisotrophic,
+
+        MaximumMinMagMipPoint,
+        MaximumMinMagPointMipLinear,
+        MaximumMinPointMagLinearMipPoint,
+        MaximumMinPointMagMipLinear,
+        MaximumMinLinearMagMipPoint,
+        MaximumMinLinearMagPointMipLinear,
+        MaximumMinMagLinearMipPoint,
+        MaximumMinMagMipLinear,
+        MaximumAnisotrophic,
     };
 
     enum class ComparisonFunction {

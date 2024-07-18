@@ -117,6 +117,85 @@ namespace RHINO::APID3D12::Convert {
                 return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         }
     }
+
+    inline D3D12_TEXTURE_ADDRESS_MODE ToD3D12TextureAddressMode(TextureAddressMode mode) noexcept {
+        switch (mode) {
+            case TextureAddressMode::Wrap:
+                return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+            case TextureAddressMode::Mirror:
+                return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+            case TextureAddressMode::Clamp:
+                return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+            case TextureAddressMode::Border:
+                return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+            case TextureAddressMode::MirrorOnce:
+                return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+            default:
+                assert(0);
+                return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        }
+    }
+
+    inline D3D12_COMPARISON_FUNC ToD3D12ComparisonFunc(ComparisonFunction func) noexcept {
+        switch (func) {
+            case ComparisonFunction::Never:
+                return D3D12_COMPARISON_FUNC_NEVER;
+            case ComparisonFunction::Less:
+                return D3D12_COMPARISON_FUNC_LESS;
+            case ComparisonFunction::Equal:
+                return D3D12_COMPARISON_FUNC_EQUAL;
+            case ComparisonFunction::LessEqual:
+                return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+            case ComparisonFunction::Greater:
+                return D3D12_COMPARISON_FUNC_GREATER;
+            case ComparisonFunction::NotEqual:
+                return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+            case ComparisonFunction::GreaterEqual:
+                return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+            case ComparisonFunction::Always:
+                return D3D12_COMPARISON_FUNC_ALWAYS;
+            default:
+                assert(0);
+                return D3D12_COMPARISON_FUNC_NEVER;
+        }
+    }
+
+    inline D3D12_FILTER ToD3D12Filter(TextureFilter filter) noexcept {
+        switch (filter) {
+
+        }
+    }
+
+    inline void ToD3D12BorderColor(BorderColor color, float outVar[4]) {
+        switch (color) {
+            case BorderColor::TransparentBlack:
+                outVar[0] = 0.0f;
+                outVar[1] = 0.0f;
+                outVar[2] = 0.0f;
+                outVar[3] = 0.0f;
+                return;
+            case BorderColor::OpaqueBlack:
+                outVar[0] = 0.0f;
+                outVar[1] = 0.0f;
+                outVar[2] = 0.0f;
+                outVar[3] = 1.0f;
+                return;
+            case BorderColor::OpaqueWhite:
+                outVar[0] = 1.0f;
+                outVar[1] = 1.0f;
+                outVar[2] = 1.0f;
+                outVar[3] = 1.0f;
+                return;
+            default:
+                assert(0);
+                outVar[0] = 0.0f;
+                outVar[1] = 0.0f;
+                outVar[2] = 0.0f;
+                outVar[3] = 0.0f;
+                return;
+        }
+    }
+
 } // namespace RHINO::APID3D12::Convert
 
 #endif // ENABLE_API_D3D12
