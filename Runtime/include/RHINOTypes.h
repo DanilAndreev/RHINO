@@ -105,6 +105,53 @@ namespace RHINO {
         RTAccelerationStructure,
     };
 
+    enum class TextureAddressMode {
+        Wrap,
+        Mirror,
+        Clamp,
+        Border,
+        MirrorOnce,
+    };
+
+    enum class TextureFilter {
+        MinMagMipPoint,
+        MinMagPointMipLinear,
+        MinPointMagLinearMipPoint,
+        MinPointMagMipLinear,
+        MinLinearMagMipPoint,
+        MinLinearMagPointMipLinear,
+        MinMagLinearMipPoint,
+        MinMagMipLinear,
+        Anisotrophic,
+
+        ComparisonMinMagMipPoint,
+        ComparisonMinMagPointMipLinear,
+        ComparisonMinPointMagLinearMipPoint,
+        ComparisonMinPointMagMipLinear,
+        ComparisonMinLinearMagMipPoint,
+        ComparisonMinLinearMagPointMipLinear,
+        ComparisonMinMagLinearMipPoint,
+        ComparisonMinMagMipLinear,
+        ComparisonAnisotrophic,
+    };
+
+    enum class ComparisonFunction {
+        Never,
+        Less,
+        Equal,
+        LessEqual,
+        Greater,
+        NotEqual,
+        GreaterEqual,
+        Always,
+    };
+
+    enum class BorderColor {
+        TransparentBlack,
+        OpaqueBlack,
+        OpaqueWhite,
+    };
+
     // ---------------------------------------------------------------------------------- OBJECTS PRE-DECLARATION
 
     class Object {
@@ -212,64 +259,17 @@ namespace RHINO {
         const char* debugName = "UnnamedRTPSO";
     };
 
-    enum class TextureAddressMode {
-        Wrap,
-        Mirror,
-        Clamp,
-        Border,
-        MirrorOnce,
-    };
-
-    enum class TextureFilter {
-        MinMagMipPoint,
-        MinMagPointMipLinear,
-        MinPointMagLinearMipPoint,
-        MinPointMagMipLinear,
-        MinLinearMagMipPoint,
-        MinLinearMagPointMipLinear,
-        MinMagLinearMipPoint,
-        MinMagMipLinear,
-        Anisotrophic,
-
-        ComparisonMinMagMipPoint,
-        ComparisonMinMagPointMipLinear,
-        ComparisonMinPointMagLinearMipPoint,
-        ComparisonMinPointMagMipLinear,
-        ComparisonMinLinearMagMipPoint,
-        ComparisonMinLinearMagPointMipLinear,
-        ComparisonMinMagLinearMipPoint,
-        ComparisonMinMagMipLinear,
-        ComparisonAnisotrophic,
-    };
-
-    enum class ComparisonFunction {
-        Never,
-        Less,
-        Equal,
-        LessEqual,
-        Greater,
-        NotEqual,
-        GreaterEqual,
-        Always,
-    };
-
-    enum class BorderColor {
-        TransparentBlack,
-        OpaqueBlack,
-        OpaqueWhite,
-    };
-
     struct SamplerDesc {
-        TextureFilter textureFilter;
-        TextureAddressMode addresU;
-        TextureAddressMode addresV;
-        TextureAddressMode addresW;
-        BorderColor borderColor;
-        ComparisonFunction comparisonFunc;
-        uint32_t maxAnisotrophy;
-        float minLOD;
-        float maxLOD;
-        const char* name;
+        TextureFilter textureFilter = TextureFilter::MinMagMipPoint;
+        TextureAddressMode addresU = TextureAddressMode::Wrap;
+        TextureAddressMode addresV = TextureAddressMode::Wrap;
+        TextureAddressMode addresW = TextureAddressMode::Wrap;
+        BorderColor borderColor = BorderColor::TransparentBlack;
+        ComparisonFunction comparisonFunc = ComparisonFunction::Never;
+        uint32_t maxAnisotrophy = 1;
+        float minLOD = 0;
+        float maxLOD = 1;
+        const char* name = "UnnamedSampler";
     };
 
     struct DispatchDesc {
