@@ -211,16 +211,17 @@ namespace RHINO::APIMetal {
 
     Sampler* MetalBackend::CreateSampler(const SamplerDesc& desc) noexcept {
         auto* result = new MetalSampler{};
+        Convert::MetalMinMagMipFilters filters = Convert::ToMTLMinMagMipFilter(desc.textureFilter);
         MTLSamplerDescriptor* samplerDescriptor = [[MTLSamplerDescriptor alloc] init];
-        samplerDescriptor.minFilter = ;
-        samplerDescriptor.magFilter = ;
-        samplerDescriptor.mipFilter = ;
+        samplerDescriptor.minFilter = filters.min;
+        samplerDescriptor.magFilter = filters.mag;
+        samplerDescriptor.mipFilter = filters.mip;
         samplerDescriptor.sAddressMode = Convert::ToMTLSamplerAddressMode(desc.addresU);
         samplerDescriptor.tAddressMode = Convert::ToMTLSamplerAddressMode(desc.addresV);
         samplerDescriptor.rAddressMode = Convert::ToMTLSamplerAddressMode(desc.addresW);
         samplerDescriptor.borderColor = Convert::ToMTLSamplerBorderColor(desc.borderColor);
         samplerDescriptor.compareFunction = Convert::ToMTLCompareFunction(desc.comparisonFunc);
-        samplerDescriptor.maxAnisotropy = desc.maxAnisotrophy;
+        samplerDescriptor.maxAnisotropy = Convert::IsFilterAnisotrophic(desc.textureFilter) ? desc.maxAnisotrophy : 1;
         samplerDescriptor.lodMinClamp = desc.minLOD;
         samplerDescriptor.lodMaxClamp = desc.maxLOD;
         samplerDescriptor.supportArgumentBuffers = true;
