@@ -2,6 +2,7 @@
 
 #include "D3D12DescriptorHeap.h"
 #include "D3D12BackendTypes.h"
+#include "D3D12Converters.h"
 
 namespace RHINO::APID3D12 {
     void D3D12DescriptorHeap::WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept {
@@ -123,14 +124,11 @@ namespace RHINO::APID3D12 {
 
         D3D12_SAMPLER_DESC smpDesc{};
         smpDesc.Filter = d3d12Sampler->samplerDesc.textureFilter;
-        smpDesc.AddressU = d3d12Sampler->samplerDesc.addresU;
-        smpDesc.AddressV = d3d12Sampler->samplerDesc.addresV;
-        smpDesc.AddressW = d3d12Sampler->samplerDesc.addresW;
-        smpDesc.BorderColor[0] = d3d12Sampler->samplerDesc.borderColor[0];
-        smpDesc.BorderColor[1] = d3d12Sampler->samplerDesc.borderColor[1];
-        smpDesc.BorderColor[2] = d3d12Sampler->samplerDesc.borderColor[2];
-        smpDesc.BorderColor[3] = d3d12Sampler->samplerDesc.borderColor[3];
-        smpDesc.ComparisonFunc = d3d12Sampler->samplerDesc.comparisonFunc;
+        smpDesc.AddressU = Convert::ToD3D12TextureAddressMode(d3d12Sampler->samplerDesc.addresU);
+        smpDesc.AddressV = Convert::ToD3D12TextureAddressMode(d3d12Sampler->samplerDesc.addresV);
+        smpDesc.AddressW = Convert::ToD3D12TextureAddressMode(d3d12Sampler->samplerDesc.addresW);
+        Convert::ToD3D12BorderColor(d3d12Sampler->samplerDesc.borderColor, smpDesc.BorderColor);
+        smpDesc.ComparisonFunc = Convert::ToD3D12ComparisonFunc(d3d12Sampler->samplerDesc.comparisonFunc);
         smpDesc.MaxAnisotropy = d3d12Sampler->samplerDesc.maxAnisotrophy;
         smpDesc.MaxLOD = d3d12Sampler->samplerDesc.maxLOD;
         smpDesc.MinLOD = d3d12Sampler->samplerDesc.minLOD;
