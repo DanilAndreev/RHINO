@@ -78,6 +78,10 @@ namespace RHINO::APIMetal {
 
         [encoder setBuffer:m_CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
         [encoder useResource:m_CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+        if (m_SamplerHeap) {
+            [encoder setBuffer:m_SamplerHeap->GetHeapBuffer() offset:0 atIndex:kIRSamplerHeapBindPoint];
+            [encoder useResource:m_SamplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+        }
 
         [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
         [encoder useResources:usedCBVSRVs.data() count:usedCBVSRVs.size() usage:MTLResourceUsageRead | MTLResourceUsageSample];
@@ -104,7 +108,7 @@ namespace RHINO::APIMetal {
     void MetalCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
         m_CBVSRVUAVHeap = INTERPRET_AS<MetalDescriptorHeap*>(CBVSRVUAVHeap);
         m_CBVSRVUAVHeapOffset = 0;
-        m_SamplerHeap = INTERPRET_AS<MetalDescriptorHeap*>(CBVSRVUAVHeap);
+        m_SamplerHeap = INTERPRET_AS<MetalDescriptorHeap*>(samplerHeap);
         m_SamplerHeapOffset = 0;
 
         RootSignatureT rootSignatureContent{};
