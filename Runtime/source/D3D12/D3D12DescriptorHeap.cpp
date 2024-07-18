@@ -123,7 +123,7 @@ namespace RHINO::APID3D12 {
         auto* d3d12Sampler = static_cast<D3D12Sampler*>(sampler);
 
         D3D12_SAMPLER_DESC smpDesc{};
-        smpDesc.Filter = d3d12Sampler->samplerDesc.textureFilter;
+        smpDesc.Filter = Convert::ToD3D12Filter(d3d12Sampler->samplerDesc.textureFilter);
         smpDesc.AddressU = Convert::ToD3D12TextureAddressMode(d3d12Sampler->samplerDesc.addresU);
         smpDesc.AddressV = Convert::ToD3D12TextureAddressMode(d3d12Sampler->samplerDesc.addresV);
         smpDesc.AddressW = Convert::ToD3D12TextureAddressMode(d3d12Sampler->samplerDesc.addresW);
