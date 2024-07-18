@@ -38,6 +38,16 @@ namespace RHINO::APIMetal {
         }
     };
 
+    class MetalSampler : public SamplerBase {
+    public:
+        id<MTLSamplerState> sampler = nil;
+        
+    public:
+        void Release() noexcept final {
+            delete this;
+        }
+    };
+
     class MetalRootSignature : public RootSignature {
     public:
         IRRootSignature* rootSignature = nullptr;

@@ -14,6 +14,10 @@ namespace RHINO {
         ResourceType GetResourceType() final { return ResourceType::Texture3D; }
     };
 
+    class SamplerBase : public Sampler {
+        ResourceType GetResourceType() final { return ResourceType::Sampler; }
+    };
+
     class BLASBase : public BLAS {
         ResourceType GetResourceType() final { return ResourceType::BLAS; }
     };

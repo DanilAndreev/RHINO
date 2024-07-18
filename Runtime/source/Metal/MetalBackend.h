@@ -37,6 +37,7 @@ namespace RHINO::APIMetal {
 
         Texture2D* CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
                                    const char* name) noexcept final;
+        Sampler* CreateSampler(const RHINO::SamplerDesc &desc) noexcept final;
         DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept final;
         CommandList* AllocateCommandList(const char* name) noexcept final;
 

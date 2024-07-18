@@ -66,6 +66,13 @@ namespace RHINO::APIMetal {
         // TODO: implement
     }
 
+    void MetalDescriptorHeap::WriteSMP(RHINO::Sampler* sampler, size_t offsetInHeap) noexcept {
+        auto* metalSampler = INTERPRET_AS<MetalSampler*>(sampler);
+        auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
+        IRDescriptorTableSetSampler(entry + offsetInHeap, metalSampler->sampler, 0);
+        // m_Resources[offsetInHeap] = metalSampler->sampler;
+    }
+
     void MetalDescriptorHeap::Release() noexcept {
         delete this;
     }
