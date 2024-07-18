@@ -104,7 +104,7 @@ namespace RHINO::APIMetal::Convert {
         return result;
     }
 
-    MTLSamplerBorderColor ToMTLSamplerBorderColor(BorderColor color) noexcept {
+    inline MTLSamplerBorderColor ToMTLSamplerBorderColor(BorderColor color) noexcept {
         switch (color) {
             case BorderColor::TransparentBlack:
                 return MTLSamplerBorderColorTransparentBlack;
@@ -118,7 +118,7 @@ namespace RHINO::APIMetal::Convert {
         }
     }
 
-    MTLSamplerAddressMode ToMTLSamplerAddressMode(TextureAddressMode mode)  noexcept {
+    inline MTLSamplerAddressMode ToMTLSamplerAddressMode(TextureAddressMode mode)  noexcept {
         switch (mode) {
             case TextureAddressMode::Wrap:
                 return MTLSamplerAddressModeRepeat;
@@ -136,7 +136,7 @@ namespace RHINO::APIMetal::Convert {
         }
     }
 
-    MTLCompareFunction ToMTLCompareFunction(ComparisonFunction func) noexcept {
+    inline MTLCompareFunction ToMTLCompareFunction(ComparisonFunction func) noexcept {
         switch (func) {
             case ComparisonFunction::Never:
                 return MTLCompareFunctionNever;
@@ -157,6 +157,58 @@ namespace RHINO::APIMetal::Convert {
             default:
                 assert(0);
                 return MTLCompareFunctionNever;
+        }
+    }
+
+    struct MetalMinMagMipFilters {
+        MTLSamplerMinMagFilter min;
+        MTLSamplerMinMagFilter mag;
+        MTLSamplerMipFilter mip;
+    };
+
+    inline MetalMinMagMipFilters ToMTLMinMagMipFilter(TextureFilter filter) noexcept {
+        switch (filter) {
+            case TextureFilter::MinMagMipPoint:
+            case TextureFilter::ComparisonMinMagMipPoint:
+                return {MTLSamplerMinMagFilterNearest, MTLSamplerMinMagFilterNearest, MTLSamplerMipFilterNearest};
+            case TextureFilter::MinMagPointMipLinear:
+            case TextureFilter::ComparisonMinMagPointMipLinear:
+                return {MTLSamplerMinMagFilterNearest, MTLSamplerMinMagFilterNearest, MTLSamplerMipFilterLinear};
+            case TextureFilter::MinPointMagLinearMipPoint:
+            case TextureFilter::ComparisonMinPointMagLinearMipPoint:
+                return {MTLSamplerMinMagFilterNearest, MTLSamplerMinMagFilterLinear, MTLSamplerMipFilterNearest};
+            case TextureFilter::MinPointMagMipLinear:
+            case TextureFilter::ComparisonMinPointMagMipLinear:
+                return {MTLSamplerMinMagFilterNearest, MTLSamplerMinMagFilterLinear, MTLSamplerMipFilterLinear};
+            case TextureFilter::MinLinearMagMipPoint:
+            case TextureFilter::ComparisonMinLinearMagMipPoint:
+                return {MTLSamplerMinMagFilterLinear, MTLSamplerMinMagFilterNearest, MTLSamplerMipFilterNearest};
+            case TextureFilter::MinLinearMagPointMipLinear:
+            case TextureFilter::ComparisonMinLinearMagPointMipLinear:
+                return {MTLSamplerMinMagFilterLinear, MTLSamplerMinMagFilterNearest, MTLSamplerMipFilterLinear};
+            case TextureFilter::MinMagLinearMipPoint:
+            case TextureFilter::ComparisonMinMagLinearMipPoint:
+                return {MTLSamplerMinMagFilterLinear, MTLSamplerMinMagFilterLinear, MTLSamplerMipFilterNearest};
+            case TextureFilter::MinMagMipLinear:
+            case TextureFilter::ComparisonMinMagMipLinear:
+                return {MTLSamplerMinMagFilterLinear, MTLSamplerMinMagFilterLinear, MTLSamplerMipFilterLinear};
+
+            case TextureFilter::Anisotrophic:
+            case TextureFilter::ComparisonAnisotrophic:
+                return {MTLSamplerMinMagFilterLinear, MTLSamplerMinMagFilterLinear, MTLSamplerMipFilterLinear};
+            default:
+                assert(0);
+                return {MTLSamplerMinMagFilterNearest, MTLSamplerMinMagFilterNearest, MTLSamplerMipFilterNearest};
+        }
+    }
+
+    inline bool IsFilterAnisotrophic(TextureFilter filter) noexcept {
+        switch (filter) {
+            case TextureFilter::Anisotrophic:
+            case TextureFilter::ComparisonAnisotrophic:
+                return true;
+            default:
+                return false;
         }
     }
 } // namespace RHINO::APIMetal::Convert
