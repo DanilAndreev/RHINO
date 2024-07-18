@@ -310,8 +310,8 @@ namespace RHINO::APID3D12 {
         d3d12Buffer->buffer->Unmap(0, &range);
     }
 
-    Texture2D* D3D12Backend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
-                                             ResourceUsage usage, const char* name) noexcept {
+    Texture2D* D3D12Backend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
+                                             const char* name) noexcept {
         auto result = new D3D12Texture2D{};
 
         D3D12_HEAP_PROPERTIES heapProperties{};
@@ -334,12 +334,17 @@ namespace RHINO::APID3D12 {
 
         resourceDesc.Flags = Convert::ToD3D12ResourceFlags(usage);
 
-        RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                                     D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                                     IID_PPV_ARGS(&result->texture)));
+        RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
+                                                     nullptr, IID_PPV_ARGS(&result->texture)));
         result->desc = result->texture->GetDesc();
 
         RHINO_GPU_DEBUG(SetDebugName(result->texture, name));
+        return result;
+    }
+
+    Sampler* D3D12Backend::CreateSampler(const SamplerDesc& desc) noexcept {
+        auto* result = new D3D12Sampler{};
+        result->samplerDesc = desc;
         return result;
     }
 
