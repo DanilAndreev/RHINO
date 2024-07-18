@@ -230,9 +230,15 @@ namespace RHINO {
         Equal,
         LessEqual,
         Greater,
-        NorEqual,
-        FreaterEqual,
+        NotEqual,
+        GreaterEqual,
         Always,
+    };
+
+    enum class BorderColor {
+        TransparentBlack,
+        OpaqueBlack,
+        OpaqueWhite,
     };
 
     struct SamplerDesc {
@@ -240,11 +246,12 @@ namespace RHINO {
         TextureAddressMode addresU;
         TextureAddressMode addresV;
         TextureAddressMode addresW;
-        float borderColor[4];
+        BorderColor borderColor;
         ComparisonFunction comparisonFunc;
         uint32_t maxAnisotrophy;
         float minLOD;
         float maxLOD;
+        const char* name;
     };
 
     struct DispatchDesc {

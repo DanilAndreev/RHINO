@@ -17,7 +17,7 @@ namespace RHINO::APIMetal::Convert {
         }
     }
 
-    inline MTLPixelFormat ToMTLPixelFormat(TextureFormat format) {
+    inline MTLPixelFormat ToMTLPixelFormat(TextureFormat format) noexcept {
         switch (format) {
             case TextureFormat::R32G32B32A32_FLOAT:
                 return MTLPixelFormatRGBA32Float;
@@ -75,7 +75,7 @@ namespace RHINO::APIMetal::Convert {
         }
     }
 
-    inline MTLResourceUsage ToMTLResourceUsage(ResourceUsage usage) {
+    inline MTLResourceUsage ToMTLResourceUsage(ResourceUsage usage) noexcept {
         MTLResourceUsage result = 0;
         if (bool(usage & ResourceUsage::VertexBuffer)) {
             result |= MTLResourceUsageRead;
@@ -102,6 +102,62 @@ namespace RHINO::APIMetal::Convert {
             result |= MTLResourceUsageRead;
         }
         return result;
+    }
+
+    MTLSamplerBorderColor ToMTLSamplerBorderColor(BorderColor color) noexcept {
+        switch (color) {
+            case BorderColor::TransparentBlack:
+                return MTLSamplerBorderColorTransparentBlack;
+            case BorderColor::OpaqueBlack:
+                return MTLSamplerBorderColorOpaqueBlack;
+            case BorderColor::OpaqueWhite:
+                return MTLSamplerBorderColorOpaqueWhite;
+            default:
+                assert(0);
+                return MTLSamplerBorderColorTransparentBlack;
+        }
+    }
+
+    MTLSamplerAddressMode ToMTLSamplerAddressMode(TextureAddressMode mode)  noexcept {
+        switch (mode) {
+            case TextureAddressMode::Wrap:
+                return MTLSamplerAddressModeRepeat;
+            case TextureAddressMode::Mirror:
+                return MTLSamplerAddressModeMirrorRepeat;
+            case TextureAddressMode::Clamp:
+                return MTLSamplerAddressModeClampToEdge;
+            case TextureAddressMode::Border:
+                return MTLSamplerAddressModeClampToBorderColor;
+            case TextureAddressMode::MirrorOnce:
+                return MTLSamplerAddressModeMirrorClampToEdge;
+            default:
+                assert(0);
+                return MTLSamplerAddressModeRepeat;
+        }
+    }
+
+    MTLCompareFunction ToMTLCompareFunction(ComparisonFunction func) noexcept {
+        switch (func) {
+            case ComparisonFunction::Never:
+                return MTLCompareFunctionNever;
+            case ComparisonFunction::Less:
+                return MTLCompareFunctionLess;
+            case ComparisonFunction::Equal:
+                return MTLCompareFunctionEqual;
+            case ComparisonFunction::LessEqual:
+                return MTLCompareFunctionLessEqual;
+            case ComparisonFunction::Greater:
+                return MTLCompareFunctionGreater;
+            case ComparisonFunction::NotEqual:
+                return MTLCompareFunctionNotEqual;
+            case ComparisonFunction::GreaterEqual:
+                return MTLCompareFunctionGreaterEqual;
+            case ComparisonFunction::Always:
+                return MTLCompareFunctionAlways;
+            default:
+                assert(0);
+                return MTLCompareFunctionNever;
+        }
     }
 } // namespace RHINO::APIMetal::Convert
 

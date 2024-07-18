@@ -204,13 +204,27 @@ namespace RHINO::APIMetal {
         descriptor.usage = Convert::ToMTLResourceUsage(usage);
 
         result->texture = [m_Device newTextureWithDescriptor:descriptor];
+
+        [result->texture setLabel:[NSString stringWithUTF8String:name]];
         return result;
     }
 
     Sampler* MetalBackend::CreateSampler(const SamplerDesc& desc) noexcept {
         auto* result = new MetalSampler{};
         MTLSamplerDescriptor* samplerDescriptor = [[MTLSamplerDescriptor alloc] init];
-        // samplerDescriptor.;
+        samplerDescriptor.minFilter = ;
+        samplerDescriptor.magFilter = ;
+        samplerDescriptor.mipFilter = ;
+        samplerDescriptor.sAddressMode = Convert::ToMTLSamplerAddressMode(desc.addresU);
+        samplerDescriptor.tAddressMode = Convert::ToMTLSamplerAddressMode(desc.addresV);
+        samplerDescriptor.rAddressMode = Convert::ToMTLSamplerAddressMode(desc.addresW);
+        samplerDescriptor.borderColor = Convert::ToMTLSamplerBorderColor(desc.borderColor);
+        samplerDescriptor.compareFunction = Convert::ToMTLCompareFunction(desc.comparisonFunc);
+        samplerDescriptor.maxAnisotropy = desc.maxAnisotrophy;
+        samplerDescriptor.lodMinClamp = desc.minLOD;
+        samplerDescriptor.lodMaxClamp = desc.maxLOD;
+        samplerDescriptor.supportArgumentBuffers = true;
+        samplerDescriptor.label = [NSString stringWithUTF8String:desc.name];
 
         result->sampler = [m_Device newSamplerStateWithDescriptor:samplerDescriptor];
         return result;
