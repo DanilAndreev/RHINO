@@ -162,7 +162,46 @@ namespace RHINO::APID3D12::Convert {
 
     inline D3D12_FILTER ToD3D12Filter(TextureFilter filter) noexcept {
         switch (filter) {
+            case TextureFilter::MinMagMipPoint:
+                return D3D12_FILTER_MIN_MAG_MIP_POINT;
+            case TextureFilter::MinMagPointMipLinear:
+                return D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+            case TextureFilter::MinPointMagLinearMipPoint:
+                return D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+            case TextureFilter::MinPointMagMipLinear:
+                return D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR;
+            case TextureFilter::MinLinearMagMipPoint:
+                return D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+            case TextureFilter::MinLinearMagPointMipLinear:
+                return D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+            case TextureFilter::MinMagLinearMipPoint:
+                return D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+            case TextureFilter::MinMagMipLinear:
+                return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+            case TextureFilter::Anisotrophic:
+                return D3D12_FILTER_ANISOTROPIC;
 
+            case TextureFilter::ComparisonMinMagMipPoint:
+                return D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+            case TextureFilter::ComparisonMinMagPointMipLinear:
+                return D3D12_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR;
+            case TextureFilter::ComparisonMinPointMagLinearMipPoint:
+                return D3D12_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT;
+            case TextureFilter::ComparisonMinPointMagMipLinear:
+                return D3D12_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR;
+            case TextureFilter::ComparisonMinLinearMagMipPoint:
+                return D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT;
+            case TextureFilter::ComparisonMinLinearMagPointMipLinear:
+                return D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+            case TextureFilter::ComparisonMinMagLinearMipPoint:
+                return D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+            case TextureFilter::ComparisonMinMagMipLinear:
+                return D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+            case TextureFilter::ComparisonAnisotrophic:
+                return D3D12_FILTER_COMPARISON_ANISOTROPIC;
+            default:
+                assert(0);
+                return D3D12_FILTER_MIN_MAG_MIP_POINT;
         }
     }
 
