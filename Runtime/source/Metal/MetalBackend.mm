@@ -133,6 +133,9 @@ namespace RHINO::APIMetal {
 
         if (!outIR) {
             // Inspect pError to determine cause.
+            IRErrorCode code = static_cast<IRErrorCode>(IRErrorGetCode(pError));
+
+            const void* payload = IRErrorGetPayload(pError);
             assert(0);
             IRErrorDestroy(pError);
             return nullptr;
