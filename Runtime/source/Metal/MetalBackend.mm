@@ -207,6 +207,15 @@ namespace RHINO::APIMetal {
         return result;
     }
 
+    Sampler* MetalBackend::CreateSampler(const SamplerDesc& desc) noexcept {
+        auto* result = new MetalSampler{};
+        MTLSamplerDescriptor* samplerDescriptor = [[MTLSamplerDescriptor alloc] init];
+        // samplerDescriptor.;
+
+        result->sampler = [m_Device newSamplerStateWithDescriptor:samplerDescriptor];
+        return result;
+    }
+
     DescriptorHeap* MetalBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount,
                                                        const char* name) noexcept {
         auto* result = new MetalDescriptorHeap{};

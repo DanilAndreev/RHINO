@@ -18,6 +18,7 @@ namespace RHINO {
         Texture3D,
         BLAS,
         TLAS,
+        Sampler,
         Count,
     };
 
@@ -122,6 +123,8 @@ namespace RHINO {
     class Texture2D : public Resource {};
     class Texture3D : public Resource {};
 
+    class Sampler : public Resource {};
+
     class RootSignature: public Object {};
     class RTPSO : public Object {};
     class ComputePSO : public Object {};
@@ -207,6 +210,10 @@ namespace RHINO {
         uint32_t maxAttributeSizeInBytes = 0;
 
         const char* debugName = "UnnamedRTPSO";
+    };
+
+    struct SamplerDesc {
+
     };
 
     struct DispatchDesc {
@@ -328,6 +335,8 @@ namespace RHINO {
         virtual void WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept = 0;
 
         virtual void WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept = 0;
+
+        virtual void WriteSMP(Sampler* sampler, size_t offsetInHeap) noexcept = 0;
     };
 } // namespace RHINO
 

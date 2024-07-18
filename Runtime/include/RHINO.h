@@ -39,6 +39,7 @@ namespace RHINO {
 
         virtual Texture2D* CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
                                            ResourceUsage usage, const char* name) noexcept = 0;
+        virtual Sampler* CreateSampler(const SamplerDesc& desc) noexcept = 0;
         virtual DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept = 0;
 
         //TODO: add command list target queue setting;

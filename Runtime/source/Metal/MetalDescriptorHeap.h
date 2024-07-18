@@ -25,6 +25,8 @@ namespace RHINO::APIMetal {
 
         void WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept final;
 
+        void WriteSMP(RHINO::Sampler *sampler, size_t offsetInHeap) noexcept final;
+
     public:
         id<MTLBuffer> GetHeapBuffer() noexcept;
         size_t GetDescriptorStride() const noexcept;
