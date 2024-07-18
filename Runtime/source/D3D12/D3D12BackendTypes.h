@@ -43,6 +43,16 @@ namespace RHINO::APID3D12 {
         }
     };
 
+    class D3D12Sampler : public SamplerBase {
+    public:
+        SamplerDesc samplerDesc = {};
+
+    public:
+        void Release() noexcept final {
+            delete this;
+        }
+    };
+
     class D3D12BLAS : public BLASBase {
     public:
         ID3D12Resource* buffer = nullptr;

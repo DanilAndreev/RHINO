@@ -212,8 +212,39 @@ namespace RHINO {
         const char* debugName = "UnnamedRTPSO";
     };
 
-    struct SamplerDesc {
+    enum class TextureAddressMode {
+        Wrap,
+        Mirror,
+        Clamp,
+        Border,
+        MirrorOnce,
+    };
 
+    enum class TextureFilter {
+
+    };
+
+    enum class ComparisonFunction {
+        Never,
+        Less,
+        Equal,
+        LessEqual,
+        Greater,
+        NorEqual,
+        FreaterEqual,
+        Always,
+    };
+
+    struct SamplerDesc {
+        TextureFilter textureFilter;
+        TextureAddressMode addresU;
+        TextureAddressMode addresV;
+        TextureAddressMode addresW;
+        float borderColor[4];
+        ComparisonFunction comparisonFunc;
+        uint32_t maxAnisotrophy;
+        float minLOD;
+        float maxLOD;
     };
 
     struct DispatchDesc {

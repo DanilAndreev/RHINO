@@ -118,6 +118,30 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
 
+    void D3D12DescriptorHeap::WriteSMP(Sampler* sampler, size_t offsetInHeap) noexcept {
+        auto* d3d12Sampler = static_cast<D3D12Sampler*>(sampler);
+
+        D3D12_SAMPLER_DESC smpDesc{};
+        smpDesc.Filter = d3d12Sampler->samplerDesc.textureFilter;
+        smpDesc.AddressU = d3d12Sampler->samplerDesc.addresU;
+        smpDesc.AddressV = d3d12Sampler->samplerDesc.addresV;
+        smpDesc.AddressW = d3d12Sampler->samplerDesc.addresW;
+        smpDesc.BorderColor[0] = d3d12Sampler->samplerDesc.borderColor[0];
+        smpDesc.BorderColor[1] = d3d12Sampler->samplerDesc.borderColor[1];
+        smpDesc.BorderColor[2] = d3d12Sampler->samplerDesc.borderColor[2];
+        smpDesc.BorderColor[3] = d3d12Sampler->samplerDesc.borderColor[3];
+        smpDesc.ComparisonFunc = d3d12Sampler->samplerDesc.comparisonFunc;
+        smpDesc.MaxAnisotropy = d3d12Sampler->samplerDesc.maxAnisotrophy;
+        smpDesc.MaxLOD = d3d12Sampler->samplerDesc.maxLOD;
+        smpDesc.MinLOD = d3d12Sampler->samplerDesc.minLOD;
+        smpDesc.MipLODBias = 0;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUHeapCPUHandle = GetCPUHeapCPUHandle(offsetInHeap);
+        D3D12_CPU_DESCRIPTOR_HANDLE GPUHeapCPUHandle = GetGPUHeapCPUHandle(offsetInHeap);
+        device->CreateSampler(&smpDesc, CPUHeapCPUHandle);
+        device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+    }
+
     void D3D12DescriptorHeap::Release() noexcept {
         CPUDescriptorHeap->Release();
         GPUDescriptorHeap->Release();
