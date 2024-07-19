@@ -8,6 +8,7 @@ namespace RHINO::APIVulkan {
     class VulkanDescriptorHeap;
 
     struct VulkanObjectContext {
+        VkInstance instance = VK_NULL_HANDLE;
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         VkDevice device = VK_NULL_HANDLE;
         VkAllocationCallbacks* allocator = nullptr;

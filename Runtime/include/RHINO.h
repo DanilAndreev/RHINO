@@ -53,6 +53,7 @@ namespace RHINO {
     public:
         // JOB SUBMISSION
         virtual void SubmitCommandList(CommandList* cmd) noexcept = 0;
+        virtual void SwapchainPresent(Swapchain* swapchain) noexcept = 0;
 
     public:
         // Sync API

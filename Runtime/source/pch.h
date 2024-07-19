@@ -27,6 +27,9 @@
 #endif // ENABLE_API_D3D12
 
 #ifdef ENABLE_API_VULKAN
+#ifdef WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif // WIN32
 //#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 #endif // ENABLE_API_VULKAN

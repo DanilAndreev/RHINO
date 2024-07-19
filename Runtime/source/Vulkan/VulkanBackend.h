@@ -27,6 +27,7 @@ namespace RHINO::APIVulkan {
         Texture2D* CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
                            const char* name) noexcept final;
         DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept final;
+        Swapchain* CreateSwapchain(const SwapchainDesc& desc) noexcept final;
 
         CommandList* AllocateCommandList(const char* name) noexcept final;
 
@@ -35,6 +36,7 @@ namespace RHINO::APIVulkan {
 
     public:
         void SubmitCommandList(CommandList* cmd) noexcept final;
+        void SwapchainPresent(Swapchain* swapchain) noexcept final;
 
     public:
         Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept final;
@@ -64,11 +66,6 @@ namespace RHINO::APIVulkan {
         VkCommandPool m_CopyQueueCMDPool = VK_NULL_HANDLE;
 
         VkAllocationCallbacks* m_Alloc = nullptr;
-
-        // DEBUG
-        VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
-        // std::vector<VkSemaphore> m_SwapchainSemaphores{};
-        uint32_t m_SwapchainCurrentImage = 0;
     };
 }// namespace RHINO::APIVulkan
 
