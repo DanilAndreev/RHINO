@@ -4,16 +4,11 @@
 #include "VulkanAPI.h"
 #include "VulkanCommandList.h"
 #include "VulkanDescriptorHeap.h"
+#include "VulkanSwapchain.h"
 #include "VulkanUtils.h"
 #include "VulkanConverters.h"
 
 #include "SCARTools/SCARComputePSOArchiveView.h"
-
-#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
-HWND g_RHINO_HWND = NULL;
-HINSTANCE g_RHINO_HInstance = NULL;
-#endif
-
 
 namespace RHINO::APIVulkan {
     void VulkanBackend::Initialize() noexcept {
@@ -26,10 +21,8 @@ namespace RHINO::APIVulkan {
 
         const char* instanceExts[] = {
             VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
-#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
             VK_KHR_SURFACE_EXTENSION_NAME,
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#endif
         };
 
         VkInstanceCreateInfo instanceInfo{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
@@ -84,9 +77,7 @@ namespace RHINO::APIVulkan {
         const char* deviceExtensions[] = {
             VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
             VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
-#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#endif // RHINO_VULKAN_DEBUG_SWAPCHAIN
         };
         deviceInfo.enabledExtensionCount = RHINO_ARR_SIZE(deviceExtensions);
         deviceInfo.ppEnabledExtensionNames = deviceExtensions;
@@ -112,49 +103,6 @@ namespace RHINO::APIVulkan {
         vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_AsyncComputeQueueCMDPool);
         poolCreateInfo.queueFamilyIndex = m_CopyQueueFamIndex;
         vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_CopyQueueCMDPool);
-
-#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
-        {
-            assert(g_RHINO_HWND);
-            assert(g_RHINO_HInstance);
-            VkWin32SurfaceCreateInfoKHR surfaceCreateInfoKhr{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
-            surfaceCreateInfoKhr.hwnd = g_RHINO_HWND;
-            surfaceCreateInfoKhr.hinstance = g_RHINO_HInstance;
-
-            VkSurfaceKHR surface;
-            RHINO_VKS(vkCreateWin32SurfaceKHR(m_Instance, &surfaceCreateInfoKhr, m_Alloc, &surface));
-            VkBool32 surfaceIsSupported;
-            vkGetPhysicalDeviceSurfaceSupportKHR(m_PhysicalDevice, m_DefaultQueueFamIndex, surface, &surfaceIsSupported);
-            assert(surfaceIsSupported && "Surface is not supported by device.");
-            VkSurfaceCapabilitiesKHR surfaceCapabilities;
-            RHINO_VKS(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, surface, &surfaceCapabilities));
-
-            uint32_t formatsCount;
-            std::vector<VkSurfaceFormatKHR> availableFormats;
-            RHINO_VKS(vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatsCount, nullptr));
-            availableFormats.resize(formatsCount);
-            RHINO_VKS(vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, surface, &formatsCount, availableFormats.data()));
-            VkSurfaceFormatKHR surfaceFormat = availableFormats.front();
-
-            VkSwapchainCreateInfoKHR swapchainCreateInfoKhr{VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
-            swapchainCreateInfoKhr.surface = surface;
-            swapchainCreateInfoKhr.minImageCount = surfaceCapabilities.minImageCount;
-            swapchainCreateInfoKhr.imageFormat = surfaceFormat.format;
-            swapchainCreateInfoKhr.imageColorSpace = surfaceFormat.colorSpace;
-            swapchainCreateInfoKhr.imageExtent = surfaceCapabilities.currentExtent;
-            swapchainCreateInfoKhr.imageArrayLayers = 1;
-            swapchainCreateInfoKhr.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-            swapchainCreateInfoKhr.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            swapchainCreateInfoKhr.queueFamilyIndexCount = 0;
-            swapchainCreateInfoKhr.pQueueFamilyIndices = nullptr;
-            swapchainCreateInfoKhr.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-            swapchainCreateInfoKhr.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-            swapchainCreateInfoKhr.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-            swapchainCreateInfoKhr.clipped = VK_TRUE;
-            swapchainCreateInfoKhr.oldSwapchain = VK_NULL_HANDLE;
-            RHINO_VKS(vkCreateSwapchainKHR(m_Device, &swapchainCreateInfoKhr, m_Alloc, &m_Swapchain));
-        }
-#endif
     }
 
     void VulkanBackend::Release() noexcept {
@@ -357,6 +305,12 @@ namespace RHINO::APIVulkan {
         return result;
     }
 
+    Swapchain* VulkanBackend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
+        auto* result = new VulkanSwapchain{};
+        result->Initialize(CreateVulkanObjectContext(), desc);
+        return result;
+    }
+
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new VulkanCommandList{};
         result->Initialize(name, CreateVulkanObjectContext(), m_DefaultQueueCMDPool);
@@ -368,18 +322,11 @@ namespace RHINO::APIVulkan {
         vulkanCMD->SubmitToQueue(m_DefaultQueue);
         vkDeviceWaitIdle(m_Device); // TODO: REMOVE
 
-#ifdef RHINO_VULKAN_DEBUG_SWAPCHAIN
-        VkResult swapchainStatus = VK_SUCCESS;
-        VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-        presentInfo.waitSemaphoreCount = 0;
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = &m_Swapchain;
-        presentInfo.pImageIndices = &m_SwapchainCurrentImage;
-        presentInfo.pResults = &swapchainStatus;
+    }
 
-        RHINO_VKS(vkQueuePresentKHR(m_DefaultQueue, &presentInfo));
-        RHINO_VKS(swapchainStatus);
-#endif RHINO_VULKAN_DEBUG_SWAPCHAIN
+    void VulkanBackend::SwapchainPresent(Swapchain* swapchain) noexcept {
+        auto* vulkanSwapchain = INTERPRET_AS<VulkanSwapchain*>(swapchain);
+        vulkanSwapchain->Present(m_DefaultQueue);
     }
 
     Semaphore* VulkanBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
@@ -572,6 +519,7 @@ namespace RHINO::APIVulkan {
 
     VulkanObjectContext VulkanBackend::CreateVulkanObjectContext() const noexcept {
         VulkanObjectContext result{};
+        result.instance = m_Instance;
         result.physicalDevice = m_PhysicalDevice;
         result.device = m_Device;
         result.allocator = m_Alloc;

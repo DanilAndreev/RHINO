@@ -17,10 +17,11 @@ set(HeaderFiles
         source/Vulkan/VulkanBackend.h
         source/Vulkan/VulkanBackendTypes.h
         source/Vulkan/VulkanConverters.h
+        source/Vulkan/VulkanUtils.h
         source/Vulkan/VulkanAPI.h
         source/Vulkan/VulkanDescriptorHeap.h
         source/Vulkan/VulkanCommandList.h
-        source/Vulkan/VulkanUtils.h
+        source/Vulkan/VulkanSwapchain.h
 
         source/D3D12/D3D12Backend.h
         source/D3D12/D3D12BackendTypes.h
@@ -62,6 +63,7 @@ set(SourceFiles
         source/Vulkan/VulkanAPI.cpp
         source/Vulkan/VulkanDescriptorHeap.cpp
         source/Vulkan/VulkanCommandList.cpp
+        source/Vulkan/VulkanSwapchain.cpp
 
         source/D3D12/D3D12Backend.cpp
         source/D3D12/D3D12DescriptorHeap.cpp
@@ -86,7 +88,7 @@ if(APPLE)
 else()
     message("RHINO AVAILABLE APIs: Vulkan, D3D12.")
     add_library(RHINO ${SourceFiles} ${HeaderFiles} ${InterfaceHeaderFiles})
-    target_compile_definitions(RHINO PRIVATE ENABLE_API_D3D12=1 ) # ENABLE_API_VULKAN=1
+    target_compile_definitions(RHINO PRIVATE ENABLE_API_D3D12=1) # ENABLE_API_VULKAN=1
     target_link_libraries(RHINO PRIVATE d3d12.lib dxgi.lib)
 
     find_package(Vulkan REQUIRED)
@@ -96,11 +98,6 @@ endif()
 
 target_include_directories(RHINO PRIVATE external/include)
 
-# --------------------------------------------- DEBUG MACRO ------------------------------------------------------------
-if(RHINO_VULKAN_DEBUG_SWAPCHAIN)
-    target_compile_definitions(RHINO PRIVATE RHINO_VULKAN_DEBUG_SWAPCHAIN=1 VK_USE_PLATFORM_WIN32_KHR=1)
-
-endif()
 # ------------------------------------------- END DEBUG MACRO ----------------------------------------------------------
 
 # set_source_files_properties(${HeaderFiles} PROPERTIES HEADER_FILE_ONLY TRUE)
