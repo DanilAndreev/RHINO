@@ -438,6 +438,11 @@ namespace RHINO::APID3D12 {
         d3d12CMD->SumbitToQueue(m_DefaultQueue);
     }
 
+    void D3D12Backend::SwapchainPresent(Swapchain* swapchain) noexcept {
+        auto* d3d12Swapchain = INTERPRET_AS<D3D12Swapchain*>(swapchain);
+
+    }
+
     Semaphore* D3D12Backend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
         auto* result = new D3D12Semaphore{};
         m_Device->CreateFence(initialValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&result->fence));
