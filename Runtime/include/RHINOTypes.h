@@ -184,6 +184,8 @@ namespace RHINO {
     class DescriptorHeap;
     class CommandList;
 
+    class Swapchain;
+
     // ---------------------------------------------------------------------------------- DESC STRUCTS + INTERFACES
 
     struct Dim3D {
