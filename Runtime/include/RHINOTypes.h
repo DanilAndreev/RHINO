@@ -396,6 +396,15 @@ namespace RHINO {
 
         virtual void WriteSMP(Sampler* sampler, size_t offsetInHeap) noexcept = 0;
     };
+
+    struct SwapchainDesc {
+
+    };
+
+    class Swapchain : public Object {
+    public:
+        virtual void GetTexture() noexcept = 0;
+    };
 } // namespace RHINO
 
 RHINO_DECLARE_BITMASK_ENUM(RHINO::ResourceUsage);

@@ -1,13 +1,13 @@
 #ifdef ENABLE_API_D3D12
 
 #include "D3D12Backend.h"
-#include "D3D12CommandList.h"
 #include "D3D12Converters.h"
-#include "D3D12DescriptorHeap.h"
 #include "D3D12Utils.h"
+#include "D3D12CommandList.h"
+#include "D3D12DescriptorHeap.h"
+#include "D3D12Swapchain.h"
 
 #pragma comment(lib, "dxguid.lib")
-#include <dxgi.h>
 
 #include <d3dx12/d3dx12.h>
 
@@ -17,11 +17,10 @@ namespace RHINO::APID3D12 {
     D3D12Backend::D3D12Backend() noexcept : m_Device(nullptr) {}
 
     void D3D12Backend::Initialize() noexcept {
-        IDXGIFactory* factory = nullptr;
-        CreateDXGIFactory(IID_PPV_ARGS(&factory));
+        CreateDXGIFactory(IID_PPV_ARGS(&m_DXGIFactory));
 
         IDXGIAdapter* adapter;
-        for (UINT i = 0; factory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+        for (UINT i = 0; m_DXGIFactory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
             DXGI_ADAPTER_DESC adapterDesc;
             adapter->GetDesc(&adapterDesc);
             // adapterDesc.Description;
@@ -29,7 +28,6 @@ namespace RHINO::APID3D12 {
         }
 
         RHINO_D3DS(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&m_Device)));
-        factory->Release();
 
         D3D12_COMMAND_QUEUE_DESC queueDesc{};
         queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -43,6 +41,7 @@ namespace RHINO::APID3D12 {
     void D3D12Backend::Release() noexcept {
         // TODO: finish garbage collector thread and wait for it.
         m_GarbageCollector.Release();
+        m_DXGIFactory->Release();
     }
 
     RootSignature* D3D12Backend::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
@@ -348,8 +347,7 @@ namespace RHINO::APID3D12 {
         return result;
     }
 
-    DescriptorHeap* D3D12Backend::CreateDescriptorHeap(DescriptorHeapType heapType, size_t descriptorsCount,
-                                                       const char* name) noexcept {
+    DescriptorHeap* D3D12Backend::CreateDescriptorHeap(DescriptorHeapType heapType, size_t descriptorsCount, const char* name) noexcept {
         auto* result = new D3D12DescriptorHeap{};
         result->device = m_Device;
 
@@ -373,6 +371,26 @@ namespace RHINO::APID3D12 {
         SetDebugName(result->CPUDescriptorHeap, name + ".CPUDescriptorHeap"s);
         SetDebugName(result->GPUDescriptorHeap, name + ".GPUDescriptorHeap"s);
         return result;
+    }
+
+    Swapchain* D3D12Backend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
+        auto* result = new D3D12Swapchain{};
+
+        DXGI_SWAP_CHAIN_DESC swapchainDesc{};
+        swapchainDesc.Flags = 0;
+        swapchainDesc.Windowed = true;
+        swapchainDesc.BufferCount = 3;
+        swapchainDesc.BufferDesc.Format = ;
+        swapchainDesc.BufferDesc.Width = ;
+        swapchainDesc.BufferDesc.Height = ;
+        swapchainDesc.BufferDesc.Scaling = ;
+        swapchainDesc.BufferDesc.RefreshRate = ;
+        swapchainDesc.BufferDesc.ScanlineOrdering = ;
+        swapchainDesc.OutputWindow = ;
+        swapchainDesc.SampleDesc = ;
+        swapchainDesc.SwapEffect = ;
+
+        m_DXGIFactory->CreateSwapChain(m_Device, &swapchainDesc, &result->m_Swapchain);
     }
 
     CommandList* D3D12Backend::AllocateCommandList(const char* name) noexcept {

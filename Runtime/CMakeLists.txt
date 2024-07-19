@@ -28,6 +28,7 @@ set(HeaderFiles
         source/D3D12/D3D12Utils.h
         source/D3D12/D3D12DescriptorHeap.h
         source/D3D12/D3D12CommandList.h
+        source/D3D12/D3D12Swapchain.h
         source/D3D12/D3D12GarbageCollector.h
 
         source/SCARTools/SCARComputePSOArchiveView.h
@@ -65,6 +66,7 @@ set(SourceFiles
         source/D3D12/D3D12Backend.cpp
         source/D3D12/D3D12DescriptorHeap.cpp
         source/D3D12/D3D12CommandList.cpp
+        source/D3D12/D3D12Swapchain.cpp
         source/D3D12/D3D12GarbageCollector.cpp
 
         source/SCARTools/SCARComputePSOArchiveView.cpp

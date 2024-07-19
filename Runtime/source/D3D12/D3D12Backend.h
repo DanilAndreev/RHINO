@@ -2,6 +2,8 @@
 
 #ifdef ENABLE_API_D3D12
 
+#include <dxgi.h>
+
 #include "RHINOInterfaceImplBase.h"
 #include "D3D12BackendTypes.h"
 #include "D3D12GarbageCollector.h"
@@ -29,6 +31,8 @@ namespace RHINO::APID3D12 {
                                    ResourceUsage usage, const char* name) noexcept final;
         Sampler* CreateSampler(const SamplerDesc& desc) noexcept final;
         DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType heapType, size_t descriptorsCount, const char* name) noexcept final;
+        Swapchain* CreateSwapchain(const SwapchainDesc& desc) noexcept final;
+
         CommandList* AllocateCommandList(const char* name) noexcept final;
     public:
         ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept final;
@@ -50,6 +54,7 @@ namespace RHINO::APID3D12 {
         ID3D12RootSignature* CreateRootSignature(size_t spacesCount, const DescriptorSpaceDesc* spaces) noexcept;
 
     private:
+        IDXGIFactory* m_DXGIFactory = nullptr;
         ID3D12Device5* m_Device = nullptr;
         ID3D12CommandQueue* m_DefaultQueue = nullptr;
         ID3D12CommandQueue* m_ComputeQueue = nullptr;
