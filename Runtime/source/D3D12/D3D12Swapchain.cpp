@@ -1,5 +1,6 @@
 #ifdef ENABLE_API_D3D12
 
+#include "D3D12Utils.h"
 #include "D3D12Swapchain.h"
 #include "D3D12Converters.h"
 
@@ -20,11 +21,11 @@ namespace RHINO::APID3D12 {
         swapchainDesc.SampleDesc.Quality = 0;
         swapchainDesc.SwapEffect = desc.swapEffect;
 
-        factory->CreateSwapChain(device, &swapchainDesc, &m_Swapchain);
+        RHINO_D3DS(factory->CreateSwapChain(device, &swapchainDesc, &m_Swapchain));
     }
 
     void D3D12Swapchain::Present() noexcept {
-        m_Swapchain->Present();
+        m_Swapchain->Present(0, 0);
     }
 
     void D3D12Swapchain::Release() noexcept {
@@ -33,7 +34,9 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12Swapchain::GetTexture() noexcept {
-
+        ID3D12Resource* backbuffer = nullptr;
+        m_Swapchain->GetBuffer(m_CurrentImageIndex, IID_PPV_ARGS(&backbuffer));
+        return backbuffer;
     }
 } // namespace RHINO::APID3D12
 

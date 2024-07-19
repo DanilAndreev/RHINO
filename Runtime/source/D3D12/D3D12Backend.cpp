@@ -440,7 +440,7 @@ namespace RHINO::APID3D12 {
 
     void D3D12Backend::SwapchainPresent(Swapchain* swapchain) noexcept {
         auto* d3d12Swapchain = INTERPRET_AS<D3D12Swapchain*>(swapchain);
-
+        d3d12Swapchain->Present();
     }
 
     Semaphore* D3D12Backend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
