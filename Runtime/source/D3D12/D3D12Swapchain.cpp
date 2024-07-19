@@ -23,9 +23,17 @@ namespace RHINO::APID3D12 {
         factory->CreateSwapChain(device, &swapchainDesc, &m_Swapchain);
     }
 
+    void D3D12Swapchain::Present() noexcept {
+        m_Swapchain->Present();
+    }
+
     void D3D12Swapchain::Release() noexcept {
         m_Swapchain->Release();
         delete this;
+    }
+
+    void D3D12Swapchain::GetTexture() noexcept {
+
     }
 } // namespace RHINO::APID3D12
 

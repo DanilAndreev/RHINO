@@ -8,8 +8,12 @@
 namespace RHINO::APID3D12 {
     class D3D12Swapchain : public Swapchain {
     public:
-        void Initialize(IDXGIFactory* factory, ID3D12Device* device, const SwapchainDesc& desc) noexcept;
         void Release() noexcept final;
+        void GetTexture() noexcept final;
+
+    public:
+        void Initialize(IDXGIFactory* factory, ID3D12Device* device, const SwapchainDesc& desc) noexcept;
+        void Present() noexcept;
 
     private:
         IDXGISwapChain* m_Swapchain = nullptr;
