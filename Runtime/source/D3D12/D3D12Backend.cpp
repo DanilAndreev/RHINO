@@ -375,22 +375,8 @@ namespace RHINO::APID3D12 {
 
     Swapchain* D3D12Backend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
         auto* result = new D3D12Swapchain{};
-
-        DXGI_SWAP_CHAIN_DESC swapchainDesc{};
-        swapchainDesc.Flags = 0;
-        swapchainDesc.Windowed = true;
-        swapchainDesc.BufferCount = 3;
-        swapchainDesc.BufferDesc.Format = ;
-        swapchainDesc.BufferDesc.Width = ;
-        swapchainDesc.BufferDesc.Height = ;
-        swapchainDesc.BufferDesc.Scaling = ;
-        swapchainDesc.BufferDesc.RefreshRate = ;
-        swapchainDesc.BufferDesc.ScanlineOrdering = ;
-        swapchainDesc.OutputWindow = ;
-        swapchainDesc.SampleDesc = ;
-        swapchainDesc.SwapEffect = ;
-
-        m_DXGIFactory->CreateSwapChain(m_Device, &swapchainDesc, &result->m_Swapchain);
+        result->Initialize(m_DXGIFactory, m_Device, desc);
+        return result;
     }
 
     CommandList* D3D12Backend::AllocateCommandList(const char* name) noexcept {
