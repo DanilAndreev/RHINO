@@ -6,6 +6,8 @@
 
 namespace RHINO::APID3D12 {
     void D3D12Swapchain::Initialize(IDXGIFactory* factory, ID3D12Device* device, const SwapchainDesc& desc) noexcept {
+        auto* surfaceDesc = static_cast<Win32SurfaceDesc*>(desc.surfaceDesc);
+
         DXGI_SWAP_CHAIN_DESC swapchainDesc{};
         swapchainDesc.Flags = 0;
         swapchainDesc.Windowed = desc.windowed;
@@ -16,10 +18,10 @@ namespace RHINO::APID3D12 {
         swapchainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
         swapchainDesc.BufferDesc.RefreshRate = {};
         swapchainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-        swapchainDesc.OutputWindow = hWnd;
+        swapchainDesc.OutputWindow = surfaceDesc->hWnd;
         swapchainDesc.SampleDesc.Count = 1;
         swapchainDesc.SampleDesc.Quality = 0;
-        swapchainDesc.SwapEffect = desc.swapEffect;
+        swapchainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
         RHINO_D3DS(factory->CreateSwapChain(device, &swapchainDesc, &m_Swapchain));
     }

@@ -307,7 +307,7 @@ namespace RHINO::APIVulkan {
 
     Swapchain* VulkanBackend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
         auto* result = new VulkanSwapchain{};
-        result->Initialize(CreateVulkanObjectContext(), desc);
+        result->Initialize(CreateVulkanObjectContext(), desc, m_DefaultQueueFamIndex);
         return result;
     }
 
