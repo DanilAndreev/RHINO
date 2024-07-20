@@ -397,17 +397,21 @@ namespace RHINO {
         virtual void WriteSMP(Sampler* sampler, size_t offsetInHeap) noexcept = 0;
     };
 
-    enum class SwapEffect {
-
+#ifdef RHINO_WIN32_SURFACE
+    struct Win32SurfaceDesc {
+        HINSTANCE hInstance;
+        HWND hWnd;
     };
+#endif
 
     struct SwapchainDesc {
         TextureFormat format;
-        SwapEffect swapEffect;
         bool windowed = true;
 
-        uint32_t width;
-        uint32_t height;
+        uint32_t width = 0;
+        uint32_t height = 0;
+
+        void* surfaceDesc = nullptr;
     };
 
     class Swapchain : public Object {

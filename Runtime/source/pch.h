@@ -1,6 +1,10 @@
 #pragma once
 
+#ifdef WIN32
 #define NOMINMAX
+#include <Windows.h>
+#define RHINO_WIN32_SURFACE
+#endif // WIN32
 
 #include "RHINO.h"
 #include "RHINOTypes.h"

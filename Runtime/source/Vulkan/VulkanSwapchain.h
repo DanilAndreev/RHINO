@@ -7,7 +7,7 @@
 namespace RHINO::APIVulkan {
     class VulkanSwapchain : public Swapchain {
     public:
-        void Initialize(const VulkanObjectContext& context, const SwapchainDesc& desc) noexcept;
+        void Initialize(const VulkanObjectContext& context, const SwapchainDesc& desc, uint32_t queueFamilyIndex) noexcept;
         void Present(VkQueue queue) noexcept;
 
     public:

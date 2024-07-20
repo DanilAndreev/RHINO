@@ -3,20 +3,23 @@
 #include "VulkanSwapchain.h"
 
 namespace RHINO::APIVulkan {
-    void VulkanSwapchain::Initialize(const VulkanObjectContext& context, const SwapchainDesc& desc) noexcept {
+    void VulkanSwapchain::Initialize(const VulkanObjectContext& context, const SwapchainDesc& desc, uint32_t queueFamilyIndex) noexcept {
         m_Context = context;
-        VkWin32SurfaceCreateInfoKHR surfaceCreateInfoKhr{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
-        surfaceCreateInfoKhr.hwnd = desc.hWnd;
-        surfaceCreateInfoKhr.hinstance = desc.hInstance;
 
-#ifdef WIN32
-        RHINO_VKS(vkCreateWin32SurfaceKHR(m_Context.instance, &surfaceCreateInfoKhr, m_Context.allocator, &m_Surface));
+#ifdef RHINO_WIN32_SURFACE
+        {
+            auto* surfaceDesc = static_cast<Win32SurfaceDesc*>(desc.surfaceDesc);
+            VkWin32SurfaceCreateInfoKHR surfaceCreateInfoKhr{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
+            surfaceCreateInfoKhr.hwnd = surfaceDesc->hWnd;
+            surfaceCreateInfoKhr.hinstance = surfaceDesc->hInstance;
+            RHINO_VKS(vkCreateWin32SurfaceKHR(m_Context.instance, &surfaceCreateInfoKhr, m_Context.allocator, &m_Surface));
+        }
 #else
-#error "Unsupported platform"
-#endif // WIN32
+#error "Unsupported surface"
+#endif // RHINO_WIN32_SURFACE
 
         VkBool32 surfaceIsSupported;
-        vkGetPhysicalDeviceSurfaceSupportKHR(m_Context.physicalDevice, m_DefaultQueueFamIndex, surface, &surfaceIsSupported);
+        vkGetPhysicalDeviceSurfaceSupportKHR(m_Context.physicalDevice, queueFamilyIndex, m_Surface, &surfaceIsSupported);
         assert(surfaceIsSupported && "Surface is not supported by device.");
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         RHINO_VKS(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context.physicalDevice, m_Surface, &surfaceCapabilities));
