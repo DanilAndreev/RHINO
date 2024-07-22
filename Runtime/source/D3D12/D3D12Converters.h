@@ -19,6 +19,8 @@ namespace RHINO::APID3D12::Convert {
 
     inline DXGI_FORMAT ToDXGIFormat(TextureFormat format) noexcept {
         switch (format) {
+            case TextureFormat::R8G8B8A8_UNORM:
+                return DXGI_FORMAT_R8G8B8A8_UNORM;
             case TextureFormat::R32G32B32A32_FLOAT:
                 return DXGI_FORMAT_R32G32B32A32_FLOAT;
             case TextureFormat::R32G32B32A32_UINT:
@@ -39,7 +41,7 @@ namespace RHINO::APID3D12::Convert {
                 return DXGI_FORMAT_R16_SINT;
             default:
                 assert(0);
-                return DXGI_FORMAT_R32G32B32A32_FLOAT;
+                return DXGI_FORMAT_R8G8B8A8_UNORM;
         }
     }
 
