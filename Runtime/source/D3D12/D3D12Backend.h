@@ -2,7 +2,7 @@
 
 #ifdef ENABLE_API_D3D12
 
-#include <dxgi.h>
+#include <dxgi1_2.h>
 
 #include "RHINOInterfaceImplBase.h"
 #include "D3D12BackendTypes.h"
@@ -55,7 +55,7 @@ namespace RHINO::APID3D12 {
         ID3D12RootSignature* CreateRootSignature(size_t spacesCount, const DescriptorSpaceDesc* spaces) noexcept;
 
     private:
-        IDXGIFactory* m_DXGIFactory = nullptr;
+        IDXGIFactory2* m_DXGIFactory = nullptr;
         ID3D12Device5* m_Device = nullptr;
         ID3D12CommandQueue* m_DefaultQueue = nullptr;
         ID3D12CommandQueue* m_ComputeQueue = nullptr;

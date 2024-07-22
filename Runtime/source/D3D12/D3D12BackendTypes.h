@@ -22,7 +22,6 @@ namespace RHINO::APID3D12 {
     class D3D12Texture2D : public Texture2DBase {
     public:
         ID3D12Resource* texture = nullptr;
-        D3D12_RESOURCE_DESC desc;
 
     public:
         void Release() noexcept final {
@@ -34,7 +33,6 @@ namespace RHINO::APID3D12 {
     class D3D12Texture3D : public Texture2DBase {
     public:
         ID3D12Resource* texture = nullptr;
-        D3D12_RESOURCE_DESC desc;
 
     public:
         void Release() noexcept final {
