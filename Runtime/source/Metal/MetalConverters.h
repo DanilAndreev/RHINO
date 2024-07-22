@@ -19,6 +19,8 @@ namespace RHINO::APIMetal::Convert {
 
     inline MTLPixelFormat ToMTLPixelFormat(TextureFormat format) noexcept {
         switch (format) {
+            case TextureFormat::R8G8B8A8_UNORM:
+                return MTLPixelFormatRGBA8Unorm;
             case TextureFormat::R32G32B32A32_FLOAT:
                 return MTLPixelFormatRGBA32Float;
             case TextureFormat::R32G32B32A32_UINT:
@@ -45,7 +47,7 @@ namespace RHINO::APIMetal::Convert {
                 return MTLPixelFormatR32Sint;
             default:
                 assert(0);
-                return MTLPixelFormatRGBA32Float;
+                return MTLPixelFormatRGBA8Unorm;
         }
     }
 

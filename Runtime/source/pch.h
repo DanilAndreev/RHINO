@@ -6,6 +6,10 @@
 #define RHINO_WIN32_SURFACE
 #endif // WIN32
 
+#ifdef __clang__
+#define RHINO_APPLE_SURFACE
+#endif
+
 #include "RHINO.h"
 #include "RHINOTypes.h"
 

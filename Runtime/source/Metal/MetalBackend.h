@@ -10,14 +10,6 @@
 namespace RHINO::APIMetal {
     class MetalTexture2D;
     class MetalBackend : public RHINOInterfaceImplBase {
-    private:
-        id<MTLDevice> m_Device = nil;
-        id<MTLCommandQueue> m_DefaultQueue;
-        id<MTLCommandQueue> m_AsyncComputeQueue;
-        id<MTLCommandQueue> m_CopyQueue;
-
-        IRCompiler* m_IRCompiler = nullptr;
-
     public:
         MetalBackend() noexcept {}
 
@@ -44,6 +36,7 @@ namespace RHINO::APIMetal {
     public:
         // JOB SUBMISSION
         void SubmitCommandList(CommandList* cmd) noexcept final;
+        void SwapchainPresent(Swapchain *swapchain, Texture2D *toPresent, size_t width, size_t height) noexcept final;
         ASPrebuildInfo GetBLASPrebuildInfo(const BLASDesc& desc) noexcept final;
         ASPrebuildInfo GetTLASPrebuildInfo(const TLASDesc& desc) noexcept final;
 
@@ -54,6 +47,14 @@ namespace RHINO::APIMetal {
         bool SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept final;
         void SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept final;
         uint64_t GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept final;
+
+    private:
+        id<MTLDevice> m_Device = nil;
+        id<MTLCommandQueue> m_DefaultQueue;
+        id<MTLCommandQueue> m_AsyncComputeQueue;
+        id<MTLCommandQueue> m_CopyQueue;
+
+        IRCompiler* m_IRCompiler = nullptr;
     };
 
     RHINOInterface* AllocateMetalBackend() noexcept {

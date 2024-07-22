@@ -43,12 +43,14 @@ set(ObjCHeaderFiles
         source/Metal/MetalBackendTypes.h
         source/Metal/MetalDescriptorHeap.h
         source/Metal/MetalCommandList.h
+        source/Metal/MetalSwapchain.h
         source/Metal/MetalUtils.h
 )
 set(ObjCSourceFiles
         source/Metal/MetalBackend.mm
         source/Metal/MetalDescriptorHeap.mm
         source/Metal/MetalCommandList.mm
+        source/Metal/MetalSwapchain.mm
         source/Metal/IRShaderCompilerRuntimeImplementation.mm
 )
 

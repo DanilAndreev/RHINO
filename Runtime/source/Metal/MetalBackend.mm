@@ -3,8 +3,9 @@
 #include "MetalBackend.h"
 #import "MetalBackendTypes.h"
 #include "MetalCommandList.h"
-#include "MetalDescriptorHeap.h"
 #include "MetalConverters.h"
+#include "MetalDescriptorHeap.h"
+#import "MetalSwapchain.h"
 #include "MetalUtils.h"
 
 #import <metal_irconverter_runtime/metal_irconverter_runtime.h>
@@ -258,6 +259,12 @@ namespace RHINO::APIMetal {
     void MetalBackend::SubmitCommandList(CommandList* cmd) noexcept {
         auto* metalCmd = INTERPRET_AS<MetalCommandList*>(cmd);
         metalCmd->SubmitToQueue();
+    }
+
+    void MetalBackend::SwapchainPresent(Swapchain* swapchain, Texture2D* toPresent, size_t width, size_t height) noexcept {
+        auto* metalSwapchain = INTERPRET_AS<MetalSwapchain*>(swapchain);
+        auto* metalTexture = INTERPRET_AS<MetalTexture2D*>(toPresent);
+        metalSwapchain->Present(metalTexture, width, height);
     }
 
     void* MetalBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
