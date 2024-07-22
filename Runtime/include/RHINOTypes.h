@@ -407,6 +407,8 @@ namespace RHINO {
     struct SwapchainDesc {
         TextureFormat format;
         bool windowed = true;
+        // 2 - 3
+        uint32_t buffersCount = 3;
 
         uint32_t width = 0;
         uint32_t height = 0;
@@ -416,7 +418,7 @@ namespace RHINO {
 
     class Swapchain : public Object {
     public:
-        virtual void GetTexture() noexcept = 0;
+        virtual Texture2D* GetTexture() noexcept = 0;
     };
 } // namespace RHINO
 

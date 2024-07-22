@@ -286,7 +286,6 @@ namespace RHINO::APID3D12 {
 
         RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                      result->currentState, nullptr, IID_PPV_ARGS(&result->buffer)));
-        result->desc = result->buffer->GetDesc();
 
         RHINO_GPU_DEBUG(SetDebugName(result->buffer, name));
         return result;
@@ -335,7 +334,6 @@ namespace RHINO::APID3D12 {
 
         RHINO_D3DS(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON,
                                                      nullptr, IID_PPV_ARGS(&result->texture)));
-        result->desc = result->texture->GetDesc();
 
         RHINO_GPU_DEBUG(SetDebugName(result->texture, name));
         return result;
@@ -375,7 +373,7 @@ namespace RHINO::APID3D12 {
 
     Swapchain* D3D12Backend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
         auto* result = new D3D12Swapchain{};
-        result->Initialize(m_DXGIFactory, m_Device, desc);
+        result->Initialize(m_DXGIFactory, m_DefaultQueue, desc);
         return result;
     }
 
