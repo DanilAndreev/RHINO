@@ -44,7 +44,9 @@ namespace RHINO::APID3D12 {
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullScrDesc{};
         fullScrDesc.Windowed = true;
 
-        RHINO_D3DS(factory->CreateSwapChainForHwnd(defaultQueue, surfaceDesc->hWnd, &swapchainDesc, &fullScrDesc, nullptr, &m_Swapchain));
+        IDXGISwapChain1* resSwapchain1 = nullptr;
+        RHINO_D3DS(factory->CreateSwapChainForHwnd(defaultQueue, surfaceDesc->hWnd, &swapchainDesc, &fullScrDesc, nullptr, &resSwapchain1));
+        resSwapchain1->QueryInterface(&m_Swapchain);
 
         m_Textures.resize(desc.buffersCount);
         for (size_t i = 0; i < desc.buffersCount; ++i) {
