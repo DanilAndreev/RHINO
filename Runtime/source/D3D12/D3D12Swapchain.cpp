@@ -49,7 +49,7 @@ namespace RHINO::APID3D12 {
         m_Textures.resize(desc.buffersCount);
         for (size_t i = 0; i < desc.buffersCount; ++i) {
             m_Textures[i] = new D3D12Texture2D{};
-            m_Swapchain->GetBuffer(m_CurrentImageIndex, IID_PPV_ARGS(&m_Textures[i]->texture));
+            m_Swapchain->GetBuffer(i, IID_PPV_ARGS(&m_Textures[i]->texture));
         }
     }
 
@@ -63,10 +63,7 @@ namespace RHINO::APID3D12 {
     }
 
     Texture2D* D3D12Swapchain::GetTexture() noexcept {
-        auto* backbuffer = m_Textures[m_CurrentImageIndex];
-        if (++m_CurrentImageIndex >= m_Textures.size()) {
-            m_CurrentImageIndex = 0;
-        }
+        auto* backbuffer = m_Textures[m_Swapchain->GetCurrentBackBufferIndex()];
         return backbuffer;
     }
 } // namespace RHINO::APID3D12

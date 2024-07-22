@@ -17,7 +17,6 @@ namespace RHINO::APID3D12 {
 
     private:
         IDXGISwapChain3* m_Swapchain = nullptr;
-        uint32_t m_CurrentImageIndex = 0;
         std::vector<D3D12Texture2D*> m_Textures = {};
     };
 } // namespace RHINO::APID3D12
