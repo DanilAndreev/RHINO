@@ -405,6 +405,11 @@ namespace RHINO {
         HWND hWnd;
     };
 #endif
+#ifdef RHINO_APPLE_SURFACE
+    struct AppleSurfaceDesc {
+        CAMetalLayer* layer;
+    };
+#endif
 
     struct SwapchainDesc {
         TextureFormat format = TextureFormat::R8G8B8A8_UNORM;

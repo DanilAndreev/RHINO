@@ -1,5 +1,7 @@
 #pragma once
 
+#include "RHINOTypes.h"
+
 namespace RHINO {
     class BufferBase : public Buffer {
     public:
