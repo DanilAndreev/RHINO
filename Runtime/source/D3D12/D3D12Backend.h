@@ -40,7 +40,7 @@ namespace RHINO::APID3D12 {
 
     public:
         void SubmitCommandList(CommandList* cmd) noexcept final;
-        void SwapchainPresent(Swapchain* swapchain) noexcept final;
+        void SwapchainPresent(Swapchain* swapchain, Texture2D* toPresent, size_t width, size_t height) noexcept final;
 
     public:
         Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept final;

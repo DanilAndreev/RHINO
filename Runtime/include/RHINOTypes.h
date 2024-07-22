@@ -23,6 +23,8 @@ namespace RHINO {
     };
 
     enum class TextureFormat {
+        R8G8B8A8_UNORM,
+
         R32G32B32A32_FLOAT,
         R32G32B32A32_UINT,
         R32G32B32A32_SINT,
@@ -405,7 +407,7 @@ namespace RHINO {
 #endif
 
     struct SwapchainDesc {
-        TextureFormat format;
+        TextureFormat format = TextureFormat::R8G8B8A8_UNORM;
         bool windowed = true;
         // 2 - 3
         uint32_t buffersCount = 3;
@@ -418,7 +420,6 @@ namespace RHINO {
 
     class Swapchain : public Object {
     public:
-        virtual Texture2D* GetTexture() noexcept = 0;
     };
 } // namespace RHINO
 

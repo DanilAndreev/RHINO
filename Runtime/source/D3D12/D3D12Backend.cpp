@@ -373,7 +373,7 @@ namespace RHINO::APID3D12 {
 
     Swapchain* D3D12Backend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
         auto* result = new D3D12Swapchain{};
-        result->Initialize(m_DXGIFactory, m_DefaultQueue, desc);
+        result->Initialize(m_DXGIFactory, m_Device, m_DefaultQueue, desc);
         return result;
     }
 
@@ -436,9 +436,10 @@ namespace RHINO::APID3D12 {
         d3d12CMD->SumbitToQueue(m_DefaultQueue);
     }
 
-    void D3D12Backend::SwapchainPresent(Swapchain* swapchain) noexcept {
+    void D3D12Backend::SwapchainPresent(Swapchain* swapchain, Texture2D* toPresent, size_t width, size_t height) noexcept {
         auto* d3d12Swapchain = INTERPRET_AS<D3D12Swapchain*>(swapchain);
-        d3d12Swapchain->Present();
+        auto* d3d12Texture = INTERPRET_AS<D3D12Texture2D*>(toPresent);
+        d3d12Swapchain->Present(d3d12Texture, width, height);
     }
 
     Semaphore* D3D12Backend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
