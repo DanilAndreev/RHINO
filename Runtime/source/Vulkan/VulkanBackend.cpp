@@ -57,6 +57,7 @@ namespace RHINO::APIVulkan {
         physicalDeviceVulkan12Features.bufferDeviceAddress = VK_TRUE;
         physicalDeviceVulkan12Features.descriptorIndexing = VK_TRUE;
         physicalDeviceVulkan12Features.descriptorBindingVariableDescriptorCount = VK_TRUE;
+        physicalDeviceVulkan12Features.timelineSemaphore = VK_TRUE;
 
         VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT deviceMutableDescriptorTypeFeaturesEXT{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT};
         deviceMutableDescriptorTypeFeaturesEXT.pNext = &physicalDeviceVulkan12Features;
@@ -71,10 +72,10 @@ namespace RHINO::APIVulkan {
         deviceFeatures2.pNext = &deviceDescriptorBufferFeaturesExt;
         deviceFeatures2.features = {};
 
-
         VkDeviceCreateInfo deviceInfo{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
         deviceInfo.pNext = &deviceFeatures2;
         const char* deviceExtensions[] = {
+            VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
             VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
             VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
