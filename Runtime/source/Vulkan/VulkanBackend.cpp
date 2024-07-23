@@ -111,17 +111,8 @@ namespace RHINO::APIVulkan {
     }
 
     RootSignature* VulkanBackend::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
-
-    }
-
-    RTPSO* VulkanBackend::CreateRTPSO(const RTPSODesc& desc) noexcept {
-
-
-        return nullptr;
-    }
-
-    ComputePSO* VulkanBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
-        auto* result = new VulkanComputePSO{};
+        auto result = new VulkanRootSignature{};
+        result->context = CreateVulkanObjectContext();
 
         std::map<size_t, size_t> topBindingPerSpace{};
         for (size_t space = 0; space < desc.spacesCount; ++space) {
@@ -220,6 +211,18 @@ namespace RHINO::APIVulkan {
         for (VkDescriptorSetLayout layout: spaceLayouts) {
             vkDestroyDescriptorSetLayout(m_Device, layout, m_Alloc);
         }
+        return result;
+    }
+
+    RTPSO* VulkanBackend::CreateRTPSO(const RTPSODesc& desc) noexcept {
+
+
+        return nullptr;
+    }
+
+    ComputePSO* VulkanBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
+        auto* vulkanRootSignature = INTERPRET_AS<VulkanRootSignature*>(desc.rootSignature);
+        auto* result = new VulkanComputePSO{};
 
         VkShaderModuleCreateInfo shaderModuleInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
         shaderModuleInfo.codeSize = desc.CS.bytecodeSize;
@@ -236,7 +239,7 @@ namespace RHINO::APIVulkan {
         VkComputePipelineCreateInfo createInfo{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
         createInfo.flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
         createInfo.stage = stageInfo;
-        createInfo.layout = result->layout;
+        createInfo.layout = vulkanRootSignature->layout;
         vkCreateComputePipelines(m_Device, VK_NULL_HANDLE, 1, &createInfo, m_Alloc, &result->PSO);
         return result;
     }

@@ -45,6 +45,23 @@ namespace RHINO::APIVulkan {
         vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
+    void VulkanCommandList::SetRootSignature(RootSignature* rootSignature) noexcept {
+        auto* vulkanRootSignature = INTERPRET_AS<VulkanRootSignature*>(rootSignature);
+        for (auto [space, spaceInfo] : vulkanRootSignature->heapOffsetsInDescriptorsBySpaces) {
+            uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
+            VkDeviceSize offset = spaceInfo.second;
+            switch (spaceInfo.first) {
+                case DescriptorRangeType::Sampler:
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, m_DescriptorProps);
+                break;
+                default:
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, m_DescriptorProps);
+            }
+            EXT::vkCmdSetDescriptorBufferOffsetsEXT(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanRootSignature->layout,
+                                                    space, 1, &bufferIndex, &offset);
+        }
+    }
+
     void VulkanCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
         auto* vulkanSrc = static_cast<VulkanBuffer*>(src);
         auto* vulkanDst = static_cast<VulkanBuffer*>(dst);
@@ -58,19 +75,6 @@ namespace RHINO::APIVulkan {
     void VulkanCommandList::SetComputePSO(ComputePSO* pso) noexcept {
         auto* vulkanPSO = static_cast<VulkanComputePSO*>(pso);
         vkCmdBindPipeline(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
-        for (auto [space, spaceInfo] : vulkanPSO->heapOffsetsInDescriptorsBySpaces) {
-            uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
-            VkDeviceSize offset = spaceInfo.second;
-            switch (spaceInfo.first) {
-                case DescriptorRangeType::Sampler:
-                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, m_DescriptorProps);
-                    break;
-                default:
-                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, m_DescriptorProps);
-            }
-            EXT::vkCmdSetDescriptorBufferOffsetsEXT(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->layout,
-                                                    space, 1, &bufferIndex, &offset);
-        }
     }
 
     void VulkanCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept {

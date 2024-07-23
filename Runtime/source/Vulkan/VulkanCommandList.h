@@ -11,6 +11,7 @@ namespace RHINO::APIVulkan {
         void SubmitToQueue(VkQueue queue) noexcept;
 
     public:
+        void SetRootSignature(RootSignature* rootSignature) noexcept final;
         void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
         void SetComputePSO(ComputePSO* pso) noexcept final;
         void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept final;
