@@ -129,7 +129,7 @@ namespace RHINO::APID3D12 {
         smpDesc.AddressW = Convert::ToD3D12TextureAddressMode(d3d12Sampler->samplerDesc.addresW);
         Convert::ToD3D12BorderColor(d3d12Sampler->samplerDesc.borderColor, smpDesc.BorderColor);
         smpDesc.ComparisonFunc = Convert::ToD3D12ComparisonFunc(d3d12Sampler->samplerDesc.comparisonFunc);
-        smpDesc.MaxAnisotropy = d3d12Sampler->samplerDesc.maxAnisotrophy;
+        smpDesc.MaxAnisotropy = d3d12Sampler->samplerDesc.maxAnisotropy;
         smpDesc.MaxLOD = d3d12Sampler->samplerDesc.maxLOD;
         smpDesc.MinLOD = d3d12Sampler->samplerDesc.minLOD;
         smpDesc.MipLODBias = 0;

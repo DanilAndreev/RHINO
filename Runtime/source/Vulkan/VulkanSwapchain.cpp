@@ -1,6 +1,7 @@
 #ifdef ENABLE_API_VULKAN
 
 #include "VulkanSwapchain.h"
+#include <RHINOSwapchainPlatform.h>
 
 namespace RHINO::APIVulkan {
     void VulkanSwapchain::Initialize(const VulkanObjectContext& context, const SwapchainDesc& desc, uint32_t queueFamilyIndex) noexcept {
@@ -8,7 +9,7 @@ namespace RHINO::APIVulkan {
 
 #ifdef RHINO_WIN32_SURFACE
         {
-            auto* surfaceDesc = static_cast<Win32SurfaceDesc*>(desc.surfaceDesc);
+            auto* surfaceDesc = static_cast<RHINOWin32SurfaceDesc*>(desc.surfaceDesc);
             VkWin32SurfaceCreateInfoKHR surfaceCreateInfoKhr{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
             surfaceCreateInfoKhr.hwnd = surfaceDesc->hWnd;
             surfaceCreateInfoKhr.hinstance = surfaceDesc->hInstance;
@@ -50,25 +51,69 @@ namespace RHINO::APIVulkan {
         RHINO_VKS(vkCreateSwapchainKHR(m_Context.device, &swapchainCreateInfoKhr, m_Context.allocator, &m_Swapchain));
 
         uint32_t swapchainImagesCount = 0;
-        vkGetSwapchainImagesKHR(m_Context.device, m_Swapchain, &swapchainImagesCount, nullptr);
+        RHINO_VKS(vkGetSwapchainImagesKHR(m_Context.device, m_Swapchain, &swapchainImagesCount, nullptr));
         m_SwapchainImages.resize(swapchainImagesCount);
-        vkGetSwapchainImagesKHR(m_Context.device, m_Swapchain, &swapchainImagesCount, m_SwapchainImages.data());
+        RHINO_VKS(vkGetSwapchainImagesKHR(m_Context.device, m_Swapchain, &swapchainImagesCount, m_SwapchainImages.data()));
 
         m_SwapchainSyncs.resize(swapchainImagesCount);
         for (size_t i = 0; i < swapchainImagesCount; ++i) {
-            VkFenceCreateInfo fenceCreateInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-            fenceCreateInfo.flags = 0;
-            vkCreateFence(m_Context.device, &fenceCreateInfo, m_Context.allocator, &m_SwapchainSyncs[i]);
+            VkSemaphoreCreateInfo semaphoreCreateInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+            semaphoreCreateInfo.flags = 0;
+            RHINO_VKS(vkCreateSemaphore(m_Context.device, &semaphoreCreateInfo, m_Context.allocator, &m_SwapchainSyncs[i]));
         }
+
+        VkCommandPoolCreateInfo cmdPoolInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+        cmdPoolInfo.queueFamilyIndex = queueFamilyIndex;
+        cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        RHINO_VKS(vkCreateCommandPool(m_Context.device, &cmdPoolInfo, m_Context.allocator, &m_CMDPool));
     }
 
-    void VulkanSwapchain::Present(VkQueue queue) noexcept {
+    void VulkanSwapchain::Present(VkQueue queue, VulkanTexture2D* toPresent, size_t width, size_t height) noexcept {
+        uint32_t index = 0;
+        RHINO_VKS(vkAcquireNextImageKHR(m_Context.device, m_Swapchain, ~0, VK_NULL_HANDLE, VK_NULL_HANDLE, &index));
+        VkImage backbuffer = m_SwapchainImages[index];
+
+        VkCommandBuffer cmd = VK_NULL_HANDLE;
+        VkCommandBufferAllocateInfo cmdAllocInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmdAllocInfo.commandPool = m_CMDPool;
+        cmdAllocInfo.commandBufferCount = 1;
+        RHINO_VKS(vkAllocateCommandBuffers(m_Context.device, &cmdAllocInfo, &cmd));
+
+        VkCommandBufferBeginInfo cmdBegin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+        cmdBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        cmdBegin.pInheritanceInfo = nullptr;
+        RHINO_VKS(vkBeginCommandBuffer(cmd, &cmdBegin));
+
+        VkImageCopy region{};
+        region.srcOffset = {0, 0, 0};
+        region.dstOffset = {0, 0, 0};
+        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.srcSubresource.mipLevel = 0;
+        region.srcSubresource.baseArrayLayer = 0;
+        region.srcSubresource.layerCount = 1;
+        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.dstSubresource.mipLevel = 0;
+        region.dstSubresource.baseArrayLayer = 0;
+        region.dstSubresource.layerCount = 1;
+        region.extent = VkExtent3D{static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
+        vkCmdCopyImage(cmd, toPresent->texture, toPresent->layout, backbuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, &region);
+
+        RHINO_VKS(vkEndCommandBuffer(cmd));
+        VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+        submit.commandBufferCount = 1;
+        submit.pCommandBuffers = &cmd;
+        submit.signalSemaphoreCount = 1;
+        submit.pSignalSemaphores = &m_SwapchainSyncs[index];
+        RHINO_VKS(vkQueueSubmit(queue, 1, &submit, VK_NULL_HANDLE));
+
         VkResult swapchainStatus = VK_SUCCESS;
         VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-        presentInfo.waitSemaphoreCount = 0;
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &m_SwapchainSyncs[index];
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &m_Swapchain;
-        presentInfo.pImageIndices = &m_CurrentImageIndex;
+        presentInfo.pImageIndices = &index;
         presentInfo.pResults = &swapchainStatus;
 
         RHINO_VKS(vkQueuePresentKHR(queue, &presentInfo));
@@ -76,20 +121,13 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanSwapchain::Release() noexcept {
-        vkWaitForFences(m_Context.device, m_SwapchainSyncs.size(), m_SwapchainSyncs.data(), VK_TRUE, ~0);
-        for (VkFence fence : m_SwapchainSyncs) {
-            vkDestroyFence(m_Context.device, fence, m_Context.allocator);
+        for (VkSemaphore semaphore : m_SwapchainSyncs) {
+            vkDestroySemaphore(m_Context.device, semaphore, m_Context.allocator);
         }
+        vkDestroyCommandPool(m_Context.device, m_CMDPool, m_Context.allocator);
         vkDestroySwapchainKHR(m_Context.device, m_Swapchain, m_Context.allocator);
         vkDestroySurfaceKHR(m_Context.instance, m_Surface, m_Context.allocator);
         delete this;
-    }
-
-    void VulkanSwapchain::GetTexture() noexcept {
-        RHINO_VKS(vkAcquireNextImageKHR(m_Context.device, m_Swapchain, ~0, VK_NULL_HANDLE, VK_NULL_HANDLE, &m_CurrentImageIndex));
-        VkImage image = m_SwapchainImages[m_CurrentImageIndex];
-
-        return image;
     }
 } // namespace RHINO::APIVulkan
 

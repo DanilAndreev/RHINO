@@ -123,6 +123,104 @@ namespace RHINO::APIVulkan::Convert {
                 return VK_INDEX_TYPE_UINT32;
         }
     }
+
+    inline VkCompareOp ToVkCompareOp(ComparisonFunction func) noexcept {
+        switch (func) {
+            case ComparisonFunction::Never:
+                return VK_COMPARE_OP_NEVER;
+            case ComparisonFunction::Less:
+                return VK_COMPARE_OP_LESS;
+            case ComparisonFunction::Equal:
+                return VK_COMPARE_OP_EQUAL;
+            case ComparisonFunction::LessEqual:
+                return VK_COMPARE_OP_LESS_OR_EQUAL;
+            case ComparisonFunction::Greater:
+                return VK_COMPARE_OP_GREATER;
+            case ComparisonFunction::NotEqual:
+                return VK_COMPARE_OP_NOT_EQUAL;
+            case ComparisonFunction::GreaterEqual:
+                return VK_COMPARE_OP_GREATER_OR_EQUAL;
+            case ComparisonFunction::Always:
+                return VK_COMPARE_OP_ALWAYS;
+            default:
+                assert(0);
+                return VK_COMPARE_OP_NEVER;
+        }
+    }
+
+    inline VkSamplerAddressMode ToVkSamplerAddressMode(TextureAddressMode mode) noexcept {
+        switch (mode) {
+            case TextureAddressMode::Wrap:
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case TextureAddressMode::Mirror:
+                return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+            case TextureAddressMode::Clamp:
+                return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case TextureAddressMode::Border:
+                return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            case TextureAddressMode::MirrorOnce:
+                return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+            default:
+                assert(0);
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        }
+    }
+
+    inline VkBorderColor ToVkBorderColor(BorderColor color) noexcept {
+        switch (color) {
+            case BorderColor::TransparentBlack:
+                return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+            case BorderColor::OpaqueBlack:
+                return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+            case BorderColor::OpaqueWhite:
+                return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+            default:
+                assert(0);
+                return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+        }
+    }
+
+    struct VulkanMinMagMipFilters {
+        VkFilter min;
+        VkFilter mag;
+        VkSamplerMipmapMode mip;
+    };
+
+    inline VulkanMinMagMipFilters ToMTLMinMagMipFilter(TextureFilter filter) noexcept {
+        switch (filter) {
+            case TextureFilter::MinMagMipPoint:
+            case TextureFilter::ComparisonMinMagMipPoint:
+                return {VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST};
+            case TextureFilter::MinMagPointMipLinear:
+            case TextureFilter::ComparisonMinMagPointMipLinear:
+                return {VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR};
+            case TextureFilter::MinPointMagLinearMipPoint:
+            case TextureFilter::ComparisonMinPointMagLinearMipPoint:
+                return {VK_FILTER_NEAREST, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST};
+            case TextureFilter::MinPointMagMipLinear:
+            case TextureFilter::ComparisonMinPointMagMipLinear:
+                return {VK_FILTER_NEAREST, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR};
+            case TextureFilter::MinLinearMagMipPoint:
+            case TextureFilter::ComparisonMinLinearMagMipPoint:
+                return {VK_FILTER_LINEAR, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST};
+            case TextureFilter::MinLinearMagPointMipLinear:
+            case TextureFilter::ComparisonMinLinearMagPointMipLinear:
+                return {VK_FILTER_LINEAR, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR};
+            case TextureFilter::MinMagLinearMipPoint:
+            case TextureFilter::ComparisonMinMagLinearMipPoint:
+                return {VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST};
+            case TextureFilter::MinMagMipLinear:
+            case TextureFilter::ComparisonMinMagMipLinear:
+                return {VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR};
+
+            case TextureFilter::Anisotrophic:
+            case TextureFilter::ComparisonAnisotrophic:
+                return {VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR};
+            default:
+                assert(0);
+                return {VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST};
+        }
+    }
 } // namespace RHINO::APIVulkan::Convert
 
 #endif // ENABLE_API_VULKAN
