@@ -2,12 +2,21 @@
 
 #include <RHINOSwapchainPlatform.h>
 #include "MetalSwapchain.h"
+#include "MetalConverters.h"
 
 namespace RHINO::APIMetal {
-    void MetalSwapchain::Initialize(id<MTLCommandQueue> queue, const SwapchainDesc& desc) noexcept {
-        auto* surfaceDesc = static_cast<AppleSurfaceDesc*>(desc.surfaceDesc);
+    void MetalSwapchain::Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue, const SwapchainDesc& desc) noexcept {
+        auto* surfaceDesc = static_cast<RHINOAppleSurfaceDesc*>(desc.surfaceDesc);
         m_Queue = queue;
-        m_CAMetalLayer = surfaceDesc->layer;
+        m_CAMetalLayer = [CAMetalLayer layer];
+        m_CAMetalLayer.device = device;
+        m_CAMetalLayer.pixelFormat = Convert::ToMTLPixelFormat(desc.format);
+        m_CAMetalLayer.displaySyncEnabled = true;
+        m_CAMetalLayer.framebufferOnly = false;
+        m_CAMetalLayer.drawableSize = CGSizeMake(desc.width, desc.height);
+
+        surfaceDesc->window.contentView.layer = m_CAMetalLayer;
+        surfaceDesc->window.contentView.wantsLayer = true;
     }
 
     void MetalSwapchain::Release() noexcept { delete this; }
