@@ -73,6 +73,19 @@ namespace RHINO::APIVulkan {
         }
     };
 
+    class VulkanRootSignature : public RootSignature {
+    public:
+        VkPipelineLayout layout = VK_NULL_HANDLE;
+        std::map<size_t, std::pair<DescriptorRangeType, size_t>> heapOffsetsInDescriptorsBySpaces{};
+        VulkanObjectContext context = {};
+
+    public:
+        void Release() noexcept final {
+            vkDestroyPipelineLayout(this->context.device, this->layout, this->context.allocator);
+            delete this;
+        }
+    };
+
     class VulkanRTPSO : public RTPSO {
     public:
         VulkanObjectContext context = {};
@@ -87,13 +100,10 @@ namespace RHINO::APIVulkan {
     public:
         VkPipeline PSO = VK_NULL_HANDLE;
         VkShaderModule shaderModule = VK_NULL_HANDLE;
-        VkPipelineLayout layout = VK_NULL_HANDLE;
-        std::map<size_t, std::pair<DescriptorRangeType, size_t>> heapOffsetsInDescriptorsBySpaces{};
         VulkanObjectContext context = {};
 
     public:
         void Release() noexcept final {
-            vkDestroyPipelineLayout(this->context.device, this->layout, this->context.allocator);
             vkDestroyPipeline(this->context.device, this->PSO, this->context.allocator);
             vkDestroyShaderModule(this->context.device, this->shaderModule, this->context.allocator);
             delete this;
