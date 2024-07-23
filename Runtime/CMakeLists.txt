@@ -2,7 +2,9 @@ cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH RHINO_REPOSITORY_ROOT)
 
 set(InterfaceHeaderFiles
         include/RHINO.h
-        include/RHINOTypes.h)
+        include/RHINOTypes.h
+        include/RHINOSwapchainPlatform.h
+)
 
 set(HeaderFiles
         source/pch.h

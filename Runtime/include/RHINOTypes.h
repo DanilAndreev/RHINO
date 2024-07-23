@@ -399,18 +399,6 @@ namespace RHINO {
         virtual void WriteSMP(Sampler* sampler, size_t offsetInHeap) noexcept = 0;
     };
 
-#ifdef RHINO_WIN32_SURFACE
-    struct Win32SurfaceDesc {
-        HINSTANCE hInstance;
-        HWND hWnd;
-    };
-#endif
-#ifdef RHINO_APPLE_SURFACE
-    struct AppleSurfaceDesc {
-        CAMetalLayer* layer;
-    };
-#endif
-
     struct SwapchainDesc {
         TextureFormat format = TextureFormat::R8G8B8A8_UNORM;
         bool windowed = true;
