@@ -31,6 +31,7 @@ namespace RHINO::APIMetal {
                                    const char* name) noexcept final;
         Sampler* CreateSampler(const RHINO::SamplerDesc &desc) noexcept final;
         DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept final;
+        Swapchain* CreateSwapchain(const RHINO::SwapchainDesc &desc) noexcept final;
         CommandList* AllocateCommandList(const char* name) noexcept final;
 
     public:

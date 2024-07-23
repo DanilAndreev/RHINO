@@ -1,10 +1,13 @@
 #ifdef ENABLE_API_METAL
 
+#include <RHINOSwapchainPlatform.h>
 #include "MetalSwapchain.h"
 
 namespace RHINO::APIMetal {
-    void MetalSwapchain::Initialize(id<MTLCommandQueue> queue) noexcept {
+    void MetalSwapchain::Initialize(id<MTLCommandQueue> queue, const SwapchainDesc& desc) noexcept {
+        auto* surfaceDesc = static_cast<AppleSurfaceDesc*>(desc.surfaceDesc);
         m_Queue = queue;
+        m_CAMetalLayer = surfaceDesc->layer;
     }
 
     void MetalSwapchain::Release() noexcept { delete this; }

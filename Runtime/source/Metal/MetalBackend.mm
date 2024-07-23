@@ -250,6 +250,12 @@ namespace RHINO::APIMetal {
         return result;
     }
 
+    Swapchain* MetalBackend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
+        auto* result = new MetalSwapchain{};
+        result->Initialize(m_DefaultQueue, desc);
+        return result;
+    }
+
     CommandList* MetalBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new MetalCommandList{};
         result->Initialize(m_Device, m_DefaultQueue);
