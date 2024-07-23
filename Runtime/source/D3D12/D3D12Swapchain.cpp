@@ -18,7 +18,7 @@ namespace RHINO::APID3D12 {
         swapchainDesc.Format = Convert::ToDXGIFormat(desc.format);
         swapchainDesc.Width = desc.width;
         swapchainDesc.Height = desc.height;
-        swapchainDesc.Scaling = DXGI_SCALING_NONE;
+        swapchainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapchainDesc.Stereo = false;
         swapchainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         swapchainDesc.BufferCount = desc.buffersCount;
