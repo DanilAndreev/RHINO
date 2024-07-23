@@ -8,7 +8,7 @@
 namespace RHINO::APIMetal {
     class MetalSwapchain : public Swapchain {
     public:
-        void Initialize(id<MTLCommandQueue> queue, const SwapchainDesc& desc) noexcept;
+        void Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue, const SwapchainDesc& desc) noexcept;
         void Release() noexcept final;
 
     public:
