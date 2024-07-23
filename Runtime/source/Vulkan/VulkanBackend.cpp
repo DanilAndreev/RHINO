@@ -110,6 +110,10 @@ namespace RHINO::APIVulkan {
         vkDestroyInstance(m_Instance, m_Alloc);
     }
 
+    RootSignature* VulkanBackend::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
+
+    }
+
     RTPSO* VulkanBackend::CreateRTPSO(const RTPSODesc& desc) noexcept {
 
 
@@ -294,9 +298,34 @@ namespace RHINO::APIVulkan {
         vkUnmapMemory(m_Device, vulkanBuffer->memory);
     }
 
-    Texture2D* VulkanBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format,
-                                              ResourceUsage usage, const char* name) noexcept {
+    Texture2D* VulkanBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
+                                              const char* name) noexcept {
         return nullptr;
+    }
+
+    Sampler* VulkanBackend::CreateSampler(const SamplerDesc& desc) noexcept {
+        auto* result = new VulkanSampler{};
+        VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+        samplerInfo.flags = 0;
+
+        Convert::VulkanMinMagMipFilters filters = Convert::ToMTLMinMagMipFilter(desc.textureFilter);
+        samplerInfo.minFilter = filters.min;
+        samplerInfo.magFilter = filters.mag;
+        samplerInfo.mipmapMode = filters.mip;
+        samplerInfo.addressModeU = Convert::ToVkSamplerAddressMode(desc.addresU);
+        samplerInfo.addressModeV = Convert::ToVkSamplerAddressMode(desc.addresV);
+        samplerInfo.addressModeW = Convert::ToVkSamplerAddressMode(desc.addresW);
+        samplerInfo.borderColor = Convert::ToVkBorderColor(desc.borderColor);
+        samplerInfo.compareEnable = desc.comparisonFunc != ComparisonFunction::Never;
+        samplerInfo.compareOp = Convert::ToVkCompareOp(desc.comparisonFunc);
+        samplerInfo.anisotropyEnable = desc.maxAnisotropy > 1;
+        samplerInfo.maxAnisotropy = static_cast<float>(desc.maxAnisotropy);
+        samplerInfo.minLod = desc.minLOD;
+        samplerInfo.maxLod = desc.maxLOD;
+        samplerInfo.mipLodBias = 0;
+        samplerInfo.unnormalizedCoordinates = false;
+        vkCreateSampler(m_Device, &samplerInfo, m_Alloc, &result->sampler);
+        return result;
     }
 
     DescriptorHeap* VulkanBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept {
@@ -324,9 +353,10 @@ namespace RHINO::APIVulkan {
 
     }
 
-    void VulkanBackend::SwapchainPresent(Swapchain* swapchain) noexcept {
+    void VulkanBackend::SwapchainPresent(Swapchain* swapchain, Texture2D* toPresent, size_t width, size_t height) noexcept {
         auto* vulkanSwapchain = INTERPRET_AS<VulkanSwapchain*>(swapchain);
-        vulkanSwapchain->Present(m_DefaultQueue);
+        auto* vulkanTexture = INTERPRET_AS<VulkanTexture2D*>(toPresent);
+        vulkanSwapchain->Present(m_DefaultQueue, vulkanTexture, width, height);
     }
 
     Semaphore* VulkanBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {

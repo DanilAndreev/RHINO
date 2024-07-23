@@ -270,7 +270,7 @@ namespace RHINO {
         TextureAddressMode addresW = TextureAddressMode::Wrap;
         BorderColor borderColor = BorderColor::TransparentBlack;
         ComparisonFunction comparisonFunc = ComparisonFunction::Never;
-        uint32_t maxAnisotrophy = 1;
+        uint32_t maxAnisotropy = 1;
         float minLOD = 0;
         float maxLOD = 1;
         const char* name = "UnnamedSampler";

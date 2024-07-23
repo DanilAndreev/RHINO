@@ -18,6 +18,7 @@ namespace RHINO::APIVulkan {
         void Release() noexcept final;
 
     public:
+        RootSignature* SerializeRootSignature(const RootSignatureDesc& desc) noexcept final;
         RTPSO* CreateRTPSO(const RTPSODesc& desc) noexcept final;
         ComputePSO* CompileComputePSO(const ComputePSODesc& desc) noexcept final;
 
@@ -26,6 +27,7 @@ namespace RHINO::APIVulkan {
         void UnmapMemory(Buffer* buffer) noexcept final;
         Texture2D* CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
                            const char* name) noexcept final;
+        Sampler* CreateSampler(const SamplerDesc& desc) noexcept final;
         DescriptorHeap* CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept final;
         Swapchain* CreateSwapchain(const SwapchainDesc& desc) noexcept final;
 
@@ -36,7 +38,7 @@ namespace RHINO::APIVulkan {
 
     public:
         void SubmitCommandList(CommandList* cmd) noexcept final;
-        void SwapchainPresent(Swapchain* swapchain) noexcept final;
+        void SwapchainPresent(Swapchain* swapchain, Texture2D* toPresent, size_t width, size_t height) noexcept final;
 
     public:
         Semaphore* CreateSyncSemaphore(uint64_t initialValue) noexcept final;

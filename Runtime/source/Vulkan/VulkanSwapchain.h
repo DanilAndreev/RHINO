@@ -8,10 +8,9 @@ namespace RHINO::APIVulkan {
     class VulkanSwapchain : public Swapchain {
     public:
         void Initialize(const VulkanObjectContext& context, const SwapchainDesc& desc, uint32_t queueFamilyIndex) noexcept;
-        void Present(VkQueue queue) noexcept;
+        void Present(VkQueue queue, VulkanTexture2D* toPresent, size_t width, size_t height) noexcept;
 
     public:
-        void GetTexture() noexcept final;
         void Release() noexcept final;
 
     private:
@@ -20,8 +19,9 @@ namespace RHINO::APIVulkan {
         VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 
         std::vector<VkImage> m_SwapchainImages = {};
-        std::vector<VkFence> m_SwapchainSyncs = {};
-        uint32_t m_CurrentImageIndex = 0;
+        std::vector<VkSemaphore> m_SwapchainSyncs = {};
+
+        VkCommandPool m_CMDPool = VK_NULL_HANDLE;
     };
 } // namespace RHINO::APIVulkan
 

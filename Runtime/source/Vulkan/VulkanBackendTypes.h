@@ -61,6 +61,18 @@ namespace RHINO::APIVulkan {
         }
     };
 
+    class VulkanSampler : public SamplerBase {
+    public:
+        VkSampler sampler = VK_NULL_HANDLE;
+        VulkanObjectContext context = {};
+
+    public:
+        void Release() noexcept final {
+            vkDestroySampler(this->context.device, this->sampler, this->context.allocator);
+            delete this;
+        }
+    };
+
     class VulkanRTPSO : public RTPSO {
     public:
         VulkanObjectContext context = {};
