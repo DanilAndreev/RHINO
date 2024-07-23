@@ -32,6 +32,7 @@ namespace RHINO::APIVulkan {
         VulkanObjectContext m_Context = {};
         VkCommandBuffer m_Cmd = VK_NULL_HANDLE;
         VkCommandPool m_Pool = VK_NULL_HANDLE;
+        VulkanRootSignature* m_RootSignature = nullptr;
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT m_DescriptorProps = {};
     };

@@ -46,20 +46,7 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::SetRootSignature(RootSignature* rootSignature) noexcept {
-        auto* vulkanRootSignature = INTERPRET_AS<VulkanRootSignature*>(rootSignature);
-        for (auto [space, spaceInfo] : vulkanRootSignature->heapOffsetsInDescriptorsBySpaces) {
-            uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
-            VkDeviceSize offset = spaceInfo.second;
-            switch (spaceInfo.first) {
-                case DescriptorRangeType::Sampler:
-                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, m_DescriptorProps);
-                break;
-                default:
-                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, m_DescriptorProps);
-            }
-            EXT::vkCmdSetDescriptorBufferOffsetsEXT(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanRootSignature->layout,
-                                                    space, 1, &bufferIndex, &offset);
-        }
+        m_RootSignature = INTERPRET_AS<VulkanRootSignature*>(rootSignature);
     }
 
     void VulkanCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
@@ -95,6 +82,20 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::Dispatch(const DispatchDesc& desc) noexcept {
+        for (auto [space, spaceInfo] : m_RootSignature->heapOffsetsInDescriptorsBySpaces) {
+            uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
+            VkDeviceSize offset = spaceInfo.second;
+            switch (spaceInfo.first) {
+                case DescriptorRangeType::Sampler:
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, m_DescriptorProps);
+                break;
+                default:
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, m_DescriptorProps);
+            }
+            EXT::vkCmdSetDescriptorBufferOffsetsEXT(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_RootSignature->layout,
+                                                    space, 1, &bufferIndex, &offset);
+        }
+
         vkCmdDispatch(m_Cmd, desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
     }
 
