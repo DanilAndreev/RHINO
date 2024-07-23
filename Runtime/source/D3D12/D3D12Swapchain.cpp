@@ -3,13 +3,14 @@
 #include "D3D12Utils.h"
 #include "D3D12Swapchain.h"
 #include "D3D12Converters.h"
+#include <RHINOSwapchainPlatform.h>
 
 namespace RHINO::APID3D12 {
     void D3D12Swapchain::Initialize(IDXGIFactory2* factory, ID3D12Device* device, ID3D12CommandQueue* queue,
                                     const SwapchainDesc& desc) noexcept {
         m_Device = device;
         m_Queue = queue;
-        auto* surfaceDesc = static_cast<Win32SurfaceDesc*>(desc.surfaceDesc);
+        auto* surfaceDesc = static_cast<RHINOWin32SurfaceDesc*>(desc.surfaceDesc);
 
         DXGI_SWAP_CHAIN_DESC1 swapchainDesc{};
         // TODO: add param for tearing.
