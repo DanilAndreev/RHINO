@@ -97,7 +97,7 @@ namespace RHINO::APIVulkan {
         region.dstSubresource.baseArrayLayer = 0;
         region.dstSubresource.layerCount = 1;
         region.extent = VkExtent3D{static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
-        vkCmdCopyImage(cmd, toPresent->texture, toPresent->layout, backbuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, &region);
+        vkCmdCopyImage(cmd, toPresent->texture, VK_IMAGE_LAYOUT_GENERAL, backbuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, &region);
 
         RHINO_VKS(vkEndCommandBuffer(cmd));
         VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};

@@ -8,8 +8,6 @@
 #include "VulkanUtils.h"
 #include "VulkanConverters.h"
 
-#include "SCARTools/SCARComputePSOArchiveView.h"
-
 namespace RHINO::APIVulkan {
     void VulkanBackend::Initialize() noexcept {
         VkApplicationInfo appInfo{VK_STRUCTURE_TYPE_APPLICATION_INFO};
@@ -182,6 +180,7 @@ namespace RHINO::APIVulkan {
 
             VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
             setLayoutCreateInfo.pNext = isSamplerSpace ? nullptr : &mutableDescriptorTypeCreateInfoExt;
+            // setLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
             setLayoutCreateInfo.flags = isSamplerSpace ? 0 : VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
             setLayoutCreateInfo.bindingCount = bindings.size();
             setLayoutCreateInfo.pBindings = bindings.data();
@@ -256,8 +255,8 @@ namespace RHINO::APIVulkan {
 
         VkMemoryRequirements memReqs;
         vkGetBufferMemoryRequirements(m_Context.device, result->buffer, &memReqs);
-        VkPhysicalDeviceMemoryProperties memoryProps;
-        vkGetPhysicalDeviceMemoryProperties(m_Context.physicalDevice, &memoryProps);
+        // VkPhysicalDeviceMemoryProperties memoryProps;
+        // vkGetPhysicalDeviceMemoryProperties(m_Context.physicalDevice, &memoryProps);
 
         VkMemoryAllocateFlagsInfo allocateFlagsInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
         allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
@@ -299,7 +298,35 @@ namespace RHINO::APIVulkan {
 
     Texture2D* VulkanBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
                                               const char* name) noexcept {
-        return nullptr;
+        auto* result = new VulkanTexture2D{};
+        result->context = m_Context;
+        result->origimalFormat = Convert::ToVkFormat(format);
+
+        VkImageCreateInfo imageInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+        imageInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width = dimensions.width;
+        imageInfo.extent.height = dimensions.height;
+        imageInfo.extent.depth = 1;
+        imageInfo.format = result->origimalFormat;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+        imageInfo.usage = Convert::ToVkImageUsage(usage);
+        imageInfo.arrayLayers = 1;
+        imageInfo.mipLevels = mips;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        RHINO_VKS(vkCreateImage(m_Context.device, &imageInfo, m_Context.allocator, &result->texture));
+
+        VkMemoryRequirements memReqs;
+        vkGetImageMemoryRequirements(m_Context.device, result->texture, &memReqs);
+
+        VkMemoryAllocateInfo allocInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+        allocInfo.allocationSize = memReqs.size;
+        allocInfo.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Context);
+        RHINO_VKS(vkAllocateMemory(m_Context.device, &allocInfo, m_Context.allocator, &result->memory));
+        RHINO_VKS(vkBindImageMemory(m_Context.device, result->texture, result->memory, 0));
+        return result;
     }
 
     Sampler* VulkanBackend::CreateSampler(const SamplerDesc& desc) noexcept {

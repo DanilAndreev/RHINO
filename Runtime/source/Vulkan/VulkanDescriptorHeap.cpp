@@ -21,8 +21,8 @@ namespace RHINO::APIVulkan {
         // TODO: 256 is just a magic number for RTX 3080TI.
         //  For some reason descriptorProps.descriptorBufferOffsetAlignment != 256.
         //  Research valid parameter for this one.
-
-        m_HeapSize = RHINO_CEIL_TO_MULTIPLE_OF(m_DescriptorHandleIncrementSize * descriptorsCount + 256, 256);
+        const VkDeviceSize dbAlignment = descriptorProps.descriptorBufferOffsetAlignment;
+        m_HeapSize = RHINO_CEIL_TO_MULTIPLE_OF(m_DescriptorHandleIncrementSize * descriptorsCount + 256, dbAlignment);
 
         VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         heapCreateInfo.flags = 0;
@@ -57,12 +57,15 @@ namespace RHINO::APIVulkan {
         m_HeapGPUStartHandle = vkGetBufferDeviceAddress(m_Context.device, &bufferInfo);
 
         RHINO_VKS(vkMapMemory(m_Context.device, m_Memory, 0, VK_WHOLE_SIZE, 0, &m_Mapped));
+
+        m_ImageViewPerDescriptor.resize(descriptorsCount);
     }
     VkDeviceAddress VulkanDescriptorHeap::GetHeapGPUStartHandle() noexcept {
         return m_HeapGPUStartHandle;
     }
 
     void VulkanDescriptorHeap::WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept {
+        InvalidateSlot(desc.offsetInHeap);
         auto* vulkanBuffer = INTERPRET_AS<VulkanBuffer*>(desc.buffer);
 
         VkDescriptorAddressInfoEXT bufferInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT};
@@ -80,6 +83,7 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanDescriptorHeap::WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept {
+        InvalidateSlot(desc.offsetInHeap);
         auto* vulkanBuffer = INTERPRET_AS<VulkanBuffer*>(desc.buffer);
 
         VkDescriptorAddressInfoEXT bufferInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT};
@@ -97,6 +101,7 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanDescriptorHeap::WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept {
+        InvalidateSlot(desc.offsetInHeap);
         auto* vulkanBuffer = INTERPRET_AS<VulkanBuffer*>(desc.buffer);
 
         VkDescriptorAddressInfoEXT bufferInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT};
@@ -114,12 +119,24 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanDescriptorHeap::WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept {
-        //TODO: validate if it is possible to create view, write this data to heap and delete vkView object;
+        VkImageView& view = InvalidateSlot(desc.offsetInHeap);
         auto* vulkanTexture = INTERPRET_AS<VulkanTexture2D*>(desc.texture);
 
+        VkImageViewCreateInfo viewInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        viewInfo.flags = 0;
+        viewInfo.format = vulkanTexture->origimalFormat;
+        viewInfo.image = vulkanTexture->texture;
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = VK_WHOLE_SIZE;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = VK_WHOLE_SIZE;
+        RHINO_VKS(vkCreateImageView(m_Context.device, &viewInfo, m_Context.allocator, &view));
+
         VkDescriptorImageInfo textureInfo{};
-        textureInfo.imageLayout = vulkanTexture->layout;
-        textureInfo.imageView = vulkanTexture->view;
+        textureInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        textureInfo.imageView = view;
 
         VkDescriptorGetInfoEXT info{VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT};
         info.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -131,12 +148,24 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanDescriptorHeap::WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept {
-        //TODO: validate if it is possible to create view, write this data to heap and delete vkView object;
+        VkImageView& view = InvalidateSlot(desc.offsetInHeap);
         auto* vulkanTexture = INTERPRET_AS<VulkanTexture2D*>(desc.texture);
 
+        VkImageViewCreateInfo viewInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        viewInfo.flags = 0;
+        viewInfo.format = vulkanTexture->origimalFormat;
+        viewInfo.image = vulkanTexture->texture;
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = VK_WHOLE_SIZE;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = VK_WHOLE_SIZE;
+        RHINO_VKS(vkCreateImageView(m_Context.device, &viewInfo, m_Context.allocator, &view));
+
         VkDescriptorImageInfo textureInfo{};
-        textureInfo.imageLayout = vulkanTexture->layout;
-        textureInfo.imageView = vulkanTexture->view;
+        textureInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        textureInfo.imageView = view;
 
         VkDescriptorGetInfoEXT info{VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT};
         info.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -148,14 +177,17 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanDescriptorHeap::WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept {
+        InvalidateSlot(desc.offsetInHeap);
         //TODO: implement
     }
 
     void VulkanDescriptorHeap::WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept {
+        InvalidateSlot(desc.offsetInHeap);
         // TODO: implement
     }
 
     void VulkanDescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
+        InvalidateSlot(desc.offsetInHeap);
         // TODO: implement
     }
 
@@ -172,11 +204,22 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanDescriptorHeap::Release() noexcept {
+        for (VkImageView view : m_ImageViewPerDescriptor) {
+            vkDestroyImageView(m_Context.device, view, m_Context.allocator);
+        }
         vkUnmapMemory(m_Context.device, this->m_Memory);
         vkDestroyBuffer(m_Context.device, this->m_Heap, m_Context.allocator);
         vkFreeMemory(m_Context.device, this->m_Memory, m_Context.allocator);
         delete this;
     }
-}// namespace RHINO::APIVulkan
+
+    VkImageView& VulkanDescriptorHeap::InvalidateSlot(uint32_t descriptorSlot) noexcept {
+        if (m_ImageViewPerDescriptor[descriptorSlot]) {
+            vkDestroyImageView(m_Context.device, m_ImageViewPerDescriptor[descriptorSlot], m_Context.allocator);
+        }
+        m_ImageViewPerDescriptor[descriptorSlot] = VK_NULL_HANDLE;
+        return m_ImageViewPerDescriptor[descriptorSlot];
+    }
+} // namespace RHINO::APIVulkan
 
 #endif// ENABLE_API_VULKAN

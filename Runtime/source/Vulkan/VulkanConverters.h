@@ -57,8 +57,27 @@ namespace RHINO::APIVulkan::Convert {
         return result;
     }
 
+    inline VkImageUsageFlags ToVkImageUsage(ResourceUsage usage) noexcept {
+        VkImageUsageFlags result = 0;
+        if (bool(usage & ResourceUsage::ShaderResource)) {
+            result |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        }
+        if (bool(usage & ResourceUsage::UnorderedAccess)) {
+            result |= VK_IMAGE_USAGE_STORAGE_BIT;
+        }
+        if (bool(usage & ResourceUsage::CopySource)) {
+            result |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        }
+        if (bool(usage & ResourceUsage::CopyDest)) {
+            result |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        }
+        return result;
+    }
+
     inline VkFormat ToVkFormat(TextureFormat format) noexcept {
         switch (format) {
+            case TextureFormat::R8G8B8A8_UNORM:
+                return VK_FORMAT_R8G8B8A8_UNORM;
             case TextureFormat::R32G32B32A32_FLOAT:
                 return VK_FORMAT_R32G32B32A32_SFLOAT;
             case TextureFormat::R32G32B32A32_UINT:
@@ -79,7 +98,7 @@ namespace RHINO::APIVulkan::Convert {
                 return VK_FORMAT_R32_SINT;
             default:
                 assert(0);
-                return VK_FORMAT_R32G32B32A32_SFLOAT;
+                return VK_FORMAT_R8G8B8A8_UNORM;
         }
     }
 

@@ -34,14 +34,14 @@ namespace RHINO::APIVulkan {
     class VulkanTexture2D : public Texture2DBase {
     public:
         VkImage texture = VK_NULL_HANDLE;
-        VkImageView view = VK_NULL_HANDLE;
-        VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        VkFormat origimalFormat = VK_FORMAT_UNDEFINED;
         VulkanObjectContext context = {};
 
     public:
         void Release() noexcept final {
-            vkDestroyImageView(this->context.device, this->view, this->context.allocator);
             vkDestroyImage(this->context.device, this->texture, this->context.allocator);
+            vkFreeMemory(this->context.device, this->memory, this->context.allocator);
             delete this;
         }
     };

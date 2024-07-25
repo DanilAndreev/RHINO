@@ -35,6 +35,9 @@ namespace RHINO::APIVulkan {
         void Release() noexcept final;
 
     private:
+        VkImageView& InvalidateSlot(uint32_t descriptorSlot) noexcept;
+
+    private:
         uint32_t m_HeapSize = 0;
         VkBuffer m_Heap = VK_NULL_HANDLE;
         VkDeviceMemory m_Memory = VK_NULL_HANDLE;
@@ -44,6 +47,8 @@ namespace RHINO::APIVulkan {
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT m_DescriptorProps{};
         VulkanObjectContext m_Context = {};
+
+        std::vector<VkImageView> m_ImageViewPerDescriptor{};
     };
 
 } // namespace RHINO::APIVulkan
