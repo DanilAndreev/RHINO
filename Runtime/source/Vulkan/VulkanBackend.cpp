@@ -196,11 +196,14 @@ namespace RHINO::APIVulkan {
 
             vkCreateDescriptorSetLayout(m_Device, &setLayoutCreateInfo, m_Alloc, &spaceLayouts[space]);
 
-//            VkDeviceSize debugSize = 0;
-//            EXT::vkGetDescriptorSetLayoutSizeEXT(m_Device, spaceLayouts[space], &debugSize);
-//            VkDeviceSize debugOffset = 0;
-//            EXT::vkGetDescriptorSetLayoutBindingOffsetEXT(m_Device, spaceLayouts[space], 2u, &debugOffset);
-//            std::cout << "Set " << space << " size: " << debugSize << " off: " << debugOffset << std::endl;
+            VkDeviceSize debugSize = 0;
+            EXT::vkGetDescriptorSetLayoutSizeEXT(m_Device, spaceLayouts[space], &debugSize);
+            std::cout << "Set " << space << " size: " << debugSize << "\n";
+            for (size_t bnd = 0; bnd < bindings.size(); ++bnd) {
+                VkDeviceSize debugOffset = 0;
+                EXT::vkGetDescriptorSetLayoutBindingOffsetEXT(m_Device, spaceLayouts[space], bnd, &debugOffset);
+                std::cout << "  Binding " << bnd << " off: " << debugOffset << std::endl;
+            }
         }
 
         VkPipelineLayoutCreateInfo layoutInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
@@ -424,11 +427,13 @@ namespace RHINO::APIVulkan {
         timelineInfo.waitSemaphoreValueCount = 1;
         timelineInfo.pWaitSemaphoreValues = &value;
 
+        VkPipelineStageFlags stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
         VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
         submitInfo.pNext = &timelineInfo;
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = &vulkanSemaphore->semaphore;
-
+        submitInfo.pWaitDstStageMask = &stage;
         vkQueueSubmit(m_DefaultQueue, 1, &submitInfo, VK_NULL_HANDLE);
     }
 

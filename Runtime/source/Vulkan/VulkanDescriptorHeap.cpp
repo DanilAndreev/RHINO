@@ -21,7 +21,8 @@ namespace RHINO::APIVulkan {
         // TODO: 256 is just a magic number for RTX 3080TI.
         //  For some reason descriptorProps.descriptorBufferOffsetAlignment != 256.
         //  Research valid parameter for this one.
-        m_HeapSize = RHINO_CEIL_TO_MULTIPLE_OF(m_DescriptorHandleIncrementSize * descriptorsCount, 256);
+
+        m_HeapSize = RHINO_CEIL_TO_MULTIPLE_OF(m_DescriptorHandleIncrementSize * descriptorsCount + 256, 256);
 
         VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         heapCreateInfo.flags = 0;
@@ -31,7 +32,7 @@ namespace RHINO::APIVulkan {
         }
         heapCreateInfo.size = m_HeapSize;
         heapCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Context.device, &heapCreateInfo, m_Context.allocator, &m_Heap);
+        RHINO_VKS(vkCreateBuffer(m_Context.device, &heapCreateInfo, m_Context.allocator, &m_Heap));
 
         // Create the memory backing up the buffer handle
         VkMemoryRequirements memReqs;
@@ -47,15 +48,15 @@ namespace RHINO::APIVulkan {
         alloc.pNext = &allocateFlagsInfo;
         alloc.allocationSize = memReqs.size;
         alloc.memoryTypeIndex = SelectMemoryType(0xffffff, memoryFlags, m_Context);
-        vkAllocateMemory(m_Context.device, &alloc, m_Context.allocator, &m_Memory);
+        RHINO_VKS(vkAllocateMemory(m_Context.device, &alloc, m_Context.allocator, &m_Memory));
 
-        vkBindBufferMemory(m_Context.device, m_Heap, m_Memory, 0);
+        RHINO_VKS(vkBindBufferMemory(m_Context.device, m_Heap, m_Memory, 0));
 
         VkBufferDeviceAddressInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
         bufferInfo.buffer = m_Heap;
         m_HeapGPUStartHandle = vkGetBufferDeviceAddress(m_Context.device, &bufferInfo);
 
-        vkMapMemory(m_Context.device, m_Memory, 0, VK_WHOLE_SIZE, 0, &m_Mapped);
+        RHINO_VKS(vkMapMemory(m_Context.device, m_Memory, 0, VK_WHOLE_SIZE, 0, &m_Mapped));
     }
     VkDeviceAddress VulkanDescriptorHeap::GetHeapGPUStartHandle() noexcept {
         return m_HeapGPUStartHandle;
