@@ -227,6 +227,7 @@ namespace RHINO::APIVulkan {
     ComputePSO* VulkanBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* vulkanRootSignature = INTERPRET_AS<VulkanRootSignature*>(desc.rootSignature);
         auto* result = new VulkanComputePSO{};
+        result->context = CreateVulkanObjectContext();
 
         VkShaderModuleCreateInfo shaderModuleInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
         shaderModuleInfo.codeSize = desc.CS.bytecodeSize;
@@ -250,6 +251,7 @@ namespace RHINO::APIVulkan {
 
     Buffer* VulkanBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept {
         auto* result = new VulkanBuffer{};
+        result->context = CreateVulkanObjectContext();
         result->size = size;
 
         VkBufferCreateInfo createInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
@@ -312,10 +314,11 @@ namespace RHINO::APIVulkan {
 
     Sampler* VulkanBackend::CreateSampler(const SamplerDesc& desc) noexcept {
         auto* result = new VulkanSampler{};
-        VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-        samplerInfo.flags = 0;
+        result->context = CreateVulkanObjectContext();
 
         Convert::VulkanMinMagMipFilters filters = Convert::ToMTLMinMagMipFilter(desc.textureFilter);
+        VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+        samplerInfo.flags = 0;
         samplerInfo.minFilter = filters.min;
         samplerInfo.magFilter = filters.mag;
         samplerInfo.mipmapMode = filters.mip;
@@ -368,6 +371,7 @@ namespace RHINO::APIVulkan {
 
     Semaphore* VulkanBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
         auto* result = new VulkanSemaphore{};
+        result->context = CreateVulkanObjectContext();
 
         VkSemaphoreTypeCreateInfo timelineCreateInfo{VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO};
         timelineCreateInfo.pNext = nullptr;
