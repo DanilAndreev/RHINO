@@ -7,7 +7,7 @@
 namespace RHINO::APIVulkan {
     class VulkanCommandList : public CommandList {
     public:
-        void Initialize(const char* name, VulkanObjectContext context, VkCommandPool pool) noexcept;
+        void Initialize(const char* name, VulkanObjectContext context, uint32_t queueFamilyIdx) noexcept;
         void SubmitToQueue(VkQueue queue) noexcept;
 
     public:

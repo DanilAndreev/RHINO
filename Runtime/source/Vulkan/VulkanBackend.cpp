@@ -96,14 +96,6 @@ namespace RHINO::APIVulkan {
         vkGetDeviceQueue(m_Device, m_CopyQueueFamIndex, 0, &m_CopyQueue);
 
         LoadVulkanAPI(m_Instance, vkGetInstanceProcAddr);
-
-        VkCommandPoolCreateInfo poolCreateInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-        poolCreateInfo.queueFamilyIndex = m_DefaultQueueFamIndex;
-        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_DefaultQueueCMDPool);
-        poolCreateInfo.queueFamilyIndex = m_AsyncComputeQueueFamIndex;
-        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_AsyncComputeQueueCMDPool);
-        poolCreateInfo.queueFamilyIndex = m_CopyQueueFamIndex;
-        vkCreateCommandPool(m_Device, &poolCreateInfo, m_Alloc, &m_CopyQueueCMDPool);
     }
 
     void VulkanBackend::Release() noexcept {
@@ -296,14 +288,14 @@ namespace RHINO::APIVulkan {
     }
 
     void* VulkanBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
-        auto* vulkanBuffer = static_cast<VulkanBuffer*>(buffer);
+        auto* vulkanBuffer = INTERPRET_AS<VulkanBuffer*>(buffer);
         void* result;
         vkMapMemory(m_Device, vulkanBuffer->memory, offset, size, 0, &result);
         return result;
     }
 
     void VulkanBackend::UnmapMemory(Buffer* buffer) noexcept {
-        auto* vulkanBuffer = static_cast<VulkanBuffer*>(buffer);
+        auto* vulkanBuffer = INTERPRET_AS<VulkanBuffer*>(buffer);
         vkUnmapMemory(m_Device, vulkanBuffer->memory);
     }
 
@@ -352,7 +344,7 @@ namespace RHINO::APIVulkan {
 
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new VulkanCommandList{};
-        result->Initialize(name, CreateVulkanObjectContext(), m_DefaultQueueCMDPool);
+        result->Initialize(name, CreateVulkanObjectContext(), m_DefaultQueueFamIndex);
         return result;
     }
 
@@ -387,7 +379,7 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanBackend::SignalFromQueue(Semaphore* semaphore, uint64_t value) noexcept {
-        auto* vulkanSemaphore = static_cast<VulkanSemaphore*>(semaphore);
+        auto* vulkanSemaphore = INTERPRET_AS<VulkanSemaphore*>(semaphore);
 
         VkTimelineSemaphoreSubmitInfo timelineInfo{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
         timelineInfo.signalSemaphoreValueCount = 1;
@@ -402,7 +394,7 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanBackend::SignalFromHost(Semaphore* semaphore, uint64_t value) noexcept {
-        auto* vulkanSemaphore = static_cast<VulkanSemaphore*>(semaphore);
+        auto* vulkanSemaphore = INTERPRET_AS<VulkanSemaphore*>(semaphore);
 
         VkSemaphoreSignalInfo signalInfo{VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO};
         signalInfo.semaphore = vulkanSemaphore->semaphore;
@@ -412,7 +404,7 @@ namespace RHINO::APIVulkan {
     }
 
     bool VulkanBackend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
-        const auto* vulkanSemaphore = static_cast<const VulkanSemaphore*>(semaphore);
+        const auto* vulkanSemaphore = INTERPRET_AS<const VulkanSemaphore*>(semaphore);
 
         VkSemaphoreWaitInfo waitInfo{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
         waitInfo.flags = 0;
@@ -425,7 +417,7 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanBackend::SemaphoreWaitFromQueue(const Semaphore* semaphore, uint64_t value) noexcept {
-        const auto* vulkanSemaphore = static_cast<const VulkanSemaphore*>(semaphore);
+        const auto* vulkanSemaphore = INTERPRET_AS<const VulkanSemaphore*>(semaphore);
 
         VkTimelineSemaphoreSubmitInfo timelineInfo{VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO};
         timelineInfo.waitSemaphoreValueCount = 1;
@@ -442,7 +434,7 @@ namespace RHINO::APIVulkan {
     }
 
     uint64_t VulkanBackend::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
-        const auto* vulkanSemaphore = static_cast<const VulkanSemaphore*>(semaphore);
+        const auto* vulkanSemaphore = INTERPRET_AS<const VulkanSemaphore*>(semaphore);
         uint64_t result;
         vkGetSemaphoreCounterValue(m_Device, vulkanSemaphore->semaphore, &result);
         return result;

@@ -7,9 +7,12 @@
 #include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
-    void VulkanCommandList::Initialize(const char* name, VulkanObjectContext context,
-                                       VkCommandPool pool) noexcept {
+    void VulkanCommandList::Initialize(const char* name, VulkanObjectContext context, uint32_t queueFamilyIdx) noexcept {
         m_Context = context;
+
+        VkCommandPoolCreateInfo poolCreateInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+        poolCreateInfo.queueFamilyIndex = queueFamilyIdx;
+        vkCreateCommandPool(m_Context.device, &poolCreateInfo, m_Context.allocator, &m_Pool);
 
         VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT};
         VkPhysicalDeviceProperties2 props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
@@ -18,7 +21,7 @@ namespace RHINO::APIVulkan {
         m_DescriptorProps = descriptorProps;
 
         VkCommandBufferAllocateInfo cmdAlloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-        cmdAlloc.commandPool = pool;
+        cmdAlloc.commandPool = m_Pool;
         cmdAlloc.commandBufferCount = 1;
         cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         vkAllocateCommandBuffers(m_Context.device, &cmdAlloc, &m_Cmd);
