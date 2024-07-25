@@ -349,8 +349,6 @@ namespace RHINO::APIVulkan {
     void VulkanBackend::SubmitCommandList(CommandList* cmd) noexcept {
         auto* vulkanCMD = INTERPRET_AS<VulkanCommandList*>(cmd);
         vulkanCMD->SubmitToQueue(m_DefaultQueue);
-        vkDeviceWaitIdle(m_Context.device); // TODO: REMOVE
-
     }
 
     void VulkanBackend::SwapchainPresent(Swapchain* swapchain, Texture2D* toPresent, size_t width, size_t height) noexcept {
