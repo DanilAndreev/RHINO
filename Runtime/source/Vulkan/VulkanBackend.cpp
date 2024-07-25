@@ -30,22 +30,22 @@ namespace RHINO::APIVulkan {
         instanceInfo.enabledExtensionCount = RHINO_ARR_SIZE(instanceExts);
         instanceInfo.ppEnabledExtensionNames = instanceExts;
         instanceInfo.enabledLayerCount = 0;
-        RHINO_VKS(vkCreateInstance(&instanceInfo, m_Alloc, &m_Instance));
+        RHINO_VKS(vkCreateInstance(&instanceInfo, m_Context.allocator, &m_Context.instance));
 
         std::vector<VkPhysicalDevice> physicalDevices{};
         uint32_t physicalDevicesCount = 0;
-        RHINO_VKS(vkEnumeratePhysicalDevices(m_Instance, &physicalDevicesCount, nullptr));
+        RHINO_VKS(vkEnumeratePhysicalDevices(m_Context.instance, &physicalDevicesCount, nullptr));
         physicalDevices.resize(physicalDevicesCount);
-        RHINO_VKS(vkEnumeratePhysicalDevices(m_Instance, &physicalDevicesCount, physicalDevices.data()));
+        RHINO_VKS(vkEnumeratePhysicalDevices(m_Context.instance, &physicalDevicesCount, physicalDevices.data()));
 
         for (size_t i = 0; i < physicalDevices.size(); ++i) {
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(physicalDevices[i], &props);
             if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-                m_PhysicalDevice = physicalDevices[i];
+                m_Context.physicalDevice = physicalDevices[i];
             }
         }
-        m_PhysicalDevice = m_PhysicalDevice ? m_PhysicalDevice : physicalDevices[0];
+        m_Context.physicalDevice = m_Context.physicalDevice ? m_Context.physicalDevice : physicalDevices[0];
 
         VkDeviceQueueCreateInfo queueInfos[3] = {};
         uint32_t queueInfosCount = 0;
@@ -84,28 +84,28 @@ namespace RHINO::APIVulkan {
         deviceInfo.ppEnabledExtensionNames = deviceExtensions;
         deviceInfo.queueCreateInfoCount = queueInfosCount;
         deviceInfo.pQueueCreateInfos = queueInfos;
-        RHINO_VKS(vkCreateDevice(m_PhysicalDevice, &deviceInfo, m_Alloc, &m_Device));
+        RHINO_VKS(vkCreateDevice(m_Context.physicalDevice, &deviceInfo, m_Context.allocator, &m_Context.device));
 
         m_DefaultQueueFamIndex = queueInfos[0].queueFamilyIndex;
         m_AsyncComputeQueueFamIndex = queueInfos[1].queueFamilyIndex;
         m_CopyQueueFamIndex = queueInfos[2].queueFamilyIndex;
 
-        vkGetDeviceQueue(m_Device, m_DefaultQueueFamIndex, 0, &m_DefaultQueue);
+        vkGetDeviceQueue(m_Context.device, m_DefaultQueueFamIndex, 0, &m_DefaultQueue);
         //TODO: fix (get real mapping)
-        vkGetDeviceQueue(m_Device, m_AsyncComputeQueueFamIndex, 0, &m_AsyncComputeQueue);
-        vkGetDeviceQueue(m_Device, m_CopyQueueFamIndex, 0, &m_CopyQueue);
+        vkGetDeviceQueue(m_Context.device, m_AsyncComputeQueueFamIndex, 0, &m_AsyncComputeQueue);
+        vkGetDeviceQueue(m_Context.device, m_CopyQueueFamIndex, 0, &m_CopyQueue);
 
-        LoadVulkanAPI(m_Instance, vkGetInstanceProcAddr);
+        LoadVulkanAPI(m_Context.instance, vkGetInstanceProcAddr);
     }
 
     void VulkanBackend::Release() noexcept {
-        vkDestroyDevice(m_Device, m_Alloc);
-        vkDestroyInstance(m_Instance, m_Alloc);
+        vkDestroyDevice(m_Context.device, m_Context.allocator);
+        vkDestroyInstance(m_Context.instance, m_Context.allocator);
     }
 
     RootSignature* VulkanBackend::SerializeRootSignature(const RootSignatureDesc& desc) noexcept {
         auto result = new VulkanRootSignature{};
-        result->context = CreateVulkanObjectContext();
+        result->context = m_Context;
 
         std::map<size_t, size_t> topBindingPerSpace{};
         for (size_t space = 0; space < desc.spacesCount; ++space) {
@@ -186,14 +186,14 @@ namespace RHINO::APIVulkan {
             setLayoutCreateInfo.bindingCount = bindings.size();
             setLayoutCreateInfo.pBindings = bindings.data();
 
-            vkCreateDescriptorSetLayout(m_Device, &setLayoutCreateInfo, m_Alloc, &spaceLayouts[space]);
+            vkCreateDescriptorSetLayout(m_Context.device, &setLayoutCreateInfo, m_Context.allocator, &spaceLayouts[space]);
 
             VkDeviceSize debugSize = 0;
-            EXT::vkGetDescriptorSetLayoutSizeEXT(m_Device, spaceLayouts[space], &debugSize);
+            EXT::vkGetDescriptorSetLayoutSizeEXT(m_Context.device, spaceLayouts[space], &debugSize);
             std::cout << "Set " << space << " size: " << debugSize << "\n";
             for (size_t bnd = 0; bnd < bindings.size(); ++bnd) {
                 VkDeviceSize debugOffset = 0;
-                EXT::vkGetDescriptorSetLayoutBindingOffsetEXT(m_Device, spaceLayouts[space], bnd, &debugOffset);
+                EXT::vkGetDescriptorSetLayoutBindingOffsetEXT(m_Context.device, spaceLayouts[space], bnd, &debugOffset);
                 std::cout << "  Binding " << bnd << " off: " << debugOffset << std::endl;
             }
         }
@@ -202,10 +202,10 @@ namespace RHINO::APIVulkan {
         layoutInfo.pushConstantRangeCount = 0;
         layoutInfo.setLayoutCount = spaceLayouts.size();
         layoutInfo.pSetLayouts = spaceLayouts.data();
-        vkCreatePipelineLayout(m_Device, &layoutInfo, m_Alloc, &result->layout);
+        vkCreatePipelineLayout(m_Context.device, &layoutInfo, m_Context.allocator, &result->layout);
 
         for (VkDescriptorSetLayout layout: spaceLayouts) {
-            vkDestroyDescriptorSetLayout(m_Device, layout, m_Alloc);
+            vkDestroyDescriptorSetLayout(m_Context.device, layout, m_Context.allocator);
         }
         return result;
     }
@@ -219,12 +219,12 @@ namespace RHINO::APIVulkan {
     ComputePSO* VulkanBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* vulkanRootSignature = INTERPRET_AS<VulkanRootSignature*>(desc.rootSignature);
         auto* result = new VulkanComputePSO{};
-        result->context = CreateVulkanObjectContext();
+        result->context = m_Context;
 
         VkShaderModuleCreateInfo shaderModuleInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
         shaderModuleInfo.codeSize = desc.CS.bytecodeSize;
         shaderModuleInfo.pCode = reinterpret_cast<const uint32_t*>(desc.CS.bytecode);
-        vkCreateShaderModule(m_Device, &shaderModuleInfo, m_Alloc, &result->shaderModule);
+        vkCreateShaderModule(m_Context.device, &shaderModuleInfo, m_Context.allocator, &result->shaderModule);
 
         VkPipelineShaderStageCreateInfo stageInfo{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
         stageInfo.flags = 0;
@@ -237,13 +237,13 @@ namespace RHINO::APIVulkan {
         createInfo.flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
         createInfo.stage = stageInfo;
         createInfo.layout = vulkanRootSignature->layout;
-        vkCreateComputePipelines(m_Device, VK_NULL_HANDLE, 1, &createInfo, m_Alloc, &result->PSO);
+        vkCreateComputePipelines(m_Context.device, VK_NULL_HANDLE, 1, &createInfo, m_Context.allocator, &result->PSO);
         return result;
     }
 
     Buffer* VulkanBackend::CreateBuffer(size_t size, ResourceHeapType heapType, ResourceUsage usage, size_t structuredStride, const char* name) noexcept {
         auto* result = new VulkanBuffer{};
-        result->context = CreateVulkanObjectContext();
+        result->context = m_Context;
         result->size = size;
 
         VkBufferCreateInfo createInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
@@ -252,37 +252,35 @@ namespace RHINO::APIVulkan {
         createInfo.usage |= VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         createInfo.size = size;
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_Device, &createInfo, m_Alloc, &result->buffer);
+        vkCreateBuffer(m_Context.device, &createInfo, m_Context.allocator, &result->buffer);
 
         VkMemoryRequirements memReqs;
-        vkGetBufferMemoryRequirements(m_Device, result->buffer, &memReqs);
+        vkGetBufferMemoryRequirements(m_Context.device, result->buffer, &memReqs);
         VkPhysicalDeviceMemoryProperties memoryProps;
-        vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProps);
+        vkGetPhysicalDeviceMemoryProperties(m_Context.physicalDevice, &memoryProps);
 
         VkMemoryAllocateFlagsInfo allocateFlagsInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
         allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
-
-        auto objectContext = CreateVulkanObjectContext();
 
         VkMemoryAllocateInfo alloc{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
         alloc.pNext = &allocateFlagsInfo;
         alloc.allocationSize = memReqs.size;
         switch (heapType) {
             case ResourceHeapType::Default:
-                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, objectContext);
+                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Context);
                 break;
             case ResourceHeapType::Upload:
             case ResourceHeapType::Readback:
-                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, objectContext);
+                alloc.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, m_Context);
                 break;
         }
-        vkAllocateMemory(m_Device, &alloc, m_Alloc, &result->memory);
+        vkAllocateMemory(m_Context.device, &alloc, m_Context.allocator, &result->memory);
 
-        vkBindBufferMemory(m_Device, result->buffer, result->memory, 0);
+        vkBindBufferMemory(m_Context.device, result->buffer, result->memory, 0);
 
         VkBufferDeviceAddressInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
         bufferInfo.buffer = result->buffer;
-        result->deviceAddress = vkGetBufferDeviceAddress(m_Device, &bufferInfo);
+        result->deviceAddress = vkGetBufferDeviceAddress(m_Context.device, &bufferInfo);
 
         return result;
     }
@@ -290,13 +288,13 @@ namespace RHINO::APIVulkan {
     void* VulkanBackend::MapMemory(Buffer* buffer, size_t offset, size_t size) noexcept {
         auto* vulkanBuffer = INTERPRET_AS<VulkanBuffer*>(buffer);
         void* result;
-        vkMapMemory(m_Device, vulkanBuffer->memory, offset, size, 0, &result);
+        vkMapMemory(m_Context.device, vulkanBuffer->memory, offset, size, 0, &result);
         return result;
     }
 
     void VulkanBackend::UnmapMemory(Buffer* buffer) noexcept {
         auto* vulkanBuffer = INTERPRET_AS<VulkanBuffer*>(buffer);
-        vkUnmapMemory(m_Device, vulkanBuffer->memory);
+        vkUnmapMemory(m_Context.device, vulkanBuffer->memory);
     }
 
     Texture2D* VulkanBackend::CreateTexture2D(const Dim3D& dimensions, size_t mips, TextureFormat format, ResourceUsage usage,
@@ -306,7 +304,7 @@ namespace RHINO::APIVulkan {
 
     Sampler* VulkanBackend::CreateSampler(const SamplerDesc& desc) noexcept {
         auto* result = new VulkanSampler{};
-        result->context = CreateVulkanObjectContext();
+        result->context = m_Context;
 
         Convert::VulkanMinMagMipFilters filters = Convert::ToMTLMinMagMipFilter(desc.textureFilter);
         VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
@@ -326,32 +324,32 @@ namespace RHINO::APIVulkan {
         samplerInfo.maxLod = desc.maxLOD;
         samplerInfo.mipLodBias = 0;
         samplerInfo.unnormalizedCoordinates = false;
-        vkCreateSampler(m_Device, &samplerInfo, m_Alloc, &result->sampler);
+        vkCreateSampler(m_Context.device, &samplerInfo, m_Context.allocator, &result->sampler);
         return result;
     }
 
     DescriptorHeap* VulkanBackend::CreateDescriptorHeap(DescriptorHeapType type, size_t descriptorsCount, const char* name) noexcept {
         auto* result = new VulkanDescriptorHeap{};
-        result->Initialize(name, type, descriptorsCount, CreateVulkanObjectContext());
+        result->Initialize(name, type, descriptorsCount, m_Context);
         return result;
     }
 
     Swapchain* VulkanBackend::CreateSwapchain(const SwapchainDesc& desc) noexcept {
         auto* result = new VulkanSwapchain{};
-        result->Initialize(CreateVulkanObjectContext(), desc, m_DefaultQueueFamIndex);
+        result->Initialize(m_Context, desc, m_DefaultQueueFamIndex);
         return result;
     }
 
     CommandList* VulkanBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new VulkanCommandList{};
-        result->Initialize(name, CreateVulkanObjectContext(), m_DefaultQueueFamIndex);
+        result->Initialize(name, m_Context, m_DefaultQueueFamIndex);
         return result;
     }
 
     void VulkanBackend::SubmitCommandList(CommandList* cmd) noexcept {
-        auto* vulkanCMD = static_cast<VulkanCommandList*>(cmd);
+        auto* vulkanCMD = INTERPRET_AS<VulkanCommandList*>(cmd);
         vulkanCMD->SubmitToQueue(m_DefaultQueue);
-        vkDeviceWaitIdle(m_Device); // TODO: REMOVE
+        vkDeviceWaitIdle(m_Context.device); // TODO: REMOVE
 
     }
 
@@ -363,7 +361,7 @@ namespace RHINO::APIVulkan {
 
     Semaphore* VulkanBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
         auto* result = new VulkanSemaphore{};
-        result->context = CreateVulkanObjectContext();
+        result->context = m_Context;
 
         VkSemaphoreTypeCreateInfo timelineCreateInfo{VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO};
         timelineCreateInfo.pNext = nullptr;
@@ -373,7 +371,7 @@ namespace RHINO::APIVulkan {
         VkSemaphoreCreateInfo createInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
         createInfo.pNext = &timelineCreateInfo;
         createInfo.flags = 0;
-        RHINO_VKS(vkCreateSemaphore(m_Device, &createInfo, m_Alloc, &result->semaphore));
+        RHINO_VKS(vkCreateSemaphore(m_Context.device, &createInfo, m_Context.allocator, &result->semaphore));
 
         return result;
     }
@@ -400,7 +398,7 @@ namespace RHINO::APIVulkan {
         signalInfo.semaphore = vulkanSemaphore->semaphore;
         signalInfo.value = value;
 
-        vkSignalSemaphore(m_Device, &signalInfo);
+        vkSignalSemaphore(m_Context.device, &signalInfo);
     }
 
     bool VulkanBackend::SemaphoreWaitFromHost(const Semaphore* semaphore, uint64_t value, size_t timeout) noexcept {
@@ -412,7 +410,7 @@ namespace RHINO::APIVulkan {
         waitInfo.pSemaphores = &vulkanSemaphore->semaphore;
         waitInfo.pValues = &value;
 
-        const VkResult status = vkWaitSemaphores(m_Device, &waitInfo, timeout);
+        const VkResult status = vkWaitSemaphores(m_Context.device, &waitInfo, timeout);
         return status == VK_SUCCESS;
     }
 
@@ -436,16 +434,16 @@ namespace RHINO::APIVulkan {
     uint64_t VulkanBackend::GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept {
         const auto* vulkanSemaphore = INTERPRET_AS<const VulkanSemaphore*>(semaphore);
         uint64_t result;
-        vkGetSemaphoreCounterValue(m_Device, vulkanSemaphore->semaphore, &result);
+        vkGetSemaphoreCounterValue(m_Context.device, vulkanSemaphore->semaphore, &result);
         return result;
     }
 
     void VulkanBackend::SelectQueues(VkDeviceQueueCreateInfo queueInfos[3], uint32_t* infosCount) noexcept {
         uint32_t queuesCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queuesCount, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(m_Context.physicalDevice, &queuesCount, nullptr);
         std::vector<VkQueueFamilyProperties> queues;
         queues.resize(queuesCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queuesCount, queues.data());
+        vkGetPhysicalDeviceQueueFamilyProperties(m_Context.physicalDevice, &queuesCount, queues.data());
 
         uint32_t graphicsQueueIndex = ~0;
         uint32_t computeQueueIndex = ~0;
@@ -552,15 +550,6 @@ namespace RHINO::APIVulkan {
         }
     }
 
-    VulkanObjectContext VulkanBackend::CreateVulkanObjectContext() const noexcept {
-        VulkanObjectContext result{};
-        result.instance = m_Instance;
-        result.physicalDevice = m_PhysicalDevice;
-        result.device = m_Device;
-        result.allocator = m_Alloc;
-        return result;
-    }
-
     ASPrebuildInfo VulkanBackend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
         VkDeviceOrHostAddressConstKHR constDummyAddr{VkDeviceAddress{NULL}};
         VkDeviceOrHostAddressKHR dummyAddr{VkDeviceAddress{NULL}};
@@ -589,7 +578,7 @@ namespace RHINO::APIVulkan {
 
         VkAccelerationStructureBuildSizesInfoKHR outSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
 
-        EXT::vkGetAccelerationStructureBuildSizesKHR(m_Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
+        EXT::vkGetAccelerationStructureBuildSizesKHR(m_Context.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, nullptr,
                                                 &outSizesInfo);
         ASPrebuildInfo result{};
         result.scratchBufferSizeInBytes = outSizesInfo.buildScratchSize;

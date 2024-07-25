@@ -51,11 +51,8 @@ namespace RHINO::APIVulkan {
 
     private:
         void SelectQueues(VkDeviceQueueCreateInfo queueInfos[3], uint32_t* infosCount) noexcept;
-        VulkanObjectContext CreateVulkanObjectContext() const noexcept;
     private:
-        VkInstance m_Instance = VK_NULL_HANDLE;
-        VkDevice m_Device = VK_NULL_HANDLE;
-        VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
+        VulkanObjectContext m_Context = {};
 
         VkQueue m_DefaultQueue = VK_NULL_HANDLE;
         uint32_t m_DefaultQueueFamIndex = 0;
@@ -63,8 +60,6 @@ namespace RHINO::APIVulkan {
         uint32_t m_AsyncComputeQueueFamIndex = 0;
         VkQueue m_CopyQueue = VK_NULL_HANDLE;
         uint32_t m_CopyQueueFamIndex = 0;
-
-        VkAllocationCallbacks* m_Alloc = nullptr;
     };
 }// namespace RHINO::APIVulkan
 
