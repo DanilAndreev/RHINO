@@ -20,6 +20,7 @@ namespace RHINO::APIVulkan {
 
         std::vector<VkImage> m_SwapchainImages = {};
         std::vector<VkSemaphore> m_SwapchainSyncs = {};
+        VkFence m_AcquireFence = VK_NULL_HANDLE;
 
         VkCommandPool m_CMDPool = VK_NULL_HANDLE;
     };

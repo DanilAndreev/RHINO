@@ -85,11 +85,11 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::Dispatch(const DispatchDesc& desc) noexcept {
-        for (auto [space, spaceInfo] : m_RootSignature->heapOffsetsInDescriptorsBySpaces) {
-            uint32_t bufferIndex = spaceInfo.first == DescriptorRangeType::Sampler ? 1 : 0;
+        for (auto [space, spaceInfo] : m_RootSignature->heapOffsetsInDescriptorsBySpace) {
+            uint32_t bufferIndex = spaceInfo.first == DescriptorHeapType::Sampler ? 1 : 0;
             VkDeviceSize offset = spaceInfo.second;
             switch (spaceInfo.first) {
-                case DescriptorRangeType::Sampler:
+                case DescriptorHeapType::Sampler:
                     offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, m_DescriptorProps);
                 break;
                 default:

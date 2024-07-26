@@ -203,6 +203,7 @@ namespace RHINO {
     };
 
     struct DescriptorSpaceDesc {
+        DescriptorHeapType spaceType = DescriptorHeapType::SRV_CBV_UAV;
         size_t space = 0;
         size_t offsetInDescriptorsFromTableStart = 0;
         size_t rangeDescCount = 0;

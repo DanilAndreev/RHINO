@@ -39,7 +39,7 @@ namespace RHINO::APIVulkan {
         swapchainCreateInfoKhr.imageColorSpace = surfaceFormat.colorSpace;
         swapchainCreateInfoKhr.imageExtent = surfaceCapabilities.currentExtent;
         swapchainCreateInfoKhr.imageArrayLayers = 1;
-        swapchainCreateInfoKhr.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        swapchainCreateInfoKhr.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         swapchainCreateInfoKhr.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapchainCreateInfoKhr.queueFamilyIndexCount = 0;
         swapchainCreateInfoKhr.pQueueFamilyIndices = nullptr;
@@ -61,6 +61,9 @@ namespace RHINO::APIVulkan {
             semaphoreCreateInfo.flags = 0;
             RHINO_VKS(vkCreateSemaphore(m_Context.device, &semaphoreCreateInfo, m_Context.allocator, &m_SwapchainSyncs[i]));
         }
+        VkFenceCreateInfo fenceInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+        fenceInfo.flags = 0;
+        RHINO_VKS(vkCreateFence(m_Context.device, &fenceInfo, m_Context.allocator, &m_AcquireFence));
 
         VkCommandPoolCreateInfo cmdPoolInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
         cmdPoolInfo.queueFamilyIndex = queueFamilyIndex;
@@ -70,7 +73,10 @@ namespace RHINO::APIVulkan {
 
     void VulkanSwapchain::Present(VkQueue queue, VulkanTexture2D* toPresent, size_t width, size_t height) noexcept {
         uint32_t index = 0;
-        RHINO_VKS(vkAcquireNextImageKHR(m_Context.device, m_Swapchain, ~0, VK_NULL_HANDLE, VK_NULL_HANDLE, &index));
+        RHINO_VKS(vkAcquireNextImageKHR(m_Context.device, m_Swapchain, ~0, VK_NULL_HANDLE, m_AcquireFence, &index));
+        vkWaitForFences(m_Context.device, 1, &m_AcquireFence, VK_TRUE, ~0);
+        vkResetFences(m_Context.device, 1, &m_AcquireFence);
+
         VkImage backbuffer = m_SwapchainImages[index];
 
         VkCommandBuffer cmd = VK_NULL_HANDLE;
@@ -85,6 +91,22 @@ namespace RHINO::APIVulkan {
         cmdBegin.pInheritanceInfo = nullptr;
         RHINO_VKS(vkBeginCommandBuffer(cmd, &cmdBegin));
 
+        VkImageMemoryBarrier barrierToCopy{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+        barrierToCopy.image = backbuffer;
+        barrierToCopy.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrierToCopy.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrierToCopy.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrierToCopy.subresourceRange.baseArrayLayer = 0;
+        barrierToCopy.subresourceRange.layerCount = 1;
+        barrierToCopy.subresourceRange.baseMipLevel = 0;
+        barrierToCopy.subresourceRange.levelCount = 1;
+        barrierToCopy.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        barrierToCopy.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrierToCopy.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrierToCopy.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                             &barrierToCopy);
+
         VkImageCopy region{};
         region.srcOffset = {0, 0, 0};
         region.dstOffset = {0, 0, 0};
@@ -97,7 +119,23 @@ namespace RHINO::APIVulkan {
         region.dstSubresource.baseArrayLayer = 0;
         region.dstSubresource.layerCount = 1;
         region.extent = VkExtent3D{static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
-        vkCmdCopyImage(cmd, toPresent->texture, VK_IMAGE_LAYOUT_GENERAL, backbuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, &region);
+        vkCmdCopyImage(cmd, toPresent->texture, VK_IMAGE_LAYOUT_GENERAL, backbuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+        VkImageMemoryBarrier barrierToPresent{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+        barrierToPresent.image = backbuffer;
+        barrierToPresent.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrierToPresent.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrierToPresent.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrierToPresent.subresourceRange.baseArrayLayer = 0;
+        barrierToPresent.subresourceRange.layerCount = 1;
+        barrierToPresent.subresourceRange.baseMipLevel = 0;
+        barrierToPresent.subresourceRange.levelCount = 1;
+        barrierToPresent.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrierToPresent.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        barrierToPresent.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrierToPresent.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                             &barrierToPresent);
 
         RHINO_VKS(vkEndCommandBuffer(cmd));
         VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};

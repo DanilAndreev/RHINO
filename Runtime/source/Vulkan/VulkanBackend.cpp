@@ -105,94 +105,71 @@ namespace RHINO::APIVulkan {
         auto result = new VulkanRootSignature{};
         result->context = m_Context;
 
-        std::map<size_t, size_t> topBindingPerSpace{};
-        for (size_t space = 0; space < desc.spacesCount; ++space) {
-            for (size_t i = 0; i < desc.spacesDescs[space].rangeDescCount; ++i) {
-                const DescriptorRangeDesc& range = desc.spacesDescs[space].rangeDescs[i];
-                topBindingPerSpace[space] = range.baseRegisterSlot + range.descriptorsCount;
+        std::map<size_t, size_t> highestBindingPerSpace{};
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            for (size_t i = 0; i < desc.spacesDescs[spaceIdx].rangeDescCount; ++i) {
+                const DescriptorRangeDesc& range = desc.spacesDescs[spaceIdx].rangeDescs[i];
+                const size_t binding = range.baseRegisterSlot + range.descriptorsCount;
+                if (highestBindingPerSpace.contains(spaceIdx)) {
+                    highestBindingPerSpace[spaceIdx] = std::max(highestBindingPerSpace[spaceIdx], binding);
+                } else {
+                    highestBindingPerSpace[spaceIdx] = binding;
+                }
             }
         }
 
         std::vector<VkDescriptorSetLayout> spaceLayouts{};
         spaceLayouts.resize(desc.spacesCount);
-        for (size_t space = 0; space < desc.spacesCount; ++space) {
-            const DescriptorSpaceDesc& spaceDesc = desc.spacesDescs[space];
-            result->heapOffsetsInDescriptorsBySpaces[space] =
-                    std::make_pair(spaceDesc.rangeDescs[0].rangeType, spaceDesc.offsetInDescriptorsFromTableStart);
+        for (size_t spaceIdx = 0; spaceIdx < desc.spacesCount; ++spaceIdx) {
+            const DescriptorSpaceDesc& spaceDesc = desc.spacesDescs[spaceIdx];
+
+            const auto heapOffsetInDescriptors = std::make_pair(spaceDesc.spaceType, spaceDesc.offsetInDescriptorsFromTableStart);
+            result->heapOffsetsInDescriptorsBySpace[spaceIdx] = heapOffsetInDescriptors;
 
             std::vector<VkDescriptorSetLayoutBinding> bindings{};
-            bindings.resize(topBindingPerSpace[space]);
+            bindings.resize(highestBindingPerSpace[spaceIdx] + 1);
 
-            bool isSamplerSpace = spaceDesc.rangeDescs[0].rangeType == DescriptorRangeType::Sampler;
-            if (isSamplerSpace) {
+            // Fill binding to highest bind slot with sampler / mutable descriptor desc.
+            VkMutableDescriptorTypeListEXT fillMutTypeList;
+            if (spaceDesc.spaceType == DescriptorHeapType::Sampler) {
                 for (uint32_t i = 0; i < bindings.size(); ++i) {
                     bindings[i] = VkDescriptorSetLayoutBinding{i, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
                                                                VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
                 }
+                fillMutTypeList = VkMutableDescriptorTypeListEXT{0, nullptr};
             }
             else {
                 for (uint32_t i = 0; i < bindings.size(); ++i) {
                     bindings[i] = VkDescriptorSetLayoutBinding{i, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, 1,
                                                                VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
                 }
+                fillMutTypeList = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::CDBSRVUAVTypes),
+                                                                 VulkanDescriptorHeap::CDBSRVUAVTypes};
             }
-
-            std::map<size_t, DescriptorRangeType> rangeTypeByBinding{};
-            for (size_t range = 0; range < spaceDesc.rangeDescCount; ++range) {
-                const DescriptorRangeDesc& rangeDesc = spaceDesc.rangeDescs[range];
-                for (size_t i = 0; i < rangeDesc.descriptorsCount; ++i) {
-                    rangeTypeByBinding[rangeDesc.baseRegisterSlot + i] = rangeDesc.rangeType;
-                }
-            }
-
             std::vector<VkMutableDescriptorTypeListEXT> mutableDescriptorTypeLists{};
-            mutableDescriptorTypeLists.resize(bindings.size());
-            for (size_t i = 0; i < bindings.size(); ++i) {
-                if (rangeTypeByBinding.contains(i)) {
-                    switch (rangeTypeByBinding[i]) {
-                        case DescriptorRangeType::CBV:
-                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::CBVTypes),
-                                                                                           VulkanDescriptorHeap::CBVTypes};
-                            break;
-                        case DescriptorRangeType::SRV:
-                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::SRVTypes),
-                                                                                           VulkanDescriptorHeap::SRVTypes};
-                            break;
-                        case DescriptorRangeType::UAV:
-                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::UAVTypes),
-                                                                                           VulkanDescriptorHeap::UAVTypes};
-                            break;
-                        case DescriptorRangeType::Sampler:
-                            mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{0, nullptr};
-                            break;
-                    }
-                }
-                else {
-                    mutableDescriptorTypeLists[i] = VkMutableDescriptorTypeListEXT{RHINO_ARR_SIZE(VulkanDescriptorHeap::CDBSRVUAVTypes),
-                                                                                   VulkanDescriptorHeap::CDBSRVUAVTypes};
-                }
-            }
+            mutableDescriptorTypeLists.resize(bindings.size(), fillMutTypeList);
+
 
             VkMutableDescriptorTypeCreateInfoEXT mutableDescriptorTypeCreateInfoExt{
-                    VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT};
+                VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT};
             mutableDescriptorTypeCreateInfoExt.mutableDescriptorTypeListCount = mutableDescriptorTypeLists.size();
             mutableDescriptorTypeCreateInfoExt.pMutableDescriptorTypeLists = mutableDescriptorTypeLists.data();
 
             VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-            setLayoutCreateInfo.pNext = isSamplerSpace ? nullptr : &mutableDescriptorTypeCreateInfoExt;
-            // setLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
-            setLayoutCreateInfo.flags = isSamplerSpace ? 0 : VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
+            setLayoutCreateInfo.pNext = spaceDesc.spaceType == DescriptorHeapType::Sampler ? nullptr : &mutableDescriptorTypeCreateInfoExt;
+            setLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
+            // setLayoutCreateInfo.flags = isSamplerSpace ? 0 : VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
             setLayoutCreateInfo.bindingCount = bindings.size();
             setLayoutCreateInfo.pBindings = bindings.data();
 
-            vkCreateDescriptorSetLayout(m_Context.device, &setLayoutCreateInfo, m_Context.allocator, &spaceLayouts[space]);
+            vkCreateDescriptorSetLayout(m_Context.device, &setLayoutCreateInfo, m_Context.allocator, &spaceLayouts[spaceIdx]);
 
             VkDeviceSize debugSize = 0;
-            EXT::vkGetDescriptorSetLayoutSizeEXT(m_Context.device, spaceLayouts[space], &debugSize);
-            std::cout << "Set " << space << " size: " << debugSize << "\n";
+            EXT::vkGetDescriptorSetLayoutSizeEXT(m_Context.device, spaceLayouts[spaceIdx], &debugSize);
+            std::cout << "Set " << spaceIdx << " size: " << debugSize << "\n";
             for (size_t bnd = 0; bnd < bindings.size(); ++bnd) {
                 VkDeviceSize debugOffset = 0;
-                EXT::vkGetDescriptorSetLayoutBindingOffsetEXT(m_Context.device, spaceLayouts[space], bnd, &debugOffset);
+                EXT::vkGetDescriptorSetLayoutBindingOffsetEXT(m_Context.device, spaceLayouts[spaceIdx], bnd, &debugOffset);
                 std::cout << "  Binding " << bnd << " off: " << debugOffset << std::endl;
             }
         }

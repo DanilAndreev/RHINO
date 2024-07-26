@@ -76,7 +76,7 @@ namespace RHINO::APIVulkan {
     class VulkanRootSignature : public RootSignature {
     public:
         VkPipelineLayout layout = VK_NULL_HANDLE;
-        std::map<size_t, std::pair<DescriptorRangeType, size_t>> heapOffsetsInDescriptorsBySpaces{};
+        std::map<size_t, std::pair<DescriptorHeapType, size_t>> heapOffsetsInDescriptorsBySpace{};
         VulkanObjectContext context = {};
 
     public:
