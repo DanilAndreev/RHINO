@@ -139,7 +139,7 @@ namespace RHINO::APIVulkan {
             case ResourceType::Texture3D:
                 imageCount = 1;
                 imageBarrier.image = INTERPRET_AS<VulkanTexture2D*>(desc.resource)->texture;
-                imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+                imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
                 imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
                 imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 imageBarrier.subresourceRange.baseArrayLayer = 0;

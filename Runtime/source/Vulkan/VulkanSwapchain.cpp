@@ -100,7 +100,7 @@ namespace RHINO::APIVulkan {
 
         VkImageMemoryBarrier barrierToCopy{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
         barrierToCopy.image = backbuffer;
-        barrierToCopy.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrierToCopy.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         barrierToCopy.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrierToCopy.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         barrierToCopy.subresourceRange.baseArrayLayer = 0;

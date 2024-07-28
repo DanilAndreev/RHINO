@@ -292,7 +292,7 @@ namespace RHINO::APIVulkan {
         imageInfo.usage = Convert::ToVkImageUsage(usage);
         imageInfo.arrayLayers = 1;
         imageInfo.mipLevels = mips;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         RHINO_VKS(vkCreateImage(m_Context.device, &imageInfo, m_Context.allocator, &result->texture));
 
