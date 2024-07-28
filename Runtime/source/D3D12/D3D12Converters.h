@@ -59,6 +59,8 @@ namespace RHINO::APID3D12::Convert {
 
     inline D3D12_RESOURCE_STATES ToD3D12ResourceState(ResourceState state) noexcept {
         switch (state) {
+            case ResourceState::Common:
+                return D3D12_RESOURCE_STATE_COMMON;
             case ResourceState::ConstantBuffer:
                 return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
             case ResourceState::UnorderedAccess:
