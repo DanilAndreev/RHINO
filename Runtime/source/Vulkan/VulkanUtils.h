@@ -6,6 +6,17 @@
 #include "VulkanDescriptorHeap.h"
 
 namespace RHINO::APIVulkan {
+    template<class T>
+    void SetDebugName(VkDevice device, T* handle, VkObjectType objectType, const char* name) noexcept {
+        if (EXT::vkSetDebugUtilsObjectNameEXT) {
+            VkDebugUtilsObjectNameInfoEXT debugInfo{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            debugInfo.objectHandle = reinterpret_cast<uint64_t>(handle);
+            debugInfo.objectType = objectType;
+            debugInfo.pObjectName = name;
+            RHINO_VKS(EXT::vkSetDebugUtilsObjectNameEXT(device, &debugInfo));
+        }
+    }
+
     inline uint32_t SelectMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, const VulkanObjectContext& context) noexcept {
         VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
         vkGetPhysicalDeviceMemoryProperties(context.physicalDevice, &deviceMemoryProperties);

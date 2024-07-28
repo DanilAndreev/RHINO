@@ -121,10 +121,12 @@ namespace RHINO::APIVulkan {
 
         VkBufferMemoryBarrier bufferBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
         VkImageMemoryBarrier imageBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-
+        uint32_t bufferCount = 0;
+        uint32_t imageCount = 0;
 
         switch (desc.resource->GetResourceType()) {
             case ResourceType::Buffer:
+                bufferCount = 1;
                 bufferBarrier.buffer = INTERPRET_AS<VulkanBuffer*>(desc.resource)->buffer;
                 bufferBarrier.offset = 0;
                 bufferBarrier.size = VK_WHOLE_SIZE;
@@ -134,15 +136,27 @@ namespace RHINO::APIVulkan {
                 bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 break;
             case ResourceType::Texture2D:
-                break;
             case ResourceType::Texture3D:
+                imageCount = 1;
+                imageBarrier.image = INTERPRET_AS<VulkanTexture2D*>(desc.resource)->texture;
+                imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+                imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+                imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.baseArrayLayer = 0;
+                imageBarrier.subresourceRange.layerCount = VK_WHOLE_SIZE;
+                imageBarrier.subresourceRange.baseMipLevel = 0;
+                imageBarrier.subresourceRange.levelCount = VK_WHOLE_SIZE;
+                imageBarrier.srcAccessMask = Convert::ToVulkanResourceState(desc.transition.stateBefore);
+                imageBarrier.dstAccessMask = Convert::ToVulkanResourceState(desc.transition.stateAfter);
+                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 break;
             case ResourceType::BLAS:
             case ResourceType::TLAS:
             default:
+                assert(0);
                 return;
         }
-
 
         // switch (desc.type) {
         //     case ResourceBarrierType::UAV:
@@ -156,12 +170,7 @@ namespace RHINO::APIVulkan {
         //     break;
         // }
 
-        uint32_t bufferCount = 0;
-        VkBufferMemoryBarrier* pBufferBarrier = nullptr;
-        uint32_t imageCount = 0;
-        VkImageMemoryBarrier* pImageBarrier = nullptr;
-
-        vkCmdPipelineBarrier(m_Cmd, srcStage, dstStage, 0, 0, nullptr, bufferCount, pBufferBarrier, imageCount, pImageBarrier);
+        vkCmdPipelineBarrier(m_Cmd, srcStage, dstStage, 0, 0, nullptr, bufferCount, &bufferBarrier, imageCount, &imageBarrier);
     }
 
     void VulkanCommandList::BuildRTPSO(RTPSO* pso) noexcept {

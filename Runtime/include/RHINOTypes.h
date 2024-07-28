@@ -96,6 +96,7 @@ namespace RHINO {
     };
 
     enum class ResourceState {
+        Common,
         ConstantBuffer,
         UnorderedAccess,
         ShaderResource,
@@ -410,6 +411,7 @@ namespace RHINO {
         uint32_t height = 0;
 
         void* surfaceDesc = nullptr;
+        const char* debugName = "UnnamedSwapchain";
     };
 
     class Swapchain : public Object {

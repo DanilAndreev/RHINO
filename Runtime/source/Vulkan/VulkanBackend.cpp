@@ -18,6 +18,7 @@ namespace RHINO::APIVulkan {
         appInfo.pEngineName = "RHINO";
 
         const char* instanceExts[] = {
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
             VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
             VK_KHR_SURFACE_EXTENSION_NAME,
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
@@ -29,6 +30,7 @@ namespace RHINO::APIVulkan {
         instanceInfo.ppEnabledExtensionNames = instanceExts;
         instanceInfo.enabledLayerCount = 0;
         RHINO_VKS(vkCreateInstance(&instanceInfo, m_Context.allocator, &m_Context.instance));
+        LoadVulkanAPI(m_Context.instance, vkGetInstanceProcAddr);
 
         std::vector<VkPhysicalDevice> physicalDevices{};
         uint32_t physicalDevicesCount = 0;
@@ -92,8 +94,6 @@ namespace RHINO::APIVulkan {
         //TODO: fix (get real mapping)
         vkGetDeviceQueue(m_Context.device, m_AsyncComputeQueueFamIndex, 0, &m_AsyncComputeQueue);
         vkGetDeviceQueue(m_Context.device, m_CopyQueueFamIndex, 0, &m_CopyQueue);
-
-        LoadVulkanAPI(m_Context.instance, vkGetInstanceProcAddr);
     }
 
     void VulkanBackend::Release() noexcept {
@@ -258,6 +258,7 @@ namespace RHINO::APIVulkan {
         bufferInfo.buffer = result->buffer;
         result->deviceAddress = vkGetBufferDeviceAddress(m_Context.device, &bufferInfo);
 
+        RHINO_GPU_DEBUG(SetDebugName(m_Context.device, result->buffer, VK_OBJECT_TYPE_BUFFER, name));
         return result;
     }
 
@@ -291,7 +292,7 @@ namespace RHINO::APIVulkan {
         imageInfo.usage = Convert::ToVkImageUsage(usage);
         imageInfo.arrayLayers = 1;
         imageInfo.mipLevels = mips;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         RHINO_VKS(vkCreateImage(m_Context.device, &imageInfo, m_Context.allocator, &result->texture));
 
@@ -303,6 +304,8 @@ namespace RHINO::APIVulkan {
         allocInfo.memoryTypeIndex = SelectMemoryType(0xffffff, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Context);
         RHINO_VKS(vkAllocateMemory(m_Context.device, &allocInfo, m_Context.allocator, &result->memory));
         RHINO_VKS(vkBindImageMemory(m_Context.device, result->texture, result->memory, 0));
+
+        RHINO_GPU_DEBUG(SetDebugName(m_Context.device, result->texture, VK_OBJECT_TYPE_IMAGE, name));
         return result;
     }
 

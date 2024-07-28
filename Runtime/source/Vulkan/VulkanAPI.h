@@ -18,6 +18,7 @@
     RHINO_APPLY(vkDestroyAccelerationStructureKHR)                                                                                         \
     RHINO_APPLY(vkCmdBuildAccelerationStructuresKHR)                                                                                       \
     RHINO_APPLY(vkCmdTraceRaysKHR)                                                                                                         \
+    RHINO_APPLY(vkSetDebugUtilsObjectNameEXT)                                                                                              \
     RHINO_APPLY(vkGetDescriptorSetLayoutSizeEXT)
 
 

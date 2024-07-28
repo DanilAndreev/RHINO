@@ -10,7 +10,7 @@ namespace RHINO::APIVulkan {
     }
 
     void LoadVulkanAPI(VkInstance instance, PFN_vkGetInstanceProcAddr getProcAddr) noexcept {
-#define RHINO_APPLY(f) EXT::f = reinterpret_cast<PFN_##f>(getProcAddr(instance, #f));
+#define RHINO_APPLY(f) EXT::f = reinterpret_cast<PFN_##f>(getProcAddr(instance, #f)); assert(EXT::f);
         RHINO_VULKAN_API_FUNCS()
 #undef RHINO_APPLY
     }

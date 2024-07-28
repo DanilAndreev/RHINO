@@ -106,6 +106,8 @@ namespace RHINO::APIVulkan::Convert {
         // TODO: possibly refactor to use common read/write flags VK_ACCESS_MEMORY_READ_BIT and VK_ACCESS_MEMORY_WRITE_BIT
 
         switch (state) {
+            case ResourceState::Common:
+                return VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
             case ResourceState::ConstantBuffer:
                 return VK_ACCESS_UNIFORM_READ_BIT;
             case ResourceState::UnorderedAccess:
@@ -124,7 +126,6 @@ namespace RHINO::APIVulkan::Convert {
                 return VK_ACCESS_HOST_READ_BIT;
             case ResourceState::RTAccelerationStructure:
                 return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-
             default:
                 assert(0);
                 return VK_ACCESS_NONE;

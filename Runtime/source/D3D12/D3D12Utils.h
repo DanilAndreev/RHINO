@@ -4,10 +4,8 @@
 
 #ifdef _DEBUG
 #define RHINO_D3DS(expr) assert(expr == S_OK)
-#define RHINO_GPU_DEBUG(expr) expr
 #else
 #define RHINO_D3DS(expr) expr
-#define RHINO_GPU_DEBUG(expr)
 #endif
 
 inline void SetDebugName(ID3D12DeviceChild* resource, const std::string& name) noexcept {

@@ -41,3 +41,10 @@
 //#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 #endif // ENABLE_API_VULKAN
+
+
+#ifdef _DEBUG
+#define RHINO_GPU_DEBUG(expr) expr
+#else
+#define RHINO_GPU_DEBUG(expr)
+#endif

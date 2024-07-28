@@ -2,8 +2,11 @@
 
 #include "VulkanSwapchain.h"
 #include <RHINOSwapchainPlatform.h>
+#include "VulkanUtils.h"
 
 namespace RHINO::APIVulkan {
+    using namespace std::literals;
+
     void VulkanSwapchain::Initialize(const VulkanObjectContext& context, const SwapchainDesc& desc, uint32_t queueFamilyIndex) noexcept {
         m_Context = context;
 
@@ -54,6 +57,10 @@ namespace RHINO::APIVulkan {
         RHINO_VKS(vkGetSwapchainImagesKHR(m_Context.device, m_Swapchain, &swapchainImagesCount, nullptr));
         m_SwapchainImages.resize(swapchainImagesCount);
         RHINO_VKS(vkGetSwapchainImagesKHR(m_Context.device, m_Swapchain, &swapchainImagesCount, m_SwapchainImages.data()));
+        for (size_t i = 0; i < swapchainImagesCount; ++i) {
+            RHINO_GPU_DEBUG(const std::string debugName = "Swapchain-"s + desc.debugName + "-img1");
+            RHINO_GPU_DEBUG(SetDebugName(m_Context.device, m_SwapchainImages[i], VK_OBJECT_TYPE_IMAGE, debugName.c_str()));
+        }
 
         m_SwapchainSyncs.resize(swapchainImagesCount);
         for (size_t i = 0; i < swapchainImagesCount; ++i) {
@@ -159,7 +166,7 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanSwapchain::Release() noexcept {
-        for (VkSemaphore semaphore : m_SwapchainSyncs) {
+        for (VkSemaphore semaphore: m_SwapchainSyncs) {
             vkDestroySemaphore(m_Context.device, semaphore, m_Context.allocator);
         }
         vkDestroyCommandPool(m_Context.device, m_CMDPool, m_Context.allocator);
