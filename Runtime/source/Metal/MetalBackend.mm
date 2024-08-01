@@ -225,7 +225,7 @@ namespace RHINO::APIMetal {
         samplerDescriptor.rAddressMode = Convert::ToMTLSamplerAddressMode(desc.addresW);
         samplerDescriptor.borderColor = Convert::ToMTLSamplerBorderColor(desc.borderColor);
         samplerDescriptor.compareFunction = Convert::ToMTLCompareFunction(desc.comparisonFunc);
-        samplerDescriptor.maxAnisotropy = Convert::IsFilterAnisotrophic(desc.textureFilter) ? desc.maxAnisotrophy : 1;
+        samplerDescriptor.maxAnisotropy = Convert::IsFilterAnisotrophic(desc.textureFilter) ? desc.maxAnisotropy : 1;
         samplerDescriptor.lodMinClamp = desc.minLOD;
         samplerDescriptor.lodMaxClamp = desc.maxLOD;
         samplerDescriptor.supportArgumentBuffers = true;
