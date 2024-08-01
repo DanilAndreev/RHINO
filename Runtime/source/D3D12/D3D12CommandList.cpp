@@ -103,7 +103,7 @@ namespace RHINO::APID3D12 {
         m_Cmd->ResourceBarrier(1, &barrier);
     }
 
-    void D3D12CommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {\
+    void D3D12CommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
         auto d3d12Src = static_cast<D3D12Buffer*>(src);
         auto d3d12Dst = static_cast<D3D12Buffer*>(dst);
         m_Cmd->CopyBufferRegion(d3d12Dst->buffer, dstOffset, d3d12Src->buffer, srcOffset, size);
