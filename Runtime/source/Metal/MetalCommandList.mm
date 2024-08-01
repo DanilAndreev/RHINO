@@ -108,8 +108,10 @@ namespace RHINO::APIMetal {
     void MetalCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
         m_CBVSRVUAVHeap = INTERPRET_AS<MetalDescriptorHeap*>(CBVSRVUAVHeap);
         m_CBVSRVUAVHeapOffset = 0;
-        m_SamplerHeap = INTERPRET_AS<MetalDescriptorHeap*>(samplerHeap);
-        m_SamplerHeapOffset = 0;
+        if (samplerHeap) {
+            m_SamplerHeap = INTERPRET_AS<MetalDescriptorHeap*>(samplerHeap);
+            m_SamplerHeapOffset = 0;
+        }
 
         RootSignatureT rootSignatureContent{};
         for (size_t spaceIdx = 0; spaceIdx < m_CurRootSignature->spaceDescs.size(); ++spaceIdx) {
