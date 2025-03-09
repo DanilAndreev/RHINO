@@ -65,6 +65,7 @@ namespace RHINO::APIMetal {
 
     class MetalRTPSO : public RTPSO {
     public:
+        id<MTLComputePipelineState> pso = nil;
     public:
         void Release() noexcept final {
             delete this;

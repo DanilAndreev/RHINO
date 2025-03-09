@@ -119,7 +119,87 @@ namespace RHINO::APIMetal {
         return result;
     }
 
-    RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
+    RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept {
+        auto* metalRootSignature = INTERPRET_AS<MetalRootSignature*>(desc.rootSignature);
+
+        auto result = new MetalRTPSO{};
+
+        std::vector<id<MTLFunction>> kernels;
+
+        // IRCompilerSetMinimumDeploymentTarget(pCompiler, IROperatingSystem_macOS, "14.0.0");
+        IRCompilerSetGlobalRootSignature(m_IRCompiler, metalRootSignature->rootSignature);
+        // IRCompilerSetLocalRootSignature(pCompiler, pLocalRootSignature);
+
+        uint64_t closestHitMask = 0x0;
+        uint64_t missMask = 0x0;
+        uint64_t anyHitMask = 0x0;
+
+        for (size_t i = 0; i < desc.recordsCount; ++i) {
+            const RTShaderTableRecord& record = desc.records[i];
+            switch (record.recordType) {
+                case RTShaderTableRecordType::HitGroup: {
+                    if (record.hitGroup.clothestHitShaderEnabled) {
+                        ShaderModule sm = desc.shaderModules[record.hitGroup.closestHitShaderIndex];
+                        missMask |= IRObjectGatherRaytracingIntrinsics(ir, sm.entrypoint);
+                    }
+                    if (record.hitGroup.anyHitShaderEnabled) {
+                        ShaderModule sm = desc.shaderModules[record.hitGroup.anyHitShaderIndex];
+                        missMask |= IRObjectGatherRaytracingIntrinsics(ir, sm.entrypoint);
+                    }
+                    break;
+                }
+                case RTShaderTableRecordType::Miss: {
+                    ShaderModule sm = desc.shaderModules[record.miss.missShaderIndex];
+                    missMask |= IRObjectGatherRaytracingIntrinsics(ir, sm.entrypoint);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+
+        IRError* pError = nullptr;
+        for (size_t i = 0; i < desc.shaderModulesCount; ++i) {
+            const ShaderModule& sm = desc.shaderModules[i];
+
+            IRCompilerSetRayTracingPipelineArguments(m_IRCompiler, desc.maxAttributeSizeInBytes, IRRaytracingPipelineFlagNone, closestHitMask, missMask, anyHitMask, ~0, -1, IRRayGenerationCompilationVisibleFunction, IRIntersectionFunctionCompilationVisibleFunction);
+
+
+            IRCompilerSetEntryPointName(m_IRCompiler, sm.entrypoint);
+
+            IRObject* pDXIL = IRObjectCreateFromDXIL(sm.bytecode, sm.bytecodeSize, IRBytecodeOwnershipNone);
+            IRObject* outIR = IRCompilerAllocCompileAndLink(m_IRCompiler, sm.entrypoint, pDXIL, &pError);
+
+            if (!outIR) {
+                // Inspect pError to determine cause.
+                IRErrorCode code = static_cast<IRErrorCode>(IRErrorGetCode(pError));
+
+                const void* payload = IRErrorGetPayload(pError);
+                assert(0);
+                IRErrorDestroy(pError);
+                return nullptr;
+            }
+
+            // Retrieve Metallib:
+            IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
+            IRObjectGetMetalLibBinary(outIR, IRShaderStageCompute, pMetallib);
+
+            IRShaderReflection* reflection = IRShaderReflectionCreate();
+            IRObjectGetReflection(outIR, IRShaderStageCompute, reflection);
+
+        }
+
+        NSError* error;
+        MTLLinkedFunctions* linkedFn = [[MTLLinkedFunctions alloc] init];
+        [linkedFn.functions setValue:kernels];
+
+        MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
+        [descriptor setLinkedFunctions:linkedFn];
+
+        result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
+        return nullptr;
+    }
 
     ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* metalRootSignature = INTERPRET_AS<MetalRootSignature*>(desc.rootSignature);
