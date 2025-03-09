@@ -275,6 +275,44 @@ namespace RHINO::APIMetal {
         }
 
         NSError* error;
+
+        // Synthesizing indirect intersection functions for AABB and Triangles
+        id<MTLFunction> synthIndirectIntersectionFn[2] = {};
+        {
+            bool status = true;
+
+            // AABB intersection
+            {
+                IRCompilerSetHitgroupType(m_IRCompiler, IRHitGroupTypeProceduralPrimitive);
+                IRMetalLibBinary* indirectIntersectLibBin = IRMetalLibBinaryCreate();
+                status = IRMetalLibSynthesizeIndirectIntersectionFunction(m_IRCompiler, indirectIntersectLibBin);
+                assert(status);
+
+                id<MTLLibrary> indirectIntersectLib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(indirectIntersectLibBin)
+                                                                                 error:&error];
+                assert(indirectIntersectLib);
+                NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectProceduralIntersectionFunctionName];
+                synthIndirectIntersectionFn[0] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
+                assert(synthIndirectIntersectionFn[0]);
+            }
+
+            // Triangle intersection
+            {
+                IRCompilerSetHitgroupType(m_IRCompiler, IRHitGroupTypeTriangles);
+                IRMetalLibBinary* indirectIntersectLibBin = IRMetalLibBinaryCreate();
+                status = IRMetalLibSynthesizeIndirectIntersectionFunction(m_IRCompiler, indirectIntersectLibBin);
+                assert(status);
+
+                id<MTLLibrary> indirectIntersectLib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(indirectIntersectLibBin)
+                                                                             error:&error];
+                assert(indirectIntersectLib);
+                NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectTriangleIntersectionFunctionName];
+                synthIndirectIntersectionFn[1] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
+                assert(synthIndirectIntersectionFn[1]);
+            }
+        }
+
+        // Synthesizing dispatch ray function
         id<MTLFunction> dispatchSynthFn = nil;
         {
             IRMetalLibBinary* libBin = IRMetalLibBinaryCreate();
@@ -286,17 +324,36 @@ namespace RHINO::APIMetal {
             dispatchSynthFn = [lib newFunctionWithName: entrypoint];
         }
 
-        NSArray *nsCompiledSMs = [NSArray arrayWithObjects:compiledSMs.data() count:compiledSMs.size()];
+        // Gathering all PSO linked functions
+        std::vector<id<MTLFunction>> psoLinkedFunctions{compiledSMs.begin(), compiledSMs.end()};
+        psoLinkedFunctions.insert(psoLinkedFunctions.end(), &synthIndirectIntersectionFn[0],
+                                  &synthIndirectIntersectionFn[0] + std::size(synthIndirectIntersectionFn));
+        NSArray *nsCompiledSMs = [NSArray arrayWithObjects:psoLinkedFunctions.data() count:psoLinkedFunctions.size()];
         MTLLinkedFunctions* linkedFn = [[MTLLinkedFunctions alloc] init];
         [linkedFn setFunctions:nsCompiledSMs];
 
+        // Creating RT PSO
         MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
         [descriptor setComputeFunction:dispatchSynthFn];
         [descriptor setLinkedFunctions:linkedFn];
-
-
         result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
-        return nullptr;
+
+        // Setup Intersection Function Table
+        MTLIntersectionFunctionTableDescriptor* iftDesc = [[MTLIntersectionFunctionTableDescriptor alloc] init];
+        [iftDesc setFunctionCount: std::size(synthIndirectIntersectionFn)];
+        result->ift = [result->pso newIntersectionFunctionTableWithDescriptor:iftDesc];
+        [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[0]] atIndex:0];
+        [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[1]] atIndex:1];
+
+        // Setup Visible Function Table
+        MTLVisibleFunctionTableDescriptor* vftDesc = [[MTLVisibleFunctionTableDescriptor alloc] init];
+        [vftDesc setFunctionCount: compiledSMs.size()];
+        result->vft = [result->pso newVisibleFunctionTableWithDescriptor:vftDesc];
+        for (size_t i = 0; i < compiledSMs.size(); ++i) {
+            [result->vft setFunction:[result->pso functionHandleWithFunction:compiledSMs[i]] atIndex:i];
+        }
+
+        return result;
     }
 
     ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
