@@ -353,6 +353,10 @@ namespace RHINO::APIMetal {
             [result->vft setFunction:[result->pso functionHandleWithFunction:compiledSMs[i]] atIndex:i];
         }
 
+        for (auto obj : smIRs) {
+            IRObjectDestroy(obj);
+        }
+
         return result;
     }
 
