@@ -546,7 +546,7 @@ namespace RHINO::APIMetal {
 
         ASPrebuildInfo result{};
         result.MaxASSizeInBytes = sizes.accelerationStructureSize;
-        result.MaxASSizeInBytes = sizes.buildScratchBufferSize;
+        result.scratchBufferSizeInBytes = sizes.buildScratchBufferSize;
         return result;
     }
 

@@ -156,7 +156,7 @@ namespace RHINO::APIMetal {
 
         auto* metalVertex = INTERPRET_AS<MetalBuffer*>(desc.vertexBuffer);
         auto* metalIndex = INTERPRET_AS<MetalBuffer*>(desc.indexBuffer);
-        auto* metalTransform = INTERPRET_AS<MetalBuffer*>(desc.transformBuffer);
+        auto* metalTransform = desc.transformBuffer ? INTERPRET_AS<MetalBuffer*>(desc.transformBuffer) : nullptr;
 
         auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
         triangleGeoDesc.vertexBuffer = metalVertex->buffer;
@@ -170,8 +170,8 @@ namespace RHINO::APIMetal {
         triangleGeoDesc.primitiveDataBuffer = nil;
         triangleGeoDesc.primitiveDataStride = 0;
         triangleGeoDesc.primitiveDataElementSize = 0;
-        triangleGeoDesc.transformationMatrixBuffer = metalTransform->buffer;
-        triangleGeoDesc.transformationMatrixBufferOffset = desc.transformBufferStartOffset;
+        triangleGeoDesc.transformationMatrixBuffer = desc.transformBuffer ? metalTransform->buffer : nil;
+        triangleGeoDesc.transformationMatrixBufferOffset = desc.transformBuffer ? desc.transformBufferStartOffset : 0;
         triangleGeoDesc.intersectionFunctionTableOffset = 0; // TODO <- take from desc
         triangleGeoDesc.label = [NSString stringWithUTF8String:name];
 
