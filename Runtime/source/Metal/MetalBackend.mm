@@ -155,12 +155,14 @@ namespace RHINO::APIMetal {
         uint8_t* metallibBytecode = new uint8_t[metallibSize];
         IRMetalLibGetBytecode(pMetalLib, metallibBytecode);
 
+        // dispatch_data_t dispatchData = IRMetalLibGetBytecodeData(pMetalLib);
+
         dispatch_data_t metallib = dispatch_data_create(metallibBytecode, metallibSize, dispatch_get_main_queue(),
                                                         DISPATCH_DATA_DESTRUCTOR_DEFAULT);
         id<MTLLibrary> pLib = [device newLibraryWithData:metallib error:nullptr];
 
 
-        CFRelease(metallib);
+        // CFRelease(metallib);
         delete[] metallibBytecode;
         IRMetalLibBinaryDestroy(pMetalLib);
         IRObjectDestroy(pAIR);
@@ -273,11 +275,25 @@ namespace RHINO::APIMetal {
         }
 
         NSError* error;
+        id<MTLFunction> dispatchSynthFn = nil;
+        {
+            IRMetalLibBinary* libBin = IRMetalLibBinaryCreate();
+            IRMetalLibSynthesizeIndirectRayDispatchFunction(m_IRCompiler, libBin);
+            id<MTLLibrary> lib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(libBin) error:&error];
+            assert(lib);
+            IRMetalLibBinaryDestroy(libBin);
+            NSString* entrypoint = [NSString stringWithUTF8String:kIRRayDispatchIndirectionKernelName];
+            dispatchSynthFn = [lib newFunctionWithName: entrypoint];
+        }
+
+        NSArray *nsCompiledSMs = [NSArray arrayWithObjects:compiledSMs.data() count:compiledSMs.size()];
         MTLLinkedFunctions* linkedFn = [[MTLLinkedFunctions alloc] init];
-        [linkedFn.functions setValue:compiledSMs];
+        [linkedFn setFunctions:nsCompiledSMs];
 
         MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
+        [descriptor setComputeFunction:dispatchSynthFn];
         [descriptor setLinkedFunctions:linkedFn];
+
 
         result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
         return nullptr;
