@@ -199,14 +199,32 @@ namespace RHINO::APIMetal {
         auto* result = new MetalTLAS{};
         auto* metalScratch = INTERPRET_AS<MetalBuffer*>(scratchBuffer);
 
-        id<MTLBuffer> instanceDescBuf = [m_Device newBufferWithLength:0 options:MTLResourceOptionCPUCacheModeDefault];
+        const size_t instanceDescBufSize = sizeof(MTLAccelerationStructureInstanceDescriptor) * desc.blasInstancesCount;
+        id<MTLBuffer> instanceDescBuf = [m_Device newBufferWithLength:instanceDescBufSize
+                                                              options:MTLResourceStorageModeShared];
 
         auto asDescs = [NSMutableArray array];
+
+        auto* instanceDescBufContents = static_cast<MTLAccelerationStructureInstanceDescriptor*>(instanceDescBuf.contents);
         for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
             const BLASInstanceDesc& instance = desc.blasInstances[i];
             auto* metalBLAS = INTERPRET_AS<MetalBLAS*>(instance.blas);
             [asDescs addObject:metalBLAS->accelerationStructure];
+
+            const auto& t = instance.transform;
+            MTLPackedFloat4x3 transform{MTLPackedFloat3Make(t[0][0], t[1][0], t[2][0]),
+                                        MTLPackedFloat3Make(t[0][1], t[1][1], t[2][1]),
+                                        MTLPackedFloat3Make(t[0][2], t[1][2], t[2][2]),
+                                        MTLPackedFloat3Make(t[0][3], t[1][3], t[2][3])};
+
+            instanceDescBufContents[i].accelerationStructureIndex = instance.instanceID;
+            instanceDescBufContents[i].mask = instance.instanceMask;
+            instanceDescBufContents[i].transformationMatrix = transform;
+            instanceDescBufContents[i].options = MTLAccelerationStructureInstanceOptionNone;
+            //TODO: calculate and fill
+            instanceDescBufContents[i].intersectionFunctionTableOffset = 0;
         }
+        [instanceDescBuf didModifyRange:NSMakeRange(0, sizeof(instanceDescBufSize))];
 
         auto accelerationStructureDescriptor = [MTLInstanceAccelerationStructureDescriptor descriptor];
         accelerationStructureDescriptor.instanceCount = desc.blasInstancesCount;
@@ -215,9 +233,7 @@ namespace RHINO::APIMetal {
 
         accelerationStructureDescriptor.instanceDescriptorBuffer = instanceDescBuf;
         accelerationStructureDescriptor.instanceDescriptorBufferOffset = 0;
-        accelerationStructureDescriptor.instanceDescriptorStride = 0;
-
-        // TODO: apply transform from desc
+        accelerationStructureDescriptor.instanceDescriptorStride = sizeof(MTLAccelerationStructureInstanceDescriptor);
 
         MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
         result->accelerationStructure = [m_Device newAccelerationStructureWithSize:sizes.accelerationStructureSize];

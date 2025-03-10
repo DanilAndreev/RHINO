@@ -550,7 +550,21 @@ namespace RHINO::APIMetal {
     }
 
     ASPrebuildInfo MetalBackend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
+        MTLAccelerationStructureInstanceDescriptor descr{};
+        MTLInstanceAccelerationStructureDescriptor* descriptor = [[MTLInstanceAccelerationStructureDescriptor alloc] init];
+        [descriptor setInstanceCount:desc.blasInstancesCount];
+        [descriptor setInstanceDescriptorBuffer:nil];
+        [descriptor setInstanceDescriptorBufferOffset:0];
+        [descriptor setInstanceDescriptorType:MTLAccelerationStructureInstanceDescriptorTypeDefault];
+        [descriptor setInstanceDescriptorStride:sizeof(MTLAccelerationStructureInstanceDescriptor)];
+        [descriptor setInstancedAccelerationStructures:nil];
 
+        MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:descriptor];
+
+        ASPrebuildInfo result{};
+        result.MaxASSizeInBytes = sizes.accelerationStructureSize;
+        result.scratchBufferSizeInBytes = sizes.buildScratchBufferSize;
+        return result;
     }
 
     Semaphore* MetalBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {
