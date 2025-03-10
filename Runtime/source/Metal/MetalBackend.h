@@ -50,15 +50,13 @@ namespace RHINO::APIMetal {
         uint64_t GetSemaphoreCompletedValue(const Semaphore* semaphore) noexcept final;
 
     private:
-        id<MTLFunction> CompileSingleRTPSOFunction(const ShaderModule& sm, IRObject* smIR) noexcept;
+        id<MTLFunction> CompileSingleRTPSOFunction(const ShaderModule& sm, IRObject* smIR, IRShaderStage stage, IRCompiler* compiler) noexcept;
 
     private:
         id<MTLDevice> m_Device = nil;
         id<MTLCommandQueue> m_DefaultQueue;
         id<MTLCommandQueue> m_AsyncComputeQueue;
         id<MTLCommandQueue> m_CopyQueue;
-
-        IRCompiler* m_IRCompiler = nullptr;
     };
 
     RHINOInterface* AllocateMetalBackend() noexcept {
