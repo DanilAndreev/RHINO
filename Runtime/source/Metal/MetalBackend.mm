@@ -307,6 +307,9 @@ namespace RHINO::APIMetal {
             }
         }
 
+        // IRShaderIdentifierInit();
+        // IRShaderIdentifierInitWithCustomIntersection();
+
         // Synthesizing dispatch ray function
         id<MTLFunction> dispatchSynthFn = nil;
         {

@@ -248,9 +248,102 @@ namespace RHINO::APIMetal {
     }
 
     void MetalCommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
-        // m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;
-        // [encoder signal:m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex];
-        // TODO: implement
+        auto* metalPSO = INTERPRET_AS<MetalRTPSO*>(desc.pso);
+
+        id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
+
+        std::vector<id<MTLResource>> usedUAVs;
+        std::vector<id<MTLResource>> usedCBVSRVs;
+        std::vector<id<MTLResource>> usedSMPs;
+        for (const DescriptorSpaceDesc& space: m_CurRootSignature->spaceDescs) {
+            for (size_t spaceIdx = 0; spaceIdx < space.rangeDescCount; ++spaceIdx) {
+                size_t pos = space.rangeDescs[spaceIdx].baseRegisterSlot + space.offsetInDescriptorsFromTableStart;
+                switch (space.rangeDescs[spaceIdx].rangeType) {
+                    case DescriptorRangeType::CBV:
+                    case DescriptorRangeType::SRV: {
+                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                            usedCBVSRVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
+                        }
+                        break;
+                    }
+                    case DescriptorRangeType::UAV: {
+                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                            usedUAVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
+                        }
+                        break;
+                    }
+                    case DescriptorRangeType::Sampler: {
+                        if (m_SamplerHeap) {
+                            for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                                usedSMPs.push_back(m_SamplerHeap->m_Resources[m_SamplerHeapOffset + pos + i]);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        [encoder setBuffer:m_CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
+        [encoder useResource:m_CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+        if (m_SamplerHeap) {
+            [encoder setBuffer:m_SamplerHeap->GetHeapBuffer() offset:0 atIndex:kIRSamplerHeapBindPoint];
+            [encoder useResource:m_SamplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+        }
+
+        [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
+        [encoder useResources:usedCBVSRVs.data() count:usedCBVSRVs.size() usage:MTLResourceUsageRead | MTLResourceUsageSample];
+
+        const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
+        m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;
+
+        IRDispatchRaysDescriptor dispatchRaysDesc;
+//        dispatchRaysDesc.RayGenerationShaderRecord = {
+//                .StartAddress = _pTriangleSphereSBT->gpuAddress(),
+//                .SizeInBytes = sizeof(ShaderRecord)
+//        };
+//        dispatchRaysDesc.HitGroupTable = {
+//                .StartAddress = _pTriangleSphereSBT->gpuAddress() + hgSBTOffset,
+//                .SizeInBytes = (missSBTOffset - hgSBTOffset),       // size of the hitgroup table
+//                .StrideInBytes = sizeof(ShaderRecordWithData)       // stride between shader records in the hitgroup table
+//        };
+//        dispatchRaysDesc.MissShaderTable = {
+//                .StartAddress = _pTriangleSphereSBT->gpuAddress() + missSBTOffset,
+//                .SizeInBytes = sizeof(ShaderRecord),
+//                .StrideInBytes = sizeof(ShaderRecord)
+//        };
+        dispatchRaysDesc.CallableShaderTable = {
+                .StartAddress = 0,
+                .SizeInBytes = 0,
+                .StrideInBytes = 0
+        };
+        dispatchRaysDesc.Width = desc.width;
+        dispatchRaysDesc.Height = desc.height;
+        dispatchRaysDesc.Depth = 1;
+
+        IRDispatchRaysArgument dispatchRaysArgs;
+        dispatchRaysArgs.DispatchRaysDesc          = dispatchRaysDesc;
+        dispatchRaysArgs.GRS                       = [m_RootSignaturesRing gpuAddress] + rootSignatureOffset;
+        dispatchRaysArgs.ResDescHeap               = 0;
+        dispatchRaysArgs.SmpDescHeap               = 0;
+        dispatchRaysArgs.VisibleFunctionTable      = [metalPSO->vft gpuResourceID];
+        dispatchRaysArgs.IntersectionFunctionTable = [metalPSO->ift gpuResourceID];
+
+        [encoder setBytes:&dispatchRaysArgs
+                   length:sizeof(dispatchRaysArgs)
+                  atIndex:kIRRayDispatchArgumentsBindPoint];
+
+        auto size = MTLSizeMake(desc.width, desc.height, 1);
+
+//        auto threadgroupSize = MTLSizeMake(m_CurComputePSO->localWorkgroupSize[0], m_CurComputePSO->localWorkgroupSize[1],
+//                                           m_CurComputePSO->localWorkgroupSize[2]);
+        auto threadgroupSize = MTLSizeMake([metalPSO->pso maxTotalThreadsPerThreadgroup], 1, 1);
+        [encoder setComputePipelineState:m_CurComputePSO->pso];
+        [encoder dispatchThreadgroups:size threadsPerThreadgroup:threadgroupSize];
+
+        [encoder endEncoding];
+        [m_Cmd encodeSignalEvent:m_RootSignaturesRingSync[m_CurrentRingRootSignatureIndex]
+                           value:m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex]];
     }
 
     void MetalCommandList::BuildRTPSO(RTPSO* pso) noexcept {
