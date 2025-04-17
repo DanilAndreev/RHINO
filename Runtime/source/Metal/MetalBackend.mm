@@ -12,8 +12,6 @@
 
 namespace RHINO::APIMetal {
     void MetalBackend::Initialize() noexcept {
-        m_IRCompiler = IRCompilerCreate();
-
         m_Device = MTLCopyAllDevices()[0];
         m_DefaultQueue = [m_Device newCommandQueue];
         m_AsyncComputeQueue = [m_Device newCommandQueue];
@@ -30,9 +28,6 @@ namespace RHINO::APIMetal {
     }
 
     void MetalBackend::Release() noexcept {
-        IRCompilerDestroy(m_IRCompiler);
-        m_IRCompiler = nullptr;
-
         auto manager= [MTLCaptureManager sharedCaptureManager];
         [manager stopCapture];
     }
@@ -119,18 +114,263 @@ namespace RHINO::APIMetal {
         return result;
     }
 
-    RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept { return nullptr; }
+    static id<MTLLibrary> NewLibraryFromDXILUsingCompiler(const IRObject* pDXIL, IRShaderStage shaderStage, const char* entryPointName,
+                                                          IRCompiler* pCompiler, id<MTLDevice> device,
+                                                          const char* fuseAnyHitEntryPointName) noexcept {
+        assert(pDXIL);
+        assert(pCompiler);
+
+        IRError* pError = nullptr;
+        IRObject* pAIR = nullptr;
+        if (fuseAnyHitEntryPointName) {
+            pAIR = IRCompilerAllocCombineCompileAndLink(pCompiler, entryPointName, pDXIL, fuseAnyHitEntryPointName, pDXIL, &pError);
+        }
+        else {
+            pAIR = IRCompilerAllocCompileAndLink(pCompiler, entryPointName, pDXIL, &pError);
+        }
+
+        if (!pAIR) {
+            __builtin_printf("Error compiling shader \"%s\" to AIR: %s\n", entryPointName, (const char*)IRErrorGetPayload(pError));
+            IRErrorDestroy(pError);
+            __builtin_trap();
+            return nil;
+        }
+        assert(pAIR);
+
+        IRMetalLibBinary* pMetalLib = IRMetalLibBinaryCreate();
+        if (!IRObjectGetMetalLibBinary(pAIR, shaderStage, pMetalLib)) {
+            __builtin_printf("Error getting metallib binary\n");
+            IRObjectDestroy(pAIR);
+            IRCompilerDestroy(pCompiler);
+            __builtin_trap();
+            return nil;
+        }
+        size_t metallibSize = IRMetalLibGetBytecodeSize(pMetalLib);
+
+        uint8_t* metallibBytecode = new uint8_t[metallibSize];
+        IRMetalLibGetBytecode(pMetalLib, metallibBytecode);
+
+        // dispatch_data_t dispatchData = IRMetalLibGetBytecodeData(pMetalLib);
+
+        dispatch_data_t metallib = dispatch_data_create(metallibBytecode, metallibSize, dispatch_get_main_queue(),
+                                                        DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+        id<MTLLibrary> pLib = [device newLibraryWithData:metallib error:nullptr];
+
+
+        // CFRelease(metallib);
+        delete[] metallibBytecode;
+        IRMetalLibBinaryDestroy(pMetalLib);
+        IRObjectDestroy(pAIR);
+
+        return pLib;
+    }
+
+    id<MTLFunction> MetalBackend::CompileSingleRTPSOFunction(const ShaderModule& sm, IRObject* smIR, IRShaderStage stage, IRCompiler* compiler) noexcept {
+        IRCompilerSetEntryPointName(compiler, sm.entrypoint);
+        id<MTLLibrary> lib = NewLibraryFromDXILUsingCompiler(smIR, stage, sm.entrypoint,
+                                                             compiler, m_Device, nullptr);
+        NSString* functionName = [NSString stringWithUTF8String:sm.entrypoint];
+        return [lib newFunctionWithName:functionName];
+    }
+
+    RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept {
+        auto* metalRootSignature = INTERPRET_AS<MetalRootSignature*>(desc.rootSignature);
+
+        auto result = new MetalRTPSO{};
+        IRCompiler* compiler = IRCompilerCreate();
+
+        std::vector<id<MTLFunction>> compiledSMs{};
+        compiledSMs.resize(desc.shaderModulesCount);
+
+        std::vector<IRObject*> smIRs{};
+        smIRs.resize(desc.shaderModulesCount);
+        for (size_t i = 0; i < desc.shaderModulesCount; ++i) {
+            const ShaderModule& sm = desc.shaderModules[i];
+            smIRs[i] = IRObjectCreateFromDXIL(sm.bytecode, sm.bytecodeSize, IRBytecodeOwnershipNone);
+        }
+
+        uint64_t closestHitMask = 0x0;
+        uint64_t missMask = 0x0;
+        uint64_t anyHitMask = 0x0;
+
+        for (size_t i = 0; i < desc.recordsCount; ++i) {
+            const RTShaderTableRecord& record = desc.records[i];
+            switch (record.recordType) {
+                case RTShaderTableRecordType::HitGroup: {
+                    if (record.hitGroup.clothestHitShaderEnabled) {
+                        const ShaderModule& sm = desc.shaderModules[record.hitGroup.closestHitShaderIndex];
+                        IRObject* smIR = smIRs[record.hitGroup.closestHitShaderIndex];
+                        missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
+                    }
+                    if (record.hitGroup.anyHitShaderEnabled) {
+                        const ShaderModule& sm = desc.shaderModules[record.hitGroup.anyHitShaderIndex];
+                        IRObject* smIR = smIRs[record.hitGroup.anyHitShaderIndex];
+                        missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
+                    }
+                    break;
+                }
+                case RTShaderTableRecordType::Miss: {
+                    const ShaderModule& sm = desc.shaderModules[record.miss.missShaderIndex];
+                    IRObject* smIR = smIRs[record.miss.missShaderIndex];
+                    missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        //TODO: maybe remove
+        IRCompilerSetMinimumDeploymentTarget(compiler, IROperatingSystem_macOS, "14.0.0");
+        IRCompilerSetGlobalRootSignature(compiler, metalRootSignature->rootSignature);
+        // IRCompilerSetLocalRootSignature(pCompiler, pLocalRootSignature);
+
+        IRError* pError = nullptr;
+        for (size_t i = 0; i < desc.recordsCount; ++i) {
+            const RTShaderTableRecord& record = desc.records[i];
+
+            IRCompilerSetRayTracingPipelineArguments(compiler, desc.maxAttributeSizeInBytes, IRRaytracingPipelineFlagNone,
+                                                     closestHitMask, missMask, anyHitMask, ~0, -1,
+                                                     IRRayGenerationCompilationVisibleFunction,
+                                                     IRIntersectionFunctionCompilationVisibleFunction);
+
+            switch (record.recordType) {
+                case RTShaderTableRecordType::RayGeneration: {
+                    const ShaderModule& sm = desc.shaderModules[record.rayGeneration.rayGenerationShaderIndex];
+                    IRObject* smIR = smIRs[record.rayGeneration.rayGenerationShaderIndex];
+                    compiledSMs[record.rayGeneration.rayGenerationShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageRayGeneration, compiler);
+                    break;
+                }
+                case RTShaderTableRecordType::HitGroup: {
+                    IRCompilerSetHitgroupType(compiler, IRHitGroupTypeTriangles);
+                    if (record.hitGroup.clothestHitShaderEnabled) {
+                        const ShaderModule& sm = desc.shaderModules[record.hitGroup.closestHitShaderIndex];
+                        IRObject* smIR = smIRs[record.hitGroup.closestHitShaderIndex];
+                        compiledSMs[record.hitGroup.closestHitShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageClosestHit, compiler);
+                    }
+                    if (record.hitGroup.anyHitShaderEnabled) {
+                        const ShaderModule& sm = desc.shaderModules[record.hitGroup.anyHitShaderIndex];
+                        IRObject* smIR = smIRs[record.hitGroup.anyHitShaderIndex];
+                        compiledSMs[record.hitGroup.anyHitShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageAnyHit, compiler);
+                    }
+                    if (record.hitGroup.intersectionShaderEnabled) {
+                        const ShaderModule& sm = desc.shaderModules[record.hitGroup.intersectionShaderEnabled];
+                        IRObject* smIR = smIRs[record.hitGroup.intersectionShaderEnabled];
+                        compiledSMs[record.hitGroup.intersectionShaderEnabled] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageIntersection, compiler);
+                    }
+                    break;
+                }
+                case RTShaderTableRecordType::Miss: {
+                    const ShaderModule& sm = desc.shaderModules[record.miss.missShaderIndex];
+                    IRObject* smIR = smIRs[record.miss.missShaderIndex];
+                    compiledSMs[record.miss.missShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageMiss, compiler);
+                    break;
+                }
+            }
+        }
+
+        NSError* error;
+
+        // Synthesizing indirect intersection functions for AABB and Triangles
+        id<MTLFunction> synthIndirectIntersectionFn[2] = {};
+        {
+            bool status = true;
+
+            // AABB intersection
+            {
+                IRCompilerSetHitgroupType(compiler, IRHitGroupTypeProceduralPrimitive);
+                IRMetalLibBinary* indirectIntersectLibBin = IRMetalLibBinaryCreate();
+                status = IRMetalLibSynthesizeIndirectIntersectionFunction(compiler, indirectIntersectLibBin);
+                assert(status);
+
+                id<MTLLibrary> indirectIntersectLib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(indirectIntersectLibBin)
+                                                                                 error:&error];
+                assert(indirectIntersectLib);
+                NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectProceduralIntersectionFunctionName];
+                synthIndirectIntersectionFn[0] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
+                assert(synthIndirectIntersectionFn[0]);
+            }
+
+            // Triangle intersection
+            {
+                IRCompilerSetHitgroupType(compiler, IRHitGroupTypeTriangles);
+                IRMetalLibBinary* indirectIntersectLibBin = IRMetalLibBinaryCreate();
+                status = IRMetalLibSynthesizeIndirectIntersectionFunction(compiler, indirectIntersectLibBin);
+                assert(status);
+
+                id<MTLLibrary> indirectIntersectLib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(indirectIntersectLibBin)
+                                                                             error:&error];
+                assert(indirectIntersectLib);
+                NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectTriangleIntersectionFunctionName];
+                synthIndirectIntersectionFn[1] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
+                assert(synthIndirectIntersectionFn[1]);
+            }
+        }
+
+        // IRShaderIdentifierInit();
+        // IRShaderIdentifierInitWithCustomIntersection();
+
+        // Synthesizing dispatch ray function
+        id<MTLFunction> dispatchSynthFn = nil;
+        {
+            IRMetalLibBinary* libBin = IRMetalLibBinaryCreate();
+            IRMetalLibSynthesizeIndirectRayDispatchFunction(compiler, libBin);
+            id<MTLLibrary> lib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(libBin) error:&error];
+            assert(lib);
+            IRMetalLibBinaryDestroy(libBin);
+            NSString* entrypoint = [NSString stringWithUTF8String:kIRRayDispatchIndirectionKernelName];
+            dispatchSynthFn = [lib newFunctionWithName: entrypoint];
+        }
+
+        // Gathering all PSO linked functions
+        std::vector<id<MTLFunction>> psoLinkedFunctions{compiledSMs.begin(), compiledSMs.end()};
+        psoLinkedFunctions.insert(psoLinkedFunctions.end(), &synthIndirectIntersectionFn[0],
+                                  &synthIndirectIntersectionFn[0] + std::size(synthIndirectIntersectionFn));
+        NSArray *nsCompiledSMs = [NSArray arrayWithObjects:psoLinkedFunctions.data() count:psoLinkedFunctions.size()];
+        MTLLinkedFunctions* linkedFn = [[MTLLinkedFunctions alloc] init];
+        [linkedFn setFunctions:nsCompiledSMs];
+
+        // Creating RT PSO
+        MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
+        [descriptor setComputeFunction:dispatchSynthFn];
+        [descriptor setLinkedFunctions:linkedFn];
+        result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
+
+        // Setup Intersection Function Table
+        MTLIntersectionFunctionTableDescriptor* iftDesc = [[MTLIntersectionFunctionTableDescriptor alloc] init];
+        [iftDesc setFunctionCount: std::size(synthIndirectIntersectionFn)];
+        result->ift = [result->pso newIntersectionFunctionTableWithDescriptor:iftDesc];
+        [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[0]] atIndex:0];
+        [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[1]] atIndex:1];
+
+        // Setup Visible Function Table
+        MTLVisibleFunctionTableDescriptor* vftDesc = [[MTLVisibleFunctionTableDescriptor alloc] init];
+        [vftDesc setFunctionCount: compiledSMs.size()];
+        result->vft = [result->pso newVisibleFunctionTableWithDescriptor:vftDesc];
+        for (size_t i = 0; i < compiledSMs.size(); ++i) {
+            [result->vft setFunction:[result->pso functionHandleWithFunction:compiledSMs[i]] atIndex:i];
+        }
+
+        for (auto obj : smIRs) {
+            IRObjectDestroy(obj);
+        }
+        IRCompilerDestroy(compiler);
+
+        return result;
+    }
 
     ComputePSO* MetalBackend::CompileComputePSO(const ComputePSODesc& desc) noexcept {
         auto* metalRootSignature = INTERPRET_AS<MetalRootSignature*>(desc.rootSignature);
 
         IRError* pError = nullptr;
         auto* result = new MetalComputePSO{};
+        IRCompiler* compiler = IRCompilerCreate();
 
-        IRCompilerSetGlobalRootSignature(m_IRCompiler, metalRootSignature->rootSignature);
-        IRCompilerSetEntryPointName(m_IRCompiler, desc.CS.entrypoint);
         IRObject* pDXIL = IRObjectCreateFromDXIL(desc.CS.bytecode, desc.CS.bytecodeSize, IRBytecodeOwnershipNone);
-        IRObject* outIR = IRCompilerAllocCompileAndLink(m_IRCompiler, desc.CS.entrypoint, pDXIL, &pError);
+
+        IRCompilerSetGlobalRootSignature(compiler, metalRootSignature->rootSignature);
+        IRCompilerSetEntryPointName(compiler, desc.CS.entrypoint);
+        IRObject* outIR = IRCompilerAllocCompileAndLink(compiler, desc.CS.entrypoint, pDXIL, &pError);
 
         if (!outIR) {
             // Inspect pError to determine cause.
@@ -179,6 +419,7 @@ namespace RHINO::APIMetal {
         result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
 
         IRMetalLibBinaryDestroy(pMetallib);
+        IRCompilerDestroy(compiler);
         return result;
     }
 
@@ -307,12 +548,26 @@ namespace RHINO::APIMetal {
 
         ASPrebuildInfo result{};
         result.MaxASSizeInBytes = sizes.accelerationStructureSize;
-        result.MaxASSizeInBytes = sizes.buildScratchBufferSize;
+        result.scratchBufferSizeInBytes = sizes.buildScratchBufferSize;
         return result;
     }
 
     ASPrebuildInfo MetalBackend::GetTLASPrebuildInfo(const TLASDesc& desc) noexcept {
+        MTLAccelerationStructureInstanceDescriptor descr{};
+        MTLInstanceAccelerationStructureDescriptor* descriptor = [[MTLInstanceAccelerationStructureDescriptor alloc] init];
+        [descriptor setInstanceCount:desc.blasInstancesCount];
+        [descriptor setInstanceDescriptorBuffer:nil];
+        [descriptor setInstanceDescriptorBufferOffset:0];
+        [descriptor setInstanceDescriptorType:MTLAccelerationStructureInstanceDescriptorTypeDefault];
+        [descriptor setInstanceDescriptorStride:sizeof(MTLAccelerationStructureInstanceDescriptor)];
+        [descriptor setInstancedAccelerationStructures:nil];
 
+        MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:descriptor];
+
+        ASPrebuildInfo result{};
+        result.MaxASSizeInBytes = sizes.accelerationStructureSize;
+        result.scratchBufferSizeInBytes = sizes.buildScratchBufferSize;
+        return result;
     }
 
     Semaphore* MetalBackend::CreateSyncSemaphore(uint64_t initialValue) noexcept {

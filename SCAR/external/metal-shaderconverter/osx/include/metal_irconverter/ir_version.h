@@ -1,6 +1,6 @@
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
-// Copyright 2023 Apple Inc.
+// Copyright 2023-2025 Apple Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 #ifndef IRVERSION_H
 #define IRVERSION_H
 
-#define IR_VERSION_MAJOR 1
+#define IR_VERSION_MAJOR 2
 #define IR_VERSION_MINOR 1
 #define IR_VERSION_PATCH 0
 
