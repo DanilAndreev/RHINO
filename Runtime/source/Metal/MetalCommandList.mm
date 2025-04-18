@@ -249,6 +249,10 @@ namespace RHINO::APIMetal {
 
     void MetalCommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
         auto* metalPSO = INTERPRET_AS<MetalRTPSO*>(desc.pso);
+        auto CBVSRVUAVHeap = INTERPRET_AS<MetalDescriptorHeap*>(desc.CDBSRVUAVHeap);
+        MetalDescriptorHeap* samplerHeap = desc.samplerHeap ? INTERPRET_AS<MetalDescriptorHeap*>(desc.samplerHeap) : nullptr;
+        size_t CBVSRVUAVHeapOffset = 0;
+        size_t samplerHeapOffset = 0;
 
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
 
@@ -262,20 +266,20 @@ namespace RHINO::APIMetal {
                     case DescriptorRangeType::CBV:
                     case DescriptorRangeType::SRV: {
                         for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            usedCBVSRVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
+                            usedCBVSRVs.push_back(CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i]);
                         }
                         break;
                     }
                     case DescriptorRangeType::UAV: {
                         for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            usedUAVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
+                            usedUAVs.push_back(CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i]);
                         }
                         break;
                     }
                     case DescriptorRangeType::Sampler: {
-                        if (m_SamplerHeap) {
+                        if (samplerHeap) {
                             for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                                usedSMPs.push_back(m_SamplerHeap->m_Resources[m_SamplerHeapOffset + pos + i]);
+                                usedSMPs.push_back(samplerHeap->m_Resources[samplerHeapOffset + pos + i]);
                             }
                         }
                         break;
@@ -284,11 +288,11 @@ namespace RHINO::APIMetal {
             }
         }
 
-        [encoder setBuffer:m_CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
-        [encoder useResource:m_CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
-        if (m_SamplerHeap) {
-            [encoder setBuffer:m_SamplerHeap->GetHeapBuffer() offset:0 atIndex:kIRSamplerHeapBindPoint];
-            [encoder useResource:m_SamplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+        [encoder setBuffer:CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
+        [encoder useResource:CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+        if (samplerHeap) {
+            [encoder setBuffer:samplerHeap->GetHeapBuffer() offset:0 atIndex:kIRSamplerHeapBindPoint];
+            [encoder useResource:samplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
         }
 
         [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
@@ -340,7 +344,7 @@ namespace RHINO::APIMetal {
 //        auto threadgroupSize = MTLSizeMake(m_CurComputePSO->localWorkgroupSize[0], m_CurComputePSO->localWorkgroupSize[1],
 //                                           m_CurComputePSO->localWorkgroupSize[2]);
         auto threadgroupSize = MTLSizeMake([metalPSO->pso maxTotalThreadsPerThreadgroup], 1, 1);
-        [encoder setComputePipelineState:m_CurComputePSO->pso];
+        [encoder setComputePipelineState:metalPSO->pso];
         [encoder dispatchThreadgroups:size threadsPerThreadgroup:threadgroupSize];
 
         [encoder endEncoding];
