@@ -212,8 +212,6 @@ namespace RHINO::APIMetal {
                         IRObject* smIR = smIRs[record.hitGroup.anyHitShaderIndex];
                         missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
                     }
-                    IRShaderIdentifierInitWithCustomIntersection(&shaderRecords[i], record.hitGroup.closestHitShaderIndex,
-                                                                 record.hitGroup.anyHitShaderIndex);
                     break;
                 }
                 case RTShaderTableRecordType::Miss: {
@@ -221,10 +219,6 @@ namespace RHINO::APIMetal {
                     IRObject* smIR = smIRs[record.miss.missShaderIndex];
                     missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
                     break;
-                    IRShaderIdentifierInit(&shaderRecords[i], record.miss.missShaderIndex);
-                }
-                case RTShaderTableRecordType::RayGeneration: {
-                    IRShaderIdentifierInit(&shaderRecords[i], record.rayGeneration.rayGenerationShaderIndex);
                 }
                 default:
                     break;
@@ -250,6 +244,7 @@ namespace RHINO::APIMetal {
                     const ShaderModule& sm = desc.shaderModules[record.rayGeneration.rayGenerationShaderIndex];
                     IRObject* smIR = smIRs[record.rayGeneration.rayGenerationShaderIndex];
                     compiledSMs[record.rayGeneration.rayGenerationShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageRayGeneration, compiler);
+                    IRShaderIdentifierInit(&shaderRecords[i], record.rayGeneration.rayGenerationShaderIndex);
                     break;
                 }
                 case RTShaderTableRecordType::HitGroup: {
@@ -267,14 +262,17 @@ namespace RHINO::APIMetal {
                     if (record.hitGroup.intersectionShaderEnabled) {
                         const ShaderModule& sm = desc.shaderModules[record.hitGroup.intersectionShaderEnabled];
                         IRObject* smIR = smIRs[record.hitGroup.intersectionShaderEnabled];
-                        compiledSMs[record.hitGroup.intersectionShaderEnabled] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageIntersection, compiler);
+                        compiledSMs[record.hitGroup.intersectionShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageIntersection, compiler);
                     }
+                    IRShaderIdentifierInitWithCustomIntersection(&shaderRecords[i], record.hitGroup.closestHitShaderIndex,
+                                                                 record.hitGroup.intersectionShaderIndex);
                     break;
                 }
                 case RTShaderTableRecordType::Miss: {
                     const ShaderModule& sm = desc.shaderModules[record.miss.missShaderIndex];
                     IRObject* smIR = smIRs[record.miss.missShaderIndex];
                     compiledSMs[record.miss.missShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageMiss, compiler);
+                    IRShaderIdentifierInit(&shaderRecords[i], record.miss.missShaderIndex);
                     break;
                 }
             }
@@ -317,9 +315,6 @@ namespace RHINO::APIMetal {
                 assert(synthIndirectIntersectionFn[1]);
             }
         }
-
-        // IRShaderIdentifierInit();
-        // IRShaderIdentifierInitWithCustomIntersection();
 
         // Synthesizing dispatch ray function
         id<MTLFunction> dispatchSynthFn = nil;
