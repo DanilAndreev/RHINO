@@ -297,21 +297,23 @@ namespace RHINO::APIMetal {
         const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
         m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;
 
+        const size_t recordStride = metalPSO->shaderTableRecordStride;
         IRDispatchRaysDescriptor dispatchRaysDesc;
-//        dispatchRaysDesc.RayGenerationShaderRecord = {
-//                .StartAddress = _pTriangleSphereSBT->gpuAddress(),
-//                .SizeInBytes = sizeof(ShaderRecord)
-//        };
-//        dispatchRaysDesc.HitGroupTable = {
-//                .StartAddress = _pTriangleSphereSBT->gpuAddress() + hgSBTOffset,
-//                .SizeInBytes = (missSBTOffset - hgSBTOffset),       // size of the hitgroup table
-//                .StrideInBytes = sizeof(ShaderRecordWithData)       // stride between shader records in the hitgroup table
-//        };
-//        dispatchRaysDesc.MissShaderTable = {
-//                .StartAddress = _pTriangleSphereSBT->gpuAddress() + missSBTOffset,
-//                .SizeInBytes = sizeof(ShaderRecord),
-//                .StrideInBytes = sizeof(ShaderRecord)
-//        };
+        //TODO: SizeInBytes is size of table but not one entry.
+        dispatchRaysDesc.RayGenerationShaderRecord = {
+                .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.rayGenerationShaderRecordIndex,
+                .SizeInBytes = sizeof(IRShaderIdentifier)
+        };
+        dispatchRaysDesc.HitGroupTable = {
+                .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.hitGroupStartRecordIndex,
+                .SizeInBytes = sizeof(IRShaderIdentifier),       // size of the hitgroup table
+                .StrideInBytes = recordStride,       // stride between shader records in the hitgroup table
+        };
+        dispatchRaysDesc.MissShaderTable = {
+                .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.hitGroupStartRecordIndex,
+                .SizeInBytes = sizeof(IRShaderIdentifier),
+                .StrideInBytes = recordStride,
+        };
         dispatchRaysDesc.CallableShaderTable = {
                 .StartAddress = 0,
                 .SizeInBytes = 0,

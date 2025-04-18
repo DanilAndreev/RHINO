@@ -193,6 +193,10 @@ namespace RHINO::APIMetal {
         uint64_t missMask = 0x0;
         uint64_t anyHitMask = 0x0;
 
+        result->shaderTableRecordStride = sizeof(IRShaderIdentifier);
+        result->shaderTable = [m_Device newBufferWithLength:result->shaderTableRecordStride * desc.recordsCount options:0];
+        auto* shaderRecords = static_cast<IRShaderIdentifier*>([result->shaderTable contents]);
+
         for (size_t i = 0; i < desc.recordsCount; ++i) {
             const RTShaderTableRecord& record = desc.records[i];
             switch (record.recordType) {
@@ -207,6 +211,8 @@ namespace RHINO::APIMetal {
                         IRObject* smIR = smIRs[record.hitGroup.anyHitShaderIndex];
                         missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
                     }
+                    IRShaderIdentifierInitWithCustomIntersection(&shaderRecords[i], record.hitGroup.closestHitShaderIndex,
+                                                                 record.hitGroup.anyHitShaderIndex);
                     break;
                 }
                 case RTShaderTableRecordType::Miss: {
@@ -214,6 +220,10 @@ namespace RHINO::APIMetal {
                     IRObject* smIR = smIRs[record.miss.missShaderIndex];
                     missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
                     break;
+                    IRShaderIdentifierInit(&shaderRecords[i], record.miss.missShaderIndex);
+                }
+                case RTShaderTableRecordType::RayGeneration: {
+                    IRShaderIdentifierInit(&shaderRecords[i], record.rayGeneration.rayGenerationShaderIndex);
                 }
                 default:
                     break;
