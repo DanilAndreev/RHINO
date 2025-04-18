@@ -194,7 +194,8 @@ namespace RHINO::APIMetal {
         uint64_t anyHitMask = 0x0;
 
         result->shaderTableRecordStride = sizeof(IRShaderIdentifier);
-        result->shaderTable = [m_Device newBufferWithLength:result->shaderTableRecordStride * desc.recordsCount options:0];
+        result->shaderTable = [m_Device newBufferWithLength:result->shaderTableRecordStride * desc.recordsCount
+                                                    options:MTLResourceStorageModeShared];
         auto* shaderRecords = static_cast<IRShaderIdentifier*>([result->shaderTable contents]);
 
         for (size_t i = 0; i < desc.recordsCount; ++i) {
@@ -491,12 +492,8 @@ namespace RHINO::APIMetal {
         auto* result = new MetalDescriptorHeap{};
 
         result->m_Resources.resize(descriptorsCount);
-
-//        result->m_DescriptorHeap = [m_Device newBufferWithLength:result->encoder.encodedLength * descriptorsCount options:0];
         result->m_DescriptorHeap = [m_Device newBufferWithLength:sizeof(IRDescriptorTableEntry) * descriptorsCount
                                                  options:MTLResourceStorageModeShared];
-//        result->m_DescriptorHeap = [m_Device newBufferWithLength:sizeof(uint64_t) * descriptorsCount
-//                                                 options:MTLResourceStorageModeShared];
         [result->m_DescriptorHeap setLabel:[NSString stringWithUTF8String:name]];
         return result;
     }

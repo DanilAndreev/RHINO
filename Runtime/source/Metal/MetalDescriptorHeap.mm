@@ -61,9 +61,11 @@ namespace RHINO::APIMetal {
     void MetalDescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
         auto* metalTLAS = INTERPRET_AS<MetalTLAS*>(desc.tlas);
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
-        // IRDescriptorTableSetAccelerationStructure(entry + desc.offsetInHeap, metalTLAS->accelerationStructure);
-        // m_Resources[desc.offsetInHeap] = metalTLAS->accelerationStructure;
-        // TODO: implement
+
+
+         IRDescriptorTableSetAccelerationStructure(entry + desc.offsetInHeap, [metalTLAS->gpuASHeader gpuAddress]);
+         m_Resources[desc.offsetInHeap] = metalTLAS->accelerationStructure;
+         //TODO: add indirect resources (BLASs + ASHeader)
     }
 
     void MetalDescriptorHeap::WriteSMP(RHINO::Sampler* sampler, size_t offsetInHeap) noexcept {

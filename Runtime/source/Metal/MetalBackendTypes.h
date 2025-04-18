@@ -100,7 +100,8 @@ namespace RHINO::APIMetal {
     class MetalTLAS : public TLASBase {
     public:
         id<MTLAccelerationStructure> accelerationStructure = nil;
-
+        id<MTLBuffer> gpuASHeader = nil;
+        std::vector<id<MTLResource>> indirectResources{};
     public:
         void Release() noexcept final {
             delete this;

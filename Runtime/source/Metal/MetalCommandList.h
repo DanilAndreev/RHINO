@@ -56,6 +56,10 @@ namespace RHINO::APIMetal {
         BLAS* BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
         TLAS* BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset, const char* name) noexcept final;
         void BuildRTPSO(RTPSO* pso) noexcept final;
+
+    private:
+        void SetHeapHelper(MetalDescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset, MetalDescriptorHeap* samplerHeap,
+                           size_t samplerHeapOffset) noexcept;
     };
 } // namespace RHINO::APIMetal
 
