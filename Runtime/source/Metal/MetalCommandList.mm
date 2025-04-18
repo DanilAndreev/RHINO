@@ -66,7 +66,7 @@ namespace RHINO::APIMetal {
         m_Device = device;
         m_RootSignaturesRing = [m_Device newBufferWithLength:sizeof(RootSignatureT) * ROOT_SIGNATURE_RING_SIZE
                                                      options:MTLResourceStorageModeManaged];
-        [m_RootSignaturesRing setLabel: @"RootSignatureRing"];
+        [m_RootSignaturesRing setLabel: @"RHINO::CommandList::RootSignatureRing"];
         for (size_t i = 0; i < ROOT_SIGNATURE_RING_SIZE; ++i) {
             m_RootSignaturesRingSync[i] = [m_Device newSharedEvent];
             [m_RootSignaturesRingSync[i] setSignaledValue: 0];
@@ -196,6 +196,7 @@ namespace RHINO::APIMetal {
         const size_t instanceDescBufSize = sizeof(MTLAccelerationStructureInstanceDescriptor) * desc.blasInstancesCount;
         id<MTLBuffer> instanceDescBuf = [m_Device newBufferWithLength:instanceDescBufSize
                                                               options:MTLResourceStorageModeShared];
+        [instanceDescBuf setLabel: @"RHINO::BuildTLAS::InstanceDescBuffer"];
 
         auto asDescs = [NSMutableArray array];
 
@@ -226,6 +227,10 @@ namespace RHINO::APIMetal {
 
         const size_t gpuASHeaderSize = sizeof(IRRaytracingAccelerationStructureGPUHeader) + instanceContribution.size() * sizeof(uint32_t);
         result->gpuASHeader = [m_Device newBufferWithLength:gpuASHeaderSize options:0];
+        if(name) {
+            std::string debugName = std::string{name} + ".GPUHeader";
+            [result->gpuASHeader setLabel: [NSString stringWithUTF8String:debugName.c_str()]];
+        }
         auto ASHeader = static_cast<IRRaytracingAccelerationStructureGPUHeader*>([result->gpuASHeader contents]);
         auto ASHeaderInstanceContribution = reinterpret_cast<uint32_t*>(&ASHeader[1]);
         ASHeader->addressOfInstanceContributions = [result->gpuASHeader gpuAddress] + sizeof(IRRaytracingAccelerationStructureGPUHeader);
@@ -278,6 +283,7 @@ namespace RHINO::APIMetal {
 
         [encoder useResource:metalPSO->vft usage:MTLResourceUsageRead];
         [encoder useResource:metalPSO->ift usage:MTLResourceUsageRead];
+        [encoder useResource:metalPSO->shaderTable usage:MTLResourceUsageRead];
 
         const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
         m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;

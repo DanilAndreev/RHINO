@@ -198,6 +198,10 @@ namespace RHINO::APIMetal {
         result->shaderTableRecordStride = sizeof(IRShaderIdentifier);
         result->shaderTable = [m_Device newBufferWithLength:result->shaderTableRecordStride * desc.recordsCount
                                                     options:MTLResourceStorageModeShared];
+        if (desc.debugName) {
+            std::string debugName = std::string{desc.debugName} + ".ShaderTable";
+            [result->shaderTable setLabel: [NSString stringWithUTF8String:debugName.c_str()]];
+        }
         auto* shaderRecords = static_cast<IRShaderIdentifier*>([result->shaderTable contents]);
 
         for (size_t i = 0; i < desc.recordsCount; ++i) {
@@ -342,6 +346,9 @@ namespace RHINO::APIMetal {
         MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
         [descriptor setComputeFunction:dispatchSynthFn];
         [descriptor setLinkedFunctions:linkedFn];
+        if (desc.debugName) {
+            [descriptor setLabel:[NSString stringWithUTF8String:desc.debugName]];
+        }
         result->pso = [m_Device newComputePipelineStateWithDescriptor:descriptor options:0 reflection:nil error:&error];
 
         // Setup Intersection Function Table
