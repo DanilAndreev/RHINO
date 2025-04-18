@@ -11,7 +11,8 @@ namespace RHINO::APIMetal {
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
         size_t bufferGPUAddress = [metalBuffer->buffer gpuAddress] + desc.bufferOffset;
         IRDescriptorTableSetBuffer(entry + desc.offsetInHeap, bufferGPUAddress, 0);
-        m_Resources[desc.offsetInHeap] = metalBuffer->buffer;
+        m_Resources[desc.offsetInHeap].direct = metalBuffer->buffer;
+        m_Resources[desc.offsetInHeap].indirect.clear();
     }
 
     void MetalDescriptorHeap::WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept {
@@ -19,7 +20,8 @@ namespace RHINO::APIMetal {
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
         size_t bufferGPUAddress = [metalBuffer->buffer gpuAddress] + desc.bufferOffset;
         IRDescriptorTableSetBuffer(entry + desc.offsetInHeap, bufferGPUAddress, 0);
-        m_Resources[desc.offsetInHeap] = metalBuffer->buffer;
+        m_Resources[desc.offsetInHeap].direct = metalBuffer->buffer;
+        m_Resources[desc.offsetInHeap].indirect.clear();
     }
 
     void MetalDescriptorHeap::WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept {
@@ -27,45 +29,54 @@ namespace RHINO::APIMetal {
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
         size_t bufferGPUAddress = [metalBuffer->buffer gpuAddress] + desc.bufferOffset;
         IRDescriptorTableSetBuffer(entry + desc.offsetInHeap, bufferGPUAddress, 0);
-        m_Resources[desc.offsetInHeap] = metalBuffer->buffer;
+        m_Resources[desc.offsetInHeap].direct = metalBuffer->buffer;
+        m_Resources[desc.offsetInHeap].indirect.clear();
     }
 
     void MetalDescriptorHeap::WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept {
         auto* metalTexture2D = INTERPRET_AS<MetalTexture2D*>(desc.texture);
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
         IRDescriptorTableSetTexture(entry + desc.offsetInHeap, metalTexture2D->texture, 0, 0);
-        m_Resources[desc.offsetInHeap] = metalTexture2D->texture;
+        m_Resources[desc.offsetInHeap].direct = metalTexture2D->texture;
+        m_Resources[desc.offsetInHeap].indirect.clear();
     }
 
     void MetalDescriptorHeap::WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept {
         auto* metalTexture2D = INTERPRET_AS<MetalTexture2D*>(desc.texture);
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
         IRDescriptorTableSetTexture(entry + desc.offsetInHeap, metalTexture2D->texture, 0, 0);
-        m_Resources[desc.offsetInHeap] = metalTexture2D->texture;
+        m_Resources[desc.offsetInHeap].direct = metalTexture2D->texture;
+        m_Resources[desc.offsetInHeap].indirect.clear();
     }
 
     void MetalDescriptorHeap::WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept {
         auto* metalTexture3D = INTERPRET_AS<MetalTexture2D*>(desc.texture);
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
         IRDescriptorTableSetTexture(entry + desc.offsetInHeap, metalTexture3D->texture, 0, 0);
-        m_Resources[desc.offsetInHeap] = metalTexture3D->texture;
+        m_Resources[desc.offsetInHeap].direct = metalTexture3D->texture;
+        m_Resources[desc.offsetInHeap].indirect.clear();
     }
 
     void MetalDescriptorHeap::WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept {
         auto* metalTexture3D = INTERPRET_AS<MetalTexture2D*>(desc.texture);
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
         IRDescriptorTableSetTexture(entry + desc.offsetInHeap, metalTexture3D->texture, 0, 0);
-        m_Resources[desc.offsetInHeap] = metalTexture3D->texture;
+        m_Resources[desc.offsetInHeap].direct = metalTexture3D->texture;
+        m_Resources[desc.offsetInHeap].indirect.clear();
     }
 
     void MetalDescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
         auto* metalTLAS = INTERPRET_AS<MetalTLAS*>(desc.tlas);
         auto* entry = static_cast<IRDescriptorTableEntry*>([m_DescriptorHeap contents]);
 
+        IRDescriptorTableSetAccelerationStructure(entry + desc.offsetInHeap, [metalTLAS->gpuASHeader gpuAddress]);
+        m_Resources[desc.offsetInHeap].direct = metalTLAS->accelerationStructure;
 
-         IRDescriptorTableSetAccelerationStructure(entry + desc.offsetInHeap, [metalTLAS->gpuASHeader gpuAddress]);
-         m_Resources[desc.offsetInHeap] = metalTLAS->accelerationStructure;
-         //TODO: add indirect resources (BLASs + ASHeader)
+        auto& outIndirectRes = m_Resources[desc.offsetInHeap].indirect;
+        outIndirectRes.clear();
+        outIndirectRes.reserve(metalTLAS->indirectResources.size() + 1);
+        outIndirectRes.insert(outIndirectRes.end(), metalTLAS->indirectResources.begin(), metalTLAS->indirectResources.end());
+        outIndirectRes.emplace_back(metalTLAS->gpuASHeader);
     }
 
     void MetalDescriptorHeap::WriteSMP(RHINO::Sampler* sampler, size_t offsetInHeap) noexcept {
@@ -87,7 +98,7 @@ namespace RHINO::APIMetal {
         return sizeof(IRDescriptorTableEntry);
     }
 
-    const std::vector<id<MTLResource>>& MetalDescriptorHeap::GetBoundResources() const noexcept {
+    const std::vector<MetalDescriptorHeap::ResourceEntry>& MetalDescriptorHeap::GetBoundResources() const noexcept {
         return m_Resources;
     }
 } // namespace RHINO::APIMetal

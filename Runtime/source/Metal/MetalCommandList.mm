@@ -9,6 +9,58 @@
 
 
 namespace RHINO::APIMetal {
+    struct IndirectResourcesSet {
+        std::vector<id<MTLResource>> r;
+        std::vector<id<MTLResource>> rw;
+        static constexpr MTLResourceUsage rUsage = MTLResourceUsageRead | MTLResourceUsageSample;
+        static constexpr MTLResourceUsage rwUsage = MTLResourceUsageRead | MTLResourceUsageWrite | MTLResourceUsageSample;
+    };
+
+    static IndirectResourcesSet GatherIndirectResources(MetalDescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset,
+                                                        MetalRootSignature* rootSignature) {
+        IndirectResourcesSet result{};
+        for (const DescriptorSpaceDesc& space: rootSignature->spaceDescs) {
+            for (size_t spaceIdx = 0; spaceIdx < space.rangeDescCount; ++spaceIdx) {
+                size_t pos = space.rangeDescs[spaceIdx].baseRegisterSlot + space.offsetInDescriptorsFromTableStart;
+                switch (space.rangeDescs[spaceIdx].rangeType) {
+                    case DescriptorRangeType::CBV:
+                    case DescriptorRangeType::SRV: {
+                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                            const auto& resEntry = CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i];
+                            if (resEntry.direct != nil) {
+                                result.r.push_back(resEntry.direct);
+                                for (const id<MTLResource>& indirectResource : resEntry.indirect) {
+                                    if (indirectResource != nil) {
+                                        result.r.push_back(indirectResource);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case DescriptorRangeType::UAV: {
+                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
+                            const auto& resEntry = CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i];
+                            if (resEntry.direct != nil) {
+                                result.rw.push_back(resEntry.direct);
+                                for (const id<MTLResource>& indirectResource : resEntry.indirect) {
+                                    if (indirectResource != nil) {
+                                        result.rw.push_back(indirectResource);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                        // Skipping SMP
+                        break;
+                }
+            }
+        }
+        return result;
+    }
+
 
     void MetalCommandList::Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept {
         m_Device = device;
@@ -38,37 +90,7 @@ namespace RHINO::APIMetal {
     void MetalCommandList::Dispatch(const DispatchDesc& desc) noexcept {
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
 
-        std::vector<id<MTLResource>> usedUAVs;
-        std::vector<id<MTLResource>> usedCBVSRVs;
-        std::vector<id<MTLResource>> usedSMPs;
-        for (const DescriptorSpaceDesc& space: m_CurRootSignature->spaceDescs) {
-            for (size_t spaceIdx = 0; spaceIdx < space.rangeDescCount; ++spaceIdx) {
-                size_t pos = space.rangeDescs[spaceIdx].baseRegisterSlot + space.offsetInDescriptorsFromTableStart;
-                switch (space.rangeDescs[spaceIdx].rangeType) {
-                    case DescriptorRangeType::CBV:
-                    case DescriptorRangeType::SRV: {
-                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            usedCBVSRVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
-                        }
-                        break;
-                    }
-                    case DescriptorRangeType::UAV: {
-                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            usedUAVs.push_back(m_CBVSRVUAVHeap->m_Resources[m_CBVSRVUAVHeapOffset + pos + i]);
-                        }
-                        break;
-                    }
-                    case DescriptorRangeType::Sampler: {
-                        if (m_SamplerHeap) {
-                            for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                                usedSMPs.push_back(m_SamplerHeap->m_Resources[m_SamplerHeapOffset + pos + i]);
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
+        IndirectResourcesSet indirectRes = GatherIndirectResources(m_CBVSRVUAVHeap, m_CBVSRVUAVHeapOffset, m_CurRootSignature);
 
         const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
         [encoder setBuffer:m_RootSignaturesRing offset:rootSignatureOffset atIndex:kIRArgumentBufferBindPoint];
@@ -83,8 +105,8 @@ namespace RHINO::APIMetal {
             [encoder useResource:m_SamplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
         }
 
-        [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
-        [encoder useResources:usedCBVSRVs.data() count:usedCBVSRVs.size() usage:MTLResourceUsageRead | MTLResourceUsageSample];
+        [encoder useResources:indirectRes.r.data() count:indirectRes.r.size() usage:indirectRes.rUsage];
+        [encoder useResources:indirectRes.rw.data() count:indirectRes.rw.size() usage:indirectRes.rwUsage];
 
         auto size = MTLSizeMake(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
 
@@ -244,46 +266,6 @@ namespace RHINO::APIMetal {
 
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
 
-        std::vector<id<MTLResource>> usedUAVs;
-        std::vector<id<MTLResource>> usedCBVSRVs;
-        std::vector<id<MTLResource>> usedSMPs;
-        for (const DescriptorSpaceDesc& space: m_CurRootSignature->spaceDescs) {
-            for (size_t spaceIdx = 0; spaceIdx < space.rangeDescCount; ++spaceIdx) {
-                size_t pos = space.rangeDescs[spaceIdx].baseRegisterSlot + space.offsetInDescriptorsFromTableStart;
-                switch (space.rangeDescs[spaceIdx].rangeType) {
-                    case DescriptorRangeType::CBV:
-                    case DescriptorRangeType::SRV: {
-                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            const auto& resource = CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i];
-                            if (resource != nil) {
-                                usedCBVSRVs.push_back(resource);
-                            }
-                        }
-                        break;
-                    }
-                    case DescriptorRangeType::UAV: {
-                        for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            const auto& resource = CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i];
-                            if (resource != nil) {
-                                usedUAVs.push_back(resource);
-                            }
-                        }
-                        break;
-                    }
-                    case DescriptorRangeType::Sampler: {
-                        if (samplerHeap) {
-                            for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                                const auto& resource = samplerHeap->m_Resources[samplerHeapOffset + pos + i];
-                                if (resource != nil) {
-                                    usedSMPs.push_back(resource);
-                                }
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
 
         // [encoder setBuffer:CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
         [encoder useResource:CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
@@ -292,8 +274,9 @@ namespace RHINO::APIMetal {
             [encoder useResource:samplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
         }
 
-        [encoder useResources:usedUAVs.data() count:usedUAVs.size() usage:MTLResourceUsageRead | MTLResourceUsageWrite];
-        [encoder useResources:usedCBVSRVs.data() count:usedCBVSRVs.size() usage:MTLResourceUsageRead | MTLResourceUsageSample];
+        IndirectResourcesSet indirectRes = GatherIndirectResources(CBVSRVUAVHeap, CBVSRVUAVHeapOffset, m_CurRootSignature);
+        [encoder useResources:indirectRes.r.data() count:indirectRes.r.size() usage:indirectRes.rUsage];
+        [encoder useResources:indirectRes.rw.data() count:indirectRes.rw.size() usage:indirectRes.rwUsage];
 
         const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
         m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;

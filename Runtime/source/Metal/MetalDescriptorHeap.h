@@ -6,11 +6,15 @@
 #import <Metal/Metal.h>
 
 namespace RHINO::APIMetal {
-
     class MetalDescriptorHeap : public DescriptorHeap {
     public:
+        struct ResourceEntry {
+            id<MTLResource> direct = {};
+            std::vector<id<MTLResource>> indirect = {};
+        };
+    public:
         id<MTLBuffer> m_DescriptorHeap = nil;
-        std::vector<id<MTLResource>> m_Resources{};
+        std::vector<ResourceEntry> m_Resources{};
 
     public:
         void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept final;
@@ -30,7 +34,7 @@ namespace RHINO::APIMetal {
     public:
         id<MTLBuffer> GetHeapBuffer() noexcept;
         size_t GetDescriptorStride() const noexcept;
-        const std::vector<id<MTLResource>>& GetBoundResources() const noexcept;
+        const std::vector<ResourceEntry>& GetBoundResources() const noexcept;
 
     public:
         void Release() noexcept final;
