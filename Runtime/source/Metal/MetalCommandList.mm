@@ -303,15 +303,16 @@ namespace RHINO::APIMetal {
 
         const size_t recordStride = metalPSO->shaderTableRecordStride;
         IRDispatchRaysDescriptor dispatchRaysDesc;
-        //TODO: SizeInBytes is size of table but not one entry.
+
         dispatchRaysDesc.RayGenerationShaderRecord = {
                 .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.rayGenerationShaderRecordIndex,
+                //TODO: SizeInBytes is size of table but not one entry.
                 .SizeInBytes = sizeof(IRShaderIdentifier)
         };
         dispatchRaysDesc.HitGroupTable = {
                 .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.hitGroupStartRecordIndex,
-                .SizeInBytes = sizeof(IRShaderIdentifier),       // size of the hitgroup table
-                .StrideInBytes = recordStride,       // stride between shader records in the hitgroup table
+                .SizeInBytes = sizeof(IRShaderIdentifier),
+                .StrideInBytes = recordStride,
         };
         dispatchRaysDesc.MissShaderTable = {
                 .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.hitGroupStartRecordIndex,
