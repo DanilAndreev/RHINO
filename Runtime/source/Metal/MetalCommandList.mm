@@ -278,6 +278,9 @@ namespace RHINO::APIMetal {
         [encoder useResources:indirectRes.r.data() count:indirectRes.r.size() usage:indirectRes.rUsage];
         [encoder useResources:indirectRes.rw.data() count:indirectRes.rw.size() usage:indirectRes.rwUsage];
 
+        [encoder useResource:metalPSO->vft usage:MTLResourceUsageRead];
+        [encoder useResource:metalPSO->ift usage:MTLResourceUsageRead];
+
         const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
         m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;
 

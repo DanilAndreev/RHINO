@@ -287,21 +287,6 @@ namespace RHINO::APIMetal {
         {
             bool status = true;
 
-            // AABB intersection
-            {
-                IRCompilerSetHitgroupType(compiler, IRHitGroupTypeProceduralPrimitive);
-                IRMetalLibBinary* indirectIntersectLibBin = IRMetalLibBinaryCreate();
-                status = IRMetalLibSynthesizeIndirectIntersectionFunction(compiler, indirectIntersectLibBin);
-                assert(status);
-
-                id<MTLLibrary> indirectIntersectLib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(indirectIntersectLibBin)
-                                                                                 error:&error];
-                assert(indirectIntersectLib);
-                NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectProceduralIntersectionFunctionName];
-                synthIndirectIntersectionFn[0] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
-                assert(synthIndirectIntersectionFn[0]);
-            }
-
             // Triangle intersection
             {
                 IRCompilerSetHitgroupType(compiler, IRHitGroupTypeTriangles);
@@ -313,6 +298,21 @@ namespace RHINO::APIMetal {
                                                                              error:&error];
                 assert(indirectIntersectLib);
                 NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectTriangleIntersectionFunctionName];
+                synthIndirectIntersectionFn[0] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
+                assert(synthIndirectIntersectionFn[0]);
+            }
+
+            // AABB intersection
+            {
+                IRCompilerSetHitgroupType(compiler, IRHitGroupTypeProceduralPrimitive);
+                IRMetalLibBinary* indirectIntersectLibBin = IRMetalLibBinaryCreate();
+                status = IRMetalLibSynthesizeIndirectIntersectionFunction(compiler, indirectIntersectLibBin);
+                assert(status);
+
+                id<MTLLibrary> indirectIntersectLib = [m_Device newLibraryWithData:IRMetalLibGetBytecodeData(indirectIntersectLibBin)
+                                                                             error:&error];
+                assert(indirectIntersectLib);
+                NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectProceduralIntersectionFunctionName];
                 synthIndirectIntersectionFn[1] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
                 assert(synthIndirectIntersectionFn[1]);
             }
