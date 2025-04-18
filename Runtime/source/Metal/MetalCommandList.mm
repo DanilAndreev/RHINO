@@ -267,10 +267,8 @@ namespace RHINO::APIMetal {
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
 
 
-        // [encoder setBuffer:CBVSRVUAVHeap->GetHeapBuffer() offset:0 atIndex:kIRDescriptorHeapBindPoint];
         [encoder useResource:CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
         if (samplerHeap) {
-            // [encoder setBuffer:samplerHeap->GetHeapBuffer() offset:0 atIndex:kIRSamplerHeapBindPoint];
             [encoder useResource:samplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
         }
 
@@ -324,10 +322,6 @@ namespace RHINO::APIMetal {
                   atIndex:kIRRayDispatchArgumentsBindPoint];
 
         auto size = MTLSizeMake(desc.width, desc.height, 1);
-
-//        auto threadgroupSize = MTLSizeMake(m_CurComputePSO->localWorkgroupSize[0], m_CurComputePSO->localWorkgroupSize[1],
-//                                           m_CurComputePSO->localWorkgroupSize[2]);
-
         auto threadgroupSize = MTLSizeMake([metalPSO->pso maxTotalThreadsPerThreadgroup], 1, 1);
         [encoder setComputePipelineState:metalPSO->pso];
         [encoder dispatchThreadgroups:size threadsPerThreadgroup:threadgroupSize];

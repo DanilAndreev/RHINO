@@ -176,6 +176,8 @@ namespace RHINO::APIMetal {
     RTPSO* APIMetal::MetalBackend::CreateRTPSO(const RHINO::RTPSODesc& desc) noexcept {
         auto* metalRootSignature = INTERPRET_AS<MetalRootSignature*>(desc.rootSignature);
 
+        static constexpr size_t VFT_START_IDX = 1;
+
         auto result = new MetalRTPSO{};
         IRCompiler* compiler = IRCompilerCreate();
 
@@ -244,7 +246,7 @@ namespace RHINO::APIMetal {
                     const ShaderModule& sm = desc.shaderModules[record.rayGeneration.rayGenerationShaderIndex];
                     IRObject* smIR = smIRs[record.rayGeneration.rayGenerationShaderIndex];
                     compiledSMs[record.rayGeneration.rayGenerationShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageRayGeneration, compiler);
-                    IRShaderIdentifierInit(&shaderRecords[i], record.rayGeneration.rayGenerationShaderIndex);
+                    IRShaderIdentifierInit(&shaderRecords[i], record.rayGeneration.rayGenerationShaderIndex + VFT_START_IDX);
                     break;
                 }
                 case RTShaderTableRecordType::HitGroup: {
@@ -264,15 +266,15 @@ namespace RHINO::APIMetal {
                         IRObject* smIR = smIRs[record.hitGroup.intersectionShaderEnabled];
                         compiledSMs[record.hitGroup.intersectionShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageIntersection, compiler);
                     }
-                    IRShaderIdentifierInitWithCustomIntersection(&shaderRecords[i], record.hitGroup.closestHitShaderIndex,
-                                                                 record.hitGroup.intersectionShaderIndex);
+                    IRShaderIdentifierInitWithCustomIntersection(&shaderRecords[i], record.hitGroup.closestHitShaderIndex + VFT_START_IDX,
+                                                                 record.hitGroup.intersectionShaderIndex + VFT_START_IDX);
                     break;
                 }
                 case RTShaderTableRecordType::Miss: {
                     const ShaderModule& sm = desc.shaderModules[record.miss.missShaderIndex];
                     IRObject* smIR = smIRs[record.miss.missShaderIndex];
                     compiledSMs[record.miss.missShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageMiss, compiler);
-                    IRShaderIdentifierInit(&shaderRecords[i], record.miss.missShaderIndex);
+                    IRShaderIdentifierInit(&shaderRecords[i], record.miss.missShaderIndex + VFT_START_IDX);
                     break;
                 }
             }
@@ -351,10 +353,10 @@ namespace RHINO::APIMetal {
 
         // Setup Visible Function Table
         MTLVisibleFunctionTableDescriptor* vftDesc = [[MTLVisibleFunctionTableDescriptor alloc] init];
-        [vftDesc setFunctionCount: compiledSMs.size()];
+        [vftDesc setFunctionCount: VFT_START_IDX + compiledSMs.size()];
         result->vft = [result->pso newVisibleFunctionTableWithDescriptor:vftDesc];
         for (size_t i = 0; i < compiledSMs.size(); ++i) {
-            [result->vft setFunction:[result->pso functionHandleWithFunction:compiledSMs[i]] atIndex:i];
+            [result->vft setFunction:[result->pso functionHandleWithFunction:compiledSMs[i]] atIndex:i + VFT_START_IDX];
         }
 
         for (auto obj : smIRs) {
