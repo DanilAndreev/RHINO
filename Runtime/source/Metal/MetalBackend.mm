@@ -7,6 +7,7 @@
 #include "MetalDescriptorHeap.h"
 #import "MetalSwapchain.h"
 #include "MetalUtils.h"
+#include "MetalConstants.h"
 
 #import <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
@@ -211,12 +212,12 @@ namespace RHINO::APIMetal {
                     if (record.hitGroup.clothestHitShaderEnabled) {
                         const ShaderModule& sm = desc.shaderModules[record.hitGroup.closestHitShaderIndex];
                         IRObject* smIR = smIRs[record.hitGroup.closestHitShaderIndex];
-                        missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
+                        closestHitMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
                     }
                     if (record.hitGroup.anyHitShaderEnabled) {
                         const ShaderModule& sm = desc.shaderModules[record.hitGroup.anyHitShaderIndex];
                         IRObject* smIR = smIRs[record.hitGroup.anyHitShaderIndex];
-                        missMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
+                        anyHitMask |= IRObjectGatherRaytracingIntrinsics(smIR, sm.entrypoint);
                     }
                     break;
                 }
@@ -241,7 +242,7 @@ namespace RHINO::APIMetal {
             const RTShaderTableRecord& record = desc.records[i];
 
             IRCompilerSetRayTracingPipelineArguments(compiler, desc.maxAttributeSizeInBytes, IRRaytracingPipelineFlagNone,
-                                                     closestHitMask, missMask, anyHitMask, ~0, -1,
+                                                     closestHitMask, missMask, anyHitMask, ~0, IRRayTracingUnlimitedRecursionDepth,
                                                      IRRayGenerationCompilationVisibleFunction,
                                                      IRIntersectionFunctionCompilationVisibleFunction);
 
@@ -266,12 +267,13 @@ namespace RHINO::APIMetal {
                         compiledSMs[record.hitGroup.anyHitShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageAnyHit, compiler);
                     }
                     if (record.hitGroup.intersectionShaderEnabled) {
-                        const ShaderModule& sm = desc.shaderModules[record.hitGroup.intersectionShaderEnabled];
-                        IRObject* smIR = smIRs[record.hitGroup.intersectionShaderEnabled];
+                        const ShaderModule& sm = desc.shaderModules[record.hitGroup.intersectionShaderIndex];
+                        IRObject* smIR = smIRs[record.hitGroup.intersectionShaderIndex];
                         compiledSMs[record.hitGroup.intersectionShaderIndex] = CompileSingleRTPSOFunction(sm, smIR, IRShaderStageIntersection, compiler);
                     }
-                    IRShaderIdentifierInitWithCustomIntersection(&shaderRecords[i], record.hitGroup.closestHitShaderIndex + VFT_START_IDX,
-                                                                 record.hitGroup.intersectionShaderIndex + VFT_START_IDX);
+                    IRShaderIdentifierInit(&shaderRecords[i], record.hitGroup.closestHitShaderIndex + VFT_START_IDX);
+//                    IRShaderIdentifierInitWithCustomIntersection(&shaderRecords[i], record.hitGroup.closestHitShaderIndex + VFT_START_IDX,
+//                                                                 record.hitGroup.intersectionShaderIndex + VFT_START_IDX);
                     break;
                 }
                 case RTShaderTableRecordType::Miss: {
@@ -287,7 +289,8 @@ namespace RHINO::APIMetal {
         NSError* error;
 
         // Synthesizing indirect intersection functions for AABB and Triangles
-        id<MTLFunction> synthIndirectIntersectionFn[2] = {};
+        id<MTLFunction> synthTriangleIndirectIntersectionFn = nil;
+        id<MTLFunction> synthAABBIndirectIntersectionFn = nil;
         {
             bool status = true;
 
@@ -302,8 +305,8 @@ namespace RHINO::APIMetal {
                                                                              error:&error];
                 assert(indirectIntersectLib);
                 NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectTriangleIntersectionFunctionName];
-                synthIndirectIntersectionFn[0] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
-                assert(synthIndirectIntersectionFn[0]);
+                synthTriangleIndirectIntersectionFn = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
+                assert(synthTriangleIndirectIntersectionFn);
             }
 
             // AABB intersection
@@ -317,8 +320,8 @@ namespace RHINO::APIMetal {
                                                                              error:&error];
                 assert(indirectIntersectLib);
                 NSString* indirectIntersectFnName = [NSString stringWithUTF8String:kIRIndirectProceduralIntersectionFunctionName];
-                synthIndirectIntersectionFn[1] = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
-                assert(synthIndirectIntersectionFn[1]);
+                synthAABBIndirectIntersectionFn = [indirectIntersectLib newFunctionWithName:indirectIntersectFnName];
+                assert(synthAABBIndirectIntersectionFn);
             }
         }
 
@@ -336,8 +339,8 @@ namespace RHINO::APIMetal {
 
         // Gathering all PSO linked functions
         std::vector<id<MTLFunction>> psoLinkedFunctions{compiledSMs.begin(), compiledSMs.end()};
-        psoLinkedFunctions.insert(psoLinkedFunctions.end(), &synthIndirectIntersectionFn[0],
-                                  &synthIndirectIntersectionFn[0] + std::size(synthIndirectIntersectionFn));
+        psoLinkedFunctions.emplace_back(synthTriangleIndirectIntersectionFn);
+        psoLinkedFunctions.emplace_back(synthAABBIndirectIntersectionFn);
         NSArray *nsCompiledSMs = [NSArray arrayWithObjects:psoLinkedFunctions.data() count:psoLinkedFunctions.size()];
         MTLLinkedFunctions* linkedFn = [[MTLLinkedFunctions alloc] init];
         [linkedFn setFunctions:nsCompiledSMs];
@@ -353,14 +356,16 @@ namespace RHINO::APIMetal {
 
         // Setup Intersection Function Table
         MTLIntersectionFunctionTableDescriptor* iftDesc = [[MTLIntersectionFunctionTableDescriptor alloc] init];
-        [iftDesc setFunctionCount: std::size(synthIndirectIntersectionFn)];
+        [iftDesc setFunctionCount: IFT_TOTAL_FUNCTIONS_COUNT];
         result->ift = [result->pso newIntersectionFunctionTableWithDescriptor:iftDesc];
         if (desc.debugName) {
             std::string debugName = std::string{desc.debugName} + ".IFT";
             [result->ift setLabel:[NSString stringWithUTF8String:debugName.c_str()]];
         }
-        [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[0]] atIndex:0];
-        [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[1]] atIndex:1];
+        [result->ift setFunction:[result->pso functionHandleWithFunction:synthTriangleIndirectIntersectionFn]
+                         atIndex:IFT_SYNTH_TRIANGLE_INTERSECTION_IDX];
+        [result->ift setFunction:[result->pso functionHandleWithFunction:synthAABBIndirectIntersectionFn]
+                         atIndex:IFT_SYNTH_AABB_INTERSECTION_IDX];
 
         // Setup Visible Function Table
         MTLVisibleFunctionTableDescriptor* vftDesc = [[MTLVisibleFunctionTableDescriptor alloc] init];

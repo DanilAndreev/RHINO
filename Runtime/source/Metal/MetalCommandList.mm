@@ -6,6 +6,7 @@
 
 #include "MetalConverters.h"
 #include "MetalUtils.h"
+#include "MetalConstants.h"
 
 
 namespace RHINO::APIMetal {
@@ -174,7 +175,7 @@ namespace RHINO::APIMetal {
         triangleGeoDesc.primitiveDataElementSize = 0;
         triangleGeoDesc.transformationMatrixBuffer = desc.transformBuffer ? metalTransform->buffer : nil;
         triangleGeoDesc.transformationMatrixBufferOffset = desc.transformBuffer ? desc.transformBufferStartOffset : 0;
-        triangleGeoDesc.intersectionFunctionTableOffset = 0; // TODO <- take from desc
+        triangleGeoDesc.intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
         if (name) {
             triangleGeoDesc.label = [NSString stringWithUTF8String:name];
         }
@@ -232,9 +233,10 @@ namespace RHINO::APIMetal {
             instanceDescBufContents[i].accelerationStructureIndex = instance.instanceID;
             instanceDescBufContents[i].mask = instance.instanceMask;
             instanceDescBufContents[i].transformationMatrix = transform;
-            instanceDescBufContents[i].options = MTLAccelerationStructureInstanceOptionNone;
-            //TODO: calculate and fill
-            instanceDescBufContents[i].intersectionFunctionTableOffset = 0;
+            //TODO: get it from settings
+            instanceDescBufContents[i].options = MTLAccelerationStructureInstanceOptionOpaque;
+            //TODO: different offsets for triangle and AABB BLAS
+            instanceDescBufContents[i].intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
         }
         // [instanceDescBuf didModifyRange:NSMakeRange(0, sizeof(instanceDescBufSize))];
 

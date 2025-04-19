@@ -47,6 +47,7 @@ set(ObjCHeaderFiles
         source/Metal/MetalCommandList.h
         source/Metal/MetalSwapchain.h
         source/Metal/MetalUtils.h
+        source/Metal/MetalConstants.h
 )
 set(ObjCSourceFiles
         source/Metal/MetalBackend.mm
