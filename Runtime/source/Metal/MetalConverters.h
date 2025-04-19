@@ -213,6 +213,23 @@ namespace RHINO::APIMetal::Convert {
                 return false;
         }
     }
+
+    inline MTLAccelerationStructureInstanceOptions ToMTLAccelerationStructureInstanceOptions(BLASInstanceFlags flags) {
+        MTLAccelerationStructureInstanceOptions result = MTLAccelerationStructureInstanceOptionNone;
+        if (static_cast<bool>(flags & BLASInstanceFlags::DiableTriangleCulling)) {
+            result |= MTLAccelerationStructureInstanceOptionDisableTriangleCulling;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::TriangleFrontCounterClockwise)) {
+            result |= MTLAccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::Opaque)) {
+            result |= MTLAccelerationStructureInstanceOptionOpaque;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::NonOpaque)) {
+            result |= MTLAccelerationStructureInstanceOptionNonOpaque;
+        }
+        return result;
+    }
 } // namespace RHINO::APIMetal::Convert
 
 #endif // ENABLE_API_METAL

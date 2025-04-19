@@ -244,8 +244,7 @@ namespace RHINO::APIMetal {
             instanceDescBufContents[i].accelerationStructureIndex = instance.instanceID;
             instanceDescBufContents[i].mask = instance.instanceMask;
             instanceDescBufContents[i].transformationMatrix = transform;
-            //TODO: get it from settings
-            instanceDescBufContents[i].options = MTLAccelerationStructureInstanceOptionOpaque;
+            instanceDescBufContents[i].options = Convert::ToMTLAccelerationStructureInstanceOptions(instance.flags);
 
             if (metalBLAS->type == BLASPrimitiveType::Triangles) {
                 instanceDescBufContents[i].intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
