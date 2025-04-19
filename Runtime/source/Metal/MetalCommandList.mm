@@ -318,8 +318,8 @@ namespace RHINO::APIMetal {
         IRDispatchRaysArgument dispatchRaysArgs;
         dispatchRaysArgs.DispatchRaysDesc          = dispatchRaysDesc;
         dispatchRaysArgs.GRS                       = [m_RootSignaturesRing gpuAddress] + rootSignatureOffset;
-        dispatchRaysArgs.ResDescHeap               = [CBVSRVUAVHeap->GetHeapBuffer() gpuAddress];
-        dispatchRaysArgs.SmpDescHeap               = samplerHeap ? [samplerHeap->GetHeapBuffer() gpuAddress] : 0;
+        dispatchRaysArgs.ResDescHeap               = [CBVSRVUAVHeap->GetHeapBuffer() gpuAddress] + CBVSRVUAVHeapOffset;
+        dispatchRaysArgs.SmpDescHeap               = samplerHeap ? [samplerHeap->GetHeapBuffer() gpuAddress] + samplerHeapOffset : 0;
         dispatchRaysArgs.VisibleFunctionTable      = [metalPSO->vft gpuResourceID];
         dispatchRaysArgs.IntersectionFunctionTable = [metalPSO->ift gpuResourceID];
 
@@ -349,11 +349,16 @@ namespace RHINO::APIMetal {
                                          size_t samplerHeapOffset) noexcept {
         RootSignatureT rootSignatureContent{};
         for (size_t spaceIdx = 0; spaceIdx < m_CurRootSignature->spaceDescs.size(); ++spaceIdx) {
-            if (m_CurRootSignature->spaceDescs[spaceIdx].rangeDescs[0].rangeType == DescriptorRangeType::Sampler) {
-                rootSignatureContent.records[spaceIdx] = samplerHeap->GetHeapBuffer().gpuAddress;
+            const auto& spaceDesc = m_CurRootSignature->spaceDescs[spaceIdx];
+            RootSignatureRecordT record = 0;
+            if (spaceDesc.rangeDescs[0].rangeType == DescriptorRangeType::Sampler) {
+                record = [samplerHeap->GetHeapBuffer() gpuAddress] + samplerHeapOffset;
+                record += spaceDesc.offsetInDescriptorsFromTableStart * samplerHeap->GetDescriptorStride();
             } else {
-                rootSignatureContent.records[spaceIdx] = CBVSRVUAVHeap->GetHeapBuffer().gpuAddress;
+                record = [CBVSRVUAVHeap->GetHeapBuffer() gpuAddress] + CBVSRVUAVHeapOffset;
+                record += spaceDesc.offsetInDescriptorsFromTableStart * CBVSRVUAVHeap->GetDescriptorStride();
             }
+            rootSignatureContent.records[spaceIdx] = record;
         }
 
         if (m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] != 0) {
