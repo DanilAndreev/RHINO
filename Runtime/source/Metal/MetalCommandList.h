@@ -36,7 +36,7 @@ namespace RHINO::APIMetal {
         size_t m_RootSignaturesRingSyncWaitValue[ROOT_SIGNATURE_RING_SIZE] = {};
         size_t m_CurrentRingRootSignatureIndex = 0;
     public:
-        void Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept;
+        void Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue, const char* name) noexcept;
         void SubmitToQueue() noexcept;
 
     public:

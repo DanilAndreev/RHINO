@@ -355,6 +355,10 @@ namespace RHINO::APIMetal {
         MTLIntersectionFunctionTableDescriptor* iftDesc = [[MTLIntersectionFunctionTableDescriptor alloc] init];
         [iftDesc setFunctionCount: std::size(synthIndirectIntersectionFn)];
         result->ift = [result->pso newIntersectionFunctionTableWithDescriptor:iftDesc];
+        if (desc.debugName) {
+            std::string debugName = std::string{desc.debugName} + ".IFT";
+            [result->ift setLabel:[NSString stringWithUTF8String:debugName.c_str()]];
+        }
         [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[0]] atIndex:0];
         [result->ift setFunction:[result->pso functionHandleWithFunction:synthIndirectIntersectionFn[1]] atIndex:1];
 
@@ -362,6 +366,10 @@ namespace RHINO::APIMetal {
         MTLVisibleFunctionTableDescriptor* vftDesc = [[MTLVisibleFunctionTableDescriptor alloc] init];
         [vftDesc setFunctionCount: VFT_START_IDX + compiledSMs.size()];
         result->vft = [result->pso newVisibleFunctionTableWithDescriptor:vftDesc];
+        if (desc.debugName) {
+            std::string debugName = std::string{desc.debugName} + ".VFT";
+            [result->vft setLabel:[NSString stringWithUTF8String:debugName.c_str()]];
+        }
         for (size_t i = 0; i < compiledSMs.size(); ++i) {
             [result->vft setFunction:[result->pso functionHandleWithFunction:compiledSMs[i]] atIndex:i + VFT_START_IDX];
         }
@@ -510,7 +518,7 @@ namespace RHINO::APIMetal {
 
     CommandList* MetalBackend::AllocateCommandList(const char* name) noexcept {
         auto* result = new MetalCommandList{};
-        result->Initialize(m_Device, m_DefaultQueue);
+        result->Initialize(m_Device, m_DefaultQueue, name);
         return result;
     }
 

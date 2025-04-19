@@ -64,17 +64,23 @@ namespace RHINO::APIMetal {
     }
 
 
-    void MetalCommandList::Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue) noexcept {
+    void MetalCommandList::Initialize(id<MTLDevice> device, id<MTLCommandQueue> queue,  const char* name) noexcept {
         m_Device = device;
         m_RootSignaturesRing = [m_Device newBufferWithLength:sizeof(RootSignatureT) * ROOT_SIGNATURE_RING_SIZE
                                                      options:MTLResourceStorageModeManaged];
-        [m_RootSignaturesRing setLabel: @"RHINO::CommandList::RootSignatureRing"];
+        if (name) {
+            std::string debugName = std::string{name} + ".RootSignatureGPURing";
+            [m_RootSignaturesRing setLabel:[NSString stringWithUTF8String:debugName.c_str()]];
+        }
         for (size_t i = 0; i < ROOT_SIGNATURE_RING_SIZE; ++i) {
             m_RootSignaturesRingSync[i] = [m_Device newSharedEvent];
             [m_RootSignaturesRingSync[i] setSignaledValue: 0];
         }
 
         m_Cmd = [queue commandBuffer];
+        if (name) {
+            [m_Cmd setLabel: [NSString stringWithUTF8String:name]];
+        }
     }
 
     void MetalCommandList::SubmitToQueue() noexcept {
@@ -169,7 +175,9 @@ namespace RHINO::APIMetal {
         triangleGeoDesc.transformationMatrixBuffer = desc.transformBuffer ? metalTransform->buffer : nil;
         triangleGeoDesc.transformationMatrixBufferOffset = desc.transformBuffer ? desc.transformBufferStartOffset : 0;
         triangleGeoDesc.intersectionFunctionTableOffset = 0; // TODO <- take from desc
-        triangleGeoDesc.label = [NSString stringWithUTF8String:name];
+        if (name) {
+            triangleGeoDesc.label = [NSString stringWithUTF8String:name];
+        }
 
         auto geometryDescriptors = [NSMutableArray array];
         [geometryDescriptors addObject:triangleGeoDesc];
@@ -180,6 +188,9 @@ namespace RHINO::APIMetal {
         MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
 
         result->accelerationStructure = [m_Device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
+        if (name) {
+            [result->accelerationStructure setLabel:[NSString stringWithUTF8String:name]];
+        }
 
         id<MTLAccelerationStructureCommandEncoder> encoder = [m_Cmd accelerationStructureCommandEncoder];
         [encoder buildAccelerationStructure:result->accelerationStructure
@@ -238,6 +249,9 @@ namespace RHINO::APIMetal {
 
         MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
         result->accelerationStructure = [m_Device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
+        if (name) {
+            [result->accelerationStructure setLabel:[NSString stringWithUTF8String:name]];
+        }
 
         id<MTLAccelerationStructureCommandEncoder> encoder = [m_Cmd accelerationStructureCommandEncoder];
         [encoder buildAccelerationStructure:result->accelerationStructure
