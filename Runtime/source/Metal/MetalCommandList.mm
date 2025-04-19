@@ -162,6 +162,14 @@ namespace RHINO::APIMetal {
 
         auto geometryDescriptors = [NSMutableArray array];
         if (desc.type == BLASPrimitiveType::Procedural) {
+            auto* AABBsBuffer = INTERPRET_AS<MetalBuffer*>(desc.procedural.AABBsBuffer);
+            auto aabbGeoDesc = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
+            aabbGeoDesc.boundingBoxBuffer = AABBsBuffer->buffer;
+            aabbGeoDesc.boundingBoxBufferOffset = desc.procedural.AABBsBufferOffset;
+            aabbGeoDesc.boundingBoxCount = desc.procedural.AABBCount;
+            aabbGeoDesc.boundingBoxStride = desc.procedural.AABBStrideInBytes;
+            [geometryDescriptors addObject:aabbGeoDesc];
+        } else {
             const auto& tDesc = desc.triangles;
 
             auto* metalVertex = INTERPRET_AS<MetalBuffer*>(tDesc.vertexBuffer);
@@ -184,14 +192,6 @@ namespace RHINO::APIMetal {
             triangleGeoDesc.transformationMatrixBufferOffset = tDesc.transformBuffer ? tDesc.transformBufferStartOffset : 0;
             triangleGeoDesc.intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
             [geometryDescriptors addObject:triangleGeoDesc];
-        } else {
-            auto* AABBsBuffer = INTERPRET_AS<MetalBuffer*>(desc.procedural.AABBsBuffer);
-            auto aabbGeoDesc = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
-            aabbGeoDesc.boundingBoxBuffer = AABBsBuffer->buffer;
-            aabbGeoDesc.boundingBoxBufferOffset = desc.procedural.AABBsBufferOffset;
-            aabbGeoDesc.boundingBoxCount = desc.procedural.AABBCount;
-            aabbGeoDesc.boundingBoxStride = desc.procedural.AABBStrideInBytes;
-            [geometryDescriptors addObject:aabbGeoDesc];
         }
 
         auto accelerationStructureDescriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];

@@ -554,6 +554,13 @@ namespace RHINO::APIMetal {
 
         auto geometryDescriptors = [NSMutableArray array];
         if (desc.type == BLASPrimitiveType::Procedural) {
+            auto aabbGeoDesc = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
+            aabbGeoDesc.boundingBoxBuffer = nil;
+            aabbGeoDesc.boundingBoxBufferOffset = desc.procedural.AABBsBufferOffset;
+            aabbGeoDesc.boundingBoxCount = desc.procedural.AABBCount;
+            aabbGeoDesc.boundingBoxStride = desc.procedural.AABBStrideInBytes;
+            [geometryDescriptors addObject:aabbGeoDesc];
+        } else {
             const auto& tDesc = desc.triangles;
 
             auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
@@ -571,13 +578,6 @@ namespace RHINO::APIMetal {
             triangleGeoDesc.transformationMatrixBuffer = nil;
             triangleGeoDesc.transformationMatrixBufferOffset = 0;
             [geometryDescriptors addObject:triangleGeoDesc];
-        } else {
-            auto aabbGeoDesc = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
-            aabbGeoDesc.boundingBoxBuffer = nil;
-            aabbGeoDesc.boundingBoxBufferOffset = desc.procedural.AABBsBufferOffset;
-            aabbGeoDesc.boundingBoxCount = desc.procedural.AABBCount;
-            aabbGeoDesc.boundingBoxStride = desc.procedural.AABBStrideInBytes;
-            [geometryDescriptors addObject:aabbGeoDesc];
         }
 
         auto accelerationStructureDescriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
