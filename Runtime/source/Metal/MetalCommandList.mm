@@ -227,20 +227,6 @@ namespace RHINO::APIMetal {
         }
         // [instanceDescBuf didModifyRange:NSMakeRange(0, sizeof(instanceDescBufSize))];
 
-        const size_t gpuASHeaderSize = sizeof(IRRaytracingAccelerationStructureGPUHeader) + instanceContribution.size() * sizeof(uint32_t);
-        result->gpuASHeader = [m_Device newBufferWithLength:gpuASHeaderSize options:0];
-        if(name) {
-            std::string debugName = std::string{name} + ".GPUHeader";
-            [result->gpuASHeader setLabel: [NSString stringWithUTF8String:debugName.c_str()]];
-        }
-        auto ASHeader = static_cast<IRRaytracingAccelerationStructureGPUHeader*>([result->gpuASHeader contents]);
-        auto ASHeaderInstanceContribution = reinterpret_cast<uint32_t*>(&ASHeader[1]);
-        ASHeader->addressOfInstanceContributions = [result->gpuASHeader gpuAddress] + sizeof(IRRaytracingAccelerationStructureGPUHeader);
-        IRRaytracingSetAccelerationStructure(reinterpret_cast<uint8_t*>(ASHeader),
-                                             [result->accelerationStructure gpuResourceID],
-                                             reinterpret_cast<uint8_t*>(ASHeaderInstanceContribution),
-                                             instanceContribution.data(), instanceContribution.size());
-
         auto accelerationStructureDescriptor = [MTLInstanceAccelerationStructureDescriptor descriptor];
         accelerationStructureDescriptor.instanceCount = desc.blasInstancesCount;
         accelerationStructureDescriptor.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeDefault;
@@ -259,6 +245,21 @@ namespace RHINO::APIMetal {
                               scratchBuffer:metalScratch->buffer
                         scratchBufferOffset:scratchBufferStartOffset];
         [encoder endEncoding];
+
+        const size_t gpuASHeaderSize = sizeof(IRRaytracingAccelerationStructureGPUHeader) + instanceContribution.size() * sizeof(uint32_t);
+        result->gpuASHeader = [m_Device newBufferWithLength:gpuASHeaderSize options:0];
+        if(name) {
+            std::string debugName = std::string{name} + ".GPUHeader";
+            [result->gpuASHeader setLabel: [NSString stringWithUTF8String:debugName.c_str()]];
+        }
+        auto ASHeader = static_cast<IRRaytracingAccelerationStructureGPUHeader*>([result->gpuASHeader contents]);
+        auto ASHeaderInstanceContribution = reinterpret_cast<uint32_t*>(&ASHeader[1]);
+        ASHeader->addressOfInstanceContributions = [result->gpuASHeader gpuAddress] + sizeof(IRRaytracingAccelerationStructureGPUHeader);
+        IRRaytracingSetAccelerationStructure(reinterpret_cast<uint8_t*>(ASHeader),
+                                             [result->accelerationStructure gpuResourceID],
+                                             reinterpret_cast<uint8_t*>(ASHeaderInstanceContribution),
+                                             instanceContribution.data(), instanceContribution.size());
+
         return result;
     }
 
