@@ -393,7 +393,7 @@ namespace RHINO::APID3D12 {
         if (desc.type == BLASPrimitiveType::Procedural) {
             geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
             geometryDesc.AABBs.AABBs.StartAddress = dummyNotNullPointer;
-            geometryDesc.AABBs.AABBs.StrideInBytes = desc.procedural.AABBsStrideInBytes;
+            geometryDesc.AABBs.AABBs.StrideInBytes = desc.procedural.AABBStrideInBytes;
             geometryDesc.AABBs.AABBCount = desc.procedural.AABBCount;
         } else {
             geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;

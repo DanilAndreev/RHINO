@@ -566,7 +566,7 @@ namespace RHINO::APIVulkan {
             asGeom.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
             asGeom.geometry.aabbs.pNext = nullptr;
             asGeom.geometry.aabbs.data = constDummyAddr;
-            asGeom.geometry.aabbs.stride = desc.procedural.AABBsStrideInBytes;
+            asGeom.geometry.aabbs.stride = desc.procedural.AABBStrideInBytes;
         } else {
             asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
             asGeom.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;

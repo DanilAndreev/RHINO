@@ -177,7 +177,7 @@ namespace RHINO::APID3D12 {
             geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
             auto* AABBsBuffer = INTERPRET_AS<D3D12Buffer*>(desc.procedural.AABBsBuffer);
             geometryDesc.AABBs.AABBs.StartAddress = AABBsBuffer->buffer->GetGPUVirtualAddress();
-            geometryDesc.AABBs.AABBs.StrideInBytes = desc.procedural.AABBsStrideInBytes;
+            geometryDesc.AABBs.AABBs.StrideInBytes = desc.procedural.AABBStrideInBytes;
             geometryDesc.AABBs.AABBCount = desc.procedural.AABBCount;
         } else {
             geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
