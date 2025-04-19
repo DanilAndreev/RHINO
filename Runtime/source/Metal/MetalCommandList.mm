@@ -136,12 +136,13 @@ namespace RHINO::APIMetal {
         m_CurComputePSO = metalPSO;
     }
 
-    void MetalCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
+    void MetalCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset, DescriptorHeap* SMPHeap,
+                                   size_t SMPHeapOffset) noexcept {
         m_CBVSRVUAVHeap = INTERPRET_AS<MetalDescriptorHeap*>(CBVSRVUAVHeap);
-        m_SamplerHeap = samplerHeap ? INTERPRET_AS<MetalDescriptorHeap*>(samplerHeap) : nullptr;
-        m_CBVSRVUAVHeapOffset = 0;
-        m_SamplerHeapOffset = 0;
-        SetHeapHelper(m_CBVSRVUAVHeap, m_CBVSRVUAVHeapOffset, m_SamplerHeap, m_SamplerHeapOffset);
+        m_SamplerHeap = SMPHeap ? INTERPRET_AS<MetalDescriptorHeap*>(SMPHeap) : nullptr;
+        m_CBVSRVUAVHeapOffset = CBVSRVUAVHeapOffset;
+        m_SMPHeapOffset = SMPHeapOffset;
+        SetHeapHelper(m_CBVSRVUAVHeap, m_CBVSRVUAVHeapOffset, m_SamplerHeap, m_SMPHeapOffset);
     }
 
     void MetalCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
@@ -281,22 +282,20 @@ namespace RHINO::APIMetal {
 
     void MetalCommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
         auto* metalPSO = INTERPRET_AS<MetalRTPSO*>(desc.pso);
-        auto CBVSRVUAVHeap = INTERPRET_AS<MetalDescriptorHeap*>(desc.CDBSRVUAVHeap);
-        MetalDescriptorHeap* samplerHeap = desc.samplerHeap ? INTERPRET_AS<MetalDescriptorHeap*>(desc.samplerHeap) : nullptr;
-        size_t CBVSRVUAVHeapOffset = 0;
-        size_t samplerHeapOffset = 0;
+        auto CBVSRVUAVHeap = INTERPRET_AS<MetalDescriptorHeap*>(desc.CBVSRVUAVHeap);
+        MetalDescriptorHeap* SMPHeap = desc.SMPHeap ? INTERPRET_AS<MetalDescriptorHeap*>(desc.SMPHeap) : nullptr;
 
-        SetHeapHelper(CBVSRVUAVHeap, CBVSRVUAVHeapOffset, samplerHeap, samplerHeapOffset);
+        SetHeapHelper(CBVSRVUAVHeap, desc.CBVSRVUAVHeapOffset, SMPHeap, desc.SMPHeapOffset);
 
         id<MTLComputeCommandEncoder> encoder = [m_Cmd computeCommandEncoder];
 
 
         [encoder useResource:CBVSRVUAVHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
-        if (samplerHeap) {
-            [encoder useResource:samplerHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
+        if (SMPHeap) {
+            [encoder useResource:SMPHeap->GetHeapBuffer() usage:MTLResourceUsageRead];
         }
 
-        IndirectResourcesSet indirectRes = GatherIndirectResources(CBVSRVUAVHeap, CBVSRVUAVHeapOffset, m_CurRootSignature);
+        IndirectResourcesSet indirectRes = GatherIndirectResources(CBVSRVUAVHeap, desc.CBVSRVUAVHeapOffset, m_CurRootSignature);
         [encoder useResources:indirectRes.r.data() count:indirectRes.r.size() usage:indirectRes.rUsage];
         [encoder useResources:indirectRes.rw.data() count:indirectRes.rw.size() usage:indirectRes.rwUsage];
 
@@ -313,17 +312,16 @@ namespace RHINO::APIMetal {
 
         dispatchRaysDesc.RayGenerationShaderRecord = {
                 .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.rayGenerationShaderRecordIndex,
-                //TODO: SizeInBytes is size of table but not one entry.
                 .SizeInBytes = sizeof(IRShaderIdentifier)
         };
         dispatchRaysDesc.HitGroupTable = {
                 .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.hitGroupStartRecordIndex,
-                .SizeInBytes = sizeof(IRShaderIdentifier),
+                .SizeInBytes = recordStride * desc.hitGroupRecordsCount,
                 .StrideInBytes = recordStride,
         };
         dispatchRaysDesc.MissShaderTable = {
                 .StartAddress = [metalPSO->shaderTable gpuAddress] + recordStride * desc.hitGroupStartRecordIndex,
-                .SizeInBytes = sizeof(IRShaderIdentifier),
+                .SizeInBytes = recordStride * desc.missShaderRecordsCount,
                 .StrideInBytes = recordStride,
         };
         dispatchRaysDesc.CallableShaderTable = {
@@ -340,7 +338,7 @@ namespace RHINO::APIMetal {
         dispatchRaysArgs.GRS                       = [m_RootSignaturesRing gpuAddress] + rootSignatureOffset;
         // Heap offsets are taken in account by root signature in SetHeapHelper
         dispatchRaysArgs.ResDescHeap               = [CBVSRVUAVHeap->GetHeapBuffer() gpuAddress];
-        dispatchRaysArgs.SmpDescHeap               = samplerHeap ? [samplerHeap->GetHeapBuffer() gpuAddress] : 0;
+        dispatchRaysArgs.SmpDescHeap               = SMPHeap ? [SMPHeap->GetHeapBuffer() gpuAddress] : 0;
         dispatchRaysArgs.VisibleFunctionTable      = [metalPSO->vft gpuResourceID];
         dispatchRaysArgs.IntersectionFunctionTable = [metalPSO->ift gpuResourceID];
 
@@ -359,7 +357,7 @@ namespace RHINO::APIMetal {
     }
 
     void MetalCommandList::BuildRTPSO(RTPSO* pso) noexcept {
-        // TODO: implement
+        // NOOP
     }
 
     void MetalCommandList::ResourceBarrier(const ResourceBarrierDesc& desc) noexcept {
@@ -372,7 +370,7 @@ namespace RHINO::APIMetal {
         for (size_t spaceIdx = 0; spaceIdx < m_CurRootSignature->spaceDescs.size(); ++spaceIdx) {
             const auto& spaceDesc = m_CurRootSignature->spaceDescs[spaceIdx];
             RootSignatureRecordT record = 0;
-            if (spaceDesc.rangeDescs[0].rangeType == DescriptorRangeType::Sampler) {
+            if (spaceDesc.rangeDescs[0].rangeType == DescriptorRangeType::SMP) {
                 record = [samplerHeap->GetHeapBuffer() gpuAddress] + samplerHeapOffset;
                 record += spaceDesc.offsetInDescriptorsFromTableStart * samplerHeap->GetDescriptorStride();
             } else {

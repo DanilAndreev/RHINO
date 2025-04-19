@@ -27,7 +27,7 @@ namespace RHINO::APIMetal {
         MetalDescriptorHeap* m_CBVSRVUAVHeap = nullptr;
         size_t m_CBVSRVUAVHeapOffset = 0;
         MetalDescriptorHeap* m_SamplerHeap = nullptr;
-        size_t m_SamplerHeapOffset = 0;
+        size_t m_SMPHeapOffset = 0;
 
         // Top Level Argument Buffers ring emulating D3D12 Root Signatures.
         id<MTLBuffer> m_RootSignaturesRing = nil;
@@ -43,7 +43,8 @@ namespace RHINO::APIMetal {
         void Dispatch(const DispatchDesc& desc) noexcept final;
         void Draw() noexcept final;
         void SetComputePSO(ComputePSO* pso) noexcept final;
-        void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept final;
+        void SetHeap(DescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset, DescriptorHeap* SMPHeap,
+                     size_t SMPHeapOffset) noexcept final;
         void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
         void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
         void ResourceBarrier(const RHINO::ResourceBarrierDesc &desc) noexcept final;

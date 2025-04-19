@@ -70,7 +70,7 @@ namespace RHINO::APIMetal {
                     case RHINO::DescriptorRangeType::CBV:
                         rangeDesc.RangeType = IRDescriptorRangeTypeCBV;
                         break;
-                    case RHINO::DescriptorRangeType::Sampler:
+                    case RHINO::DescriptorRangeType::SMP:
                         rangeDesc.RangeType = IRDescriptorRangeTypeSampler;
                         break;
                 }
@@ -341,14 +341,17 @@ namespace RHINO::APIMetal {
         std::vector<id<MTLFunction>> psoLinkedFunctions{compiledSMs.begin(), compiledSMs.end()};
         psoLinkedFunctions.emplace_back(synthTriangleIndirectIntersectionFn);
         psoLinkedFunctions.emplace_back(synthAABBIndirectIntersectionFn);
-        NSArray *nsCompiledSMs = [NSArray arrayWithObjects:psoLinkedFunctions.data() count:psoLinkedFunctions.size()];
+        NSArray *nsPSOLinkedFNs = [NSArray arrayWithObjects:psoLinkedFunctions.data() count:psoLinkedFunctions.size()];
         MTLLinkedFunctions* linkedFn = [[MTLLinkedFunctions alloc] init];
-        [linkedFn setFunctions:nsCompiledSMs];
+        [linkedFn setFunctions:nsPSOLinkedFNs];
 
         // Creating RT PSO
         MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
         [descriptor setComputeFunction:dispatchSynthFn];
         [descriptor setLinkedFunctions:linkedFn];
+
+        //TODO: fix stack overflow and remove this statement.
+        [descriptor setMaxCallStackDepth:20];
         if (desc.debugName) {
             [descriptor setLabel:[NSString stringWithUTF8String:desc.debugName]];
         }
