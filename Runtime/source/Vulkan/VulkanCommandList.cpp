@@ -187,7 +187,7 @@ namespace RHINO::APIVulkan {
         auto result = new VulkanBLAS{};
 
         VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
-        asGeom.flags = Convert::ToVkGeometryFlags(desc.flags);
+        asGeom.flags = 0;
         if (desc.type == BLASPrimitiveType::Procedural) {
             asGeom.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
             auto* AABBsBuffer = INTERPRET_AS<VulkanBuffer*>(desc.procedural.AABBsBuffer);
@@ -260,7 +260,7 @@ namespace RHINO::APIVulkan {
         for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
             const BLASInstanceDesc& instanceDesc = desc.blasInstances[i];
             VkAccelerationStructureInstanceKHR nativeInstanceDesc{};
-            nativeInstanceDesc.flags = 0;
+            nativeInstanceDesc.flags = Convert::ToVkGeometryInstanceFlags(instanceDesc.flags);;
             nativeInstanceDesc.mask = instanceDesc.instanceMask;
             nativeInstanceDesc.instanceCustomIndex = instanceDesc.instanceID;
             nativeInstanceDesc.instanceShaderBindingTableRecordOffset = 0;

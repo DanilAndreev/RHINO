@@ -242,10 +242,19 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
-    inline VkGeometryFlagsKHR ToVkGeometryFlags(const GeometryFlags flags) noexcept {
+    inline VkGeometryInstanceFlagsKHR ToVkGeometryInstanceFlags(const BLASInstanceFlags flags) noexcept {
         VkGeometryFlagsKHR result = 0;
-        if (static_cast<bool>(flags & GeometryFlags::Opaque)) {
-            result |= VK_GEOMETRY_OPAQUE_BIT_KHR;
+        if (static_cast<bool>(flags & BLASInstanceFlags::DiableTriangleCulling)) {
+            result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::TriangleFrontCounterClockwise)) {
+            result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::Opaque)) {
+            result |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::NonOpaque)) {
+            result |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR;
         }
         return result;
     }

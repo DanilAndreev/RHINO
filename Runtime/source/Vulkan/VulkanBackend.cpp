@@ -580,10 +580,6 @@ namespace RHINO::APIVulkan {
             asGeom.geometry.triangles.transformData = constDummyAddr;
         }
 
-
-
-
-
         VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
         buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;
         buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |

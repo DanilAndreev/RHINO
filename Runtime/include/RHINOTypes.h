@@ -309,11 +309,6 @@ namespace RHINO {
         Procedural,
     };
 
-    enum class GeometryFlags : uint32_t {
-        None = 0x0,
-        Opaque = 0x1,
-    };
-
     struct BLASTrianglesGeometryDesc {
         Buffer* indexBuffer = nullptr;
         size_t indexBufferStartOffset = 0;
@@ -348,17 +343,25 @@ namespace RHINO {
 
     struct BLASDesc {
         BLASPrimitiveType type = BLASPrimitiveType::Triangles;
-        GeometryFlags flags = GeometryFlags::None;
         union {
             BLASTrianglesGeometryDesc triangles;
             BLASProceduralPrimitiveDesc procedural;
         };
     };
 
+    enum class BLASInstanceFlags : uint32_t {
+        None = 0x0,
+        DiableTriangleCulling = 0x1,
+        TriangleFrontCounterClockwise = 0x2,
+        Opaque = 0x4,
+        NonOpaque = 0x8,
+    };
+
     struct BLASInstanceDesc {
         BLAS* blas = nullptr;
         uint32_t instanceID = 0;
         uint32_t instanceMask = ~0u;
+        BLASInstanceFlags flags = BLASInstanceFlags::None;
         float transform[3][4] = {1.0f, 0.0f, 0.0f, 0.0f,
                                  0.0f, 1.0f, 0.0f, 0.0f,
                                  0.0f, 0.0f, 1.0f, 0.0f};
@@ -468,4 +471,4 @@ namespace RHINO {
 } // namespace RHINO
 
 RHINO_DECLARE_BITMASK_ENUM(RHINO::ResourceUsage);
-RHINO_DECLARE_BITMASK_ENUM(RHINO::GeometryFlags);
+RHINO_DECLARE_BITMASK_ENUM(RHINO::BLASInstanceFlags);

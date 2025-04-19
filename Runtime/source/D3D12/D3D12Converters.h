@@ -239,14 +239,22 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline D3D12_RAYTRACING_GEOMETRY_FLAGS ToD3D12RayTracingGeometryFlags(const GeometryFlags flags) noexcept {
-        D3D12_RAYTRACING_GEOMETRY_FLAGS result = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
-        if (static_cast<bool>(flags & GeometryFlags::Opaque)) {
-            result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+    inline D3D12_RAYTRACING_INSTANCE_FLAGS ToD3D12RayTracingInstanceFlags(const BLASInstanceFlags flags) noexcept {
+        D3D12_RAYTRACING_INSTANCE_FLAGS result = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+        if (static_cast<bool>(flags & BLASInstanceFlags::DiableTriangleCulling)) {
+            result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::TriangleFrontCounterClockwise)) {
+            result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::Opaque)) {
+            result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
+        }
+        if (static_cast<bool>(flags & BLASInstanceFlags::NonOpaque)) {
+            result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE;
         }
         return result;
     }
-
 } // namespace RHINO::APID3D12::Convert
 
 #endif // ENABLE_API_D3D12

@@ -172,7 +172,7 @@ namespace RHINO::APID3D12 {
         auto result = new D3D12BLAS{};
 
         D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
-        geometryDesc.Flags = Convert::ToD3D12RayTracingGeometryFlags(desc.flags);
+        geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
         if (desc.type == BLASPrimitiveType::Procedural) {
             geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
             auto* AABBsBuffer = INTERPRET_AS<D3D12Buffer*>(desc.procedural.AABBsBuffer);
@@ -266,7 +266,7 @@ namespace RHINO::APID3D12 {
             const BLASInstanceDesc& instanceDesc = desc.blasInstances[i];
             auto* d3d12BLAS = INTERPRET_AS<D3D12BLAS*>(instanceDesc.blas);
             D3D12_RAYTRACING_INSTANCE_DESC& mappedInstanceDesc = mappedData[i];
-            mappedInstanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+            mappedInstanceDesc.Flags = Convert::ToD3D12RayTracingInstanceFlags(instanceDesc.flags);
             mappedInstanceDesc.InstanceID = instanceDesc.instanceID;
             mappedInstanceDesc.InstanceMask = instanceDesc.instanceMask;
             mappedInstanceDesc.AccelerationStructure = d3d12BLAS->buffer->GetGPUVirtualAddress();
