@@ -26,7 +26,8 @@ namespace RHINO::APIMetal {
                     case DescriptorRangeType::CBV:
                     case DescriptorRangeType::SRV: {
                         for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            const auto& resEntry = CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i];
+                            const auto& resources = CBVSRVUAVHeap->GetBoundResources();
+                            const auto& resEntry = resources[CBVSRVUAVHeapOffset + pos + i];
                             if (resEntry.direct != nil) {
                                 result.r.push_back(resEntry.direct);
                                 for (const id<MTLResource>& indirectResource : resEntry.indirect) {
@@ -40,7 +41,8 @@ namespace RHINO::APIMetal {
                     }
                     case DescriptorRangeType::UAV: {
                         for (size_t i = 0; i < space.rangeDescs[spaceIdx].descriptorsCount; ++i) {
-                            const auto& resEntry = CBVSRVUAVHeap->m_Resources[CBVSRVUAVHeapOffset + pos + i];
+                            const auto& resources = CBVSRVUAVHeap->GetBoundResources();
+                            const auto& resEntry = resources[CBVSRVUAVHeapOffset + pos + i];
                             if (resEntry.direct != nil) {
                                 result.rw.push_back(resEntry.direct);
                                 for (const id<MTLResource>& indirectResource : resEntry.indirect) {
