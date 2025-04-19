@@ -341,7 +341,8 @@ namespace RHINO {
     struct BLASProceduralPrimitiveDesc {
         // GPU Buffer containing RayTracingAABB structures
         Buffer* AABBsBuffer = nullptr;
-        size_t AABBsStrideInBytes = 0;
+        size_t AABBsBufferOffset = 0;
+        size_t AABBStrideInBytes = 0;
         size_t AABBCount = 0;
     };
 

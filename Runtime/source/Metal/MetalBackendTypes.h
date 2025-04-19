@@ -90,7 +90,7 @@ namespace RHINO::APIMetal {
     class MetalBLAS : public BLASBase {
     public:
         id<MTLAccelerationStructure> accelerationStructure = nil;
-
+        BLASPrimitiveType type = BLASPrimitiveType::Triangles;
     public:
         void Release() noexcept final {
             delete this;

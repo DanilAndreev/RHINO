@@ -156,33 +156,43 @@ namespace RHINO::APIMetal {
     BLAS* MetalCommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                       const char* name) noexcept {
         auto* result = new MetalBLAS{};
+        result->type = desc.type;
+
         auto* metalScratch = INTERPRET_AS<MetalBuffer*>(scratchBuffer);
 
-        auto* metalVertex = INTERPRET_AS<MetalBuffer*>(desc.vertexBuffer);
-        auto* metalIndex = INTERPRET_AS<MetalBuffer*>(desc.indexBuffer);
-        auto* metalTransform = desc.transformBuffer ? INTERPRET_AS<MetalBuffer*>(desc.transformBuffer) : nullptr;
-
-        auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
-        triangleGeoDesc.vertexBuffer = metalVertex->buffer;
-        triangleGeoDesc.vertexBufferOffset = desc.vertexBufferStartOffset;
-        triangleGeoDesc.vertexFormat = Convert::ToMTLMTLAttributeFormat(desc.vertexFormat);
-        triangleGeoDesc.vertexStride = desc.vertexStride;
-        triangleGeoDesc.indexBuffer = metalIndex->buffer;
-        triangleGeoDesc.indexBufferOffset = desc.indexBufferStartOffset;
-        triangleGeoDesc.indexType = MTLIndexTypeUInt16;
-        triangleGeoDesc.triangleCount = desc.indexCount / 3;
-        triangleGeoDesc.primitiveDataBuffer = nil;
-        triangleGeoDesc.primitiveDataStride = 0;
-        triangleGeoDesc.primitiveDataElementSize = 0;
-        triangleGeoDesc.transformationMatrixBuffer = desc.transformBuffer ? metalTransform->buffer : nil;
-        triangleGeoDesc.transformationMatrixBufferOffset = desc.transformBuffer ? desc.transformBufferStartOffset : 0;
-        triangleGeoDesc.intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
-        if (name) {
-            triangleGeoDesc.label = [NSString stringWithUTF8String:name];
-        }
-
         auto geometryDescriptors = [NSMutableArray array];
-        [geometryDescriptors addObject:triangleGeoDesc];
+        if (desc.type == BLASPrimitiveType::Procedural) {
+            const auto& tDesc = desc.triangles;
+
+            auto* metalVertex = INTERPRET_AS<MetalBuffer*>(tDesc.vertexBuffer);
+            auto* metalIndex = INTERPRET_AS<MetalBuffer*>(tDesc.indexBuffer);
+            auto* metalTransform = tDesc.transformBuffer ? INTERPRET_AS<MetalBuffer*>(tDesc.transformBuffer) : nullptr;
+
+            auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+            triangleGeoDesc.vertexBuffer = metalVertex->buffer;
+            triangleGeoDesc.vertexBufferOffset = tDesc.vertexBufferStartOffset;
+            triangleGeoDesc.vertexFormat = Convert::ToMTLMTLAttributeFormat(tDesc.vertexFormat);
+            triangleGeoDesc.vertexStride = tDesc.vertexStride;
+            triangleGeoDesc.indexBuffer = metalIndex->buffer;
+            triangleGeoDesc.indexBufferOffset = tDesc.indexBufferStartOffset;
+            triangleGeoDesc.indexType = Convert::ToMTLIndexType(tDesc.indexFormat);
+            triangleGeoDesc.triangleCount = tDesc.indexCount / 3;
+            triangleGeoDesc.primitiveDataBuffer = nil;
+            triangleGeoDesc.primitiveDataStride = 0;
+            triangleGeoDesc.primitiveDataElementSize = 0;
+            triangleGeoDesc.transformationMatrixBuffer = tDesc.transformBuffer ? metalTransform->buffer : nil;
+            triangleGeoDesc.transformationMatrixBufferOffset = tDesc.transformBuffer ? tDesc.transformBufferStartOffset : 0;
+            triangleGeoDesc.intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
+            [geometryDescriptors addObject:triangleGeoDesc];
+        } else {
+            auto* AABBsBuffer = INTERPRET_AS<MetalBuffer*>(desc.procedural.AABBsBuffer);
+            auto aabbGeoDesc = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
+            aabbGeoDesc.boundingBoxBuffer = AABBsBuffer->buffer;
+            aabbGeoDesc.boundingBoxBufferOffset = desc.procedural.AABBsBufferOffset;
+            aabbGeoDesc.boundingBoxCount = desc.procedural.AABBCount;
+            aabbGeoDesc.boundingBoxStride = desc.procedural.AABBStrideInBytes;
+            [geometryDescriptors addObject:aabbGeoDesc];
+        }
 
         auto accelerationStructureDescriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
         accelerationStructureDescriptor.geometryDescriptors = geometryDescriptors;
@@ -236,8 +246,12 @@ namespace RHINO::APIMetal {
             instanceDescBufContents[i].transformationMatrix = transform;
             //TODO: get it from settings
             instanceDescBufContents[i].options = MTLAccelerationStructureInstanceOptionOpaque;
-            //TODO: different offsets for triangle and AABB BLAS
-            instanceDescBufContents[i].intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
+
+            if (metalBLAS->type == BLASPrimitiveType::Triangles) {
+                instanceDescBufContents[i].intersectionFunctionTableOffset = IFT_SYNTH_TRIANGLE_INTERSECTION_IDX;
+            } else {
+                instanceDescBufContents[i].intersectionFunctionTableOffset = IFT_SYNTH_AABB_INTERSECTION_IDX;
+            }
         }
         // [instanceDescBuf didModifyRange:NSMakeRange(0, sizeof(instanceDescBufSize))];
 

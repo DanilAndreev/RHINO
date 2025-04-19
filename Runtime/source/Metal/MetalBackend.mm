@@ -551,24 +551,36 @@ namespace RHINO::APIMetal {
     }
 
     ASPrebuildInfo MetalBackend::GetBLASPrebuildInfo(const BLASDesc& desc) noexcept {
-        auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
-        triangleGeoDesc.vertexBuffer = nil;
-        triangleGeoDesc.vertexBufferOffset = 0;
-        triangleGeoDesc.vertexFormat = Convert::ToMTLMTLAttributeFormat(desc.vertexFormat);
-        triangleGeoDesc.vertexStride = desc.vertexStride;
-        triangleGeoDesc.indexBuffer = nil;
-        triangleGeoDesc.indexBufferOffset = 0;
-        triangleGeoDesc.indexType = Convert::ToMTLIndexType(desc.indexFormat);
-        triangleGeoDesc.triangleCount = desc.indexCount / 3;
-        triangleGeoDesc.primitiveDataBuffer = nil;
-        triangleGeoDesc.primitiveDataStride = 0;
-        triangleGeoDesc.primitiveDataElementSize = 0;
-        triangleGeoDesc.transformationMatrixBuffer = nil;
-        triangleGeoDesc.transformationMatrixBufferOffset = 0;
+
+        auto geometryDescriptors = [NSMutableArray array];
+        if (desc.type == BLASPrimitiveType::Procedural) {
+            const auto& tDesc = desc.triangles;
+
+            auto triangleGeoDesc = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+            triangleGeoDesc.vertexBuffer = nil;
+            triangleGeoDesc.vertexBufferOffset = 0;
+            triangleGeoDesc.vertexFormat = Convert::ToMTLMTLAttributeFormat(tDesc.vertexFormat);
+            triangleGeoDesc.vertexStride = tDesc.vertexStride;
+            triangleGeoDesc.indexBuffer = nil;
+            triangleGeoDesc.indexBufferOffset = 0;
+            triangleGeoDesc.indexType = Convert::ToMTLIndexType(tDesc.indexFormat);
+            triangleGeoDesc.triangleCount = tDesc.indexCount / 3;
+            triangleGeoDesc.primitiveDataBuffer = nil;
+            triangleGeoDesc.primitiveDataStride = 0;
+            triangleGeoDesc.primitiveDataElementSize = 0;
+            triangleGeoDesc.transformationMatrixBuffer = nil;
+            triangleGeoDesc.transformationMatrixBufferOffset = 0;
+            [geometryDescriptors addObject:triangleGeoDesc];
+        } else {
+            auto aabbGeoDesc = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
+            aabbGeoDesc.boundingBoxBuffer = nil;
+            aabbGeoDesc.boundingBoxBufferOffset = desc.procedural.AABBsBufferOffset;
+            aabbGeoDesc.boundingBoxCount = desc.procedural.AABBCount;
+            aabbGeoDesc.boundingBoxStride = desc.procedural.AABBStrideInBytes;
+            [geometryDescriptors addObject:aabbGeoDesc];
+        }
 
         auto accelerationStructureDescriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
-        auto geometryDescriptors = [NSMutableArray array];
-        [geometryDescriptors addObject:triangleGeoDesc];
 
         accelerationStructureDescriptor.geometryDescriptors = geometryDescriptors;
         MTLAccelerationStructureSizes sizes = [m_Device accelerationStructureSizesWithDescriptor:accelerationStructureDescriptor];
