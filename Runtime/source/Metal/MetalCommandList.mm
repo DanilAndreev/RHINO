@@ -286,6 +286,7 @@ namespace RHINO::APIMetal {
         [encoder useResource:metalPSO->vft usage:MTLResourceUsageRead];
         [encoder useResource:metalPSO->ift usage:MTLResourceUsageRead];
         [encoder useResource:metalPSO->shaderTable usage:MTLResourceUsageRead];
+        [encoder useResource:m_RootSignaturesRing usage:MTLResourceUsageRead];
 
         const size_t rootSignatureOffset = m_CurrentRingRootSignatureIndex * sizeof(RootSignatureT);
         m_RootSignaturesRingSyncWaitValue[m_CurrentRingRootSignatureIndex] += 1;
@@ -320,8 +321,9 @@ namespace RHINO::APIMetal {
         IRDispatchRaysArgument dispatchRaysArgs;
         dispatchRaysArgs.DispatchRaysDesc          = dispatchRaysDesc;
         dispatchRaysArgs.GRS                       = [m_RootSignaturesRing gpuAddress] + rootSignatureOffset;
-        dispatchRaysArgs.ResDescHeap               = [CBVSRVUAVHeap->GetHeapBuffer() gpuAddress] + CBVSRVUAVHeapOffset;
-        dispatchRaysArgs.SmpDescHeap               = samplerHeap ? [samplerHeap->GetHeapBuffer() gpuAddress] + samplerHeapOffset : 0;
+        // Heap offsets are taken in account by root signature in SetHeapHelper
+        dispatchRaysArgs.ResDescHeap               = [CBVSRVUAVHeap->GetHeapBuffer() gpuAddress];
+        dispatchRaysArgs.SmpDescHeap               = samplerHeap ? [samplerHeap->GetHeapBuffer() gpuAddress] : 0;
         dispatchRaysArgs.VisibleFunctionTable      = [metalPSO->vft gpuResourceID];
         dispatchRaysArgs.IntersectionFunctionTable = [metalPSO->ift gpuResourceID];
 
