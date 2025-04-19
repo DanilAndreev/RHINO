@@ -41,7 +41,7 @@ namespace RHINO::APIVulkan {
                 types = VulkanDescriptorHeap::CDBSRVUAVTypes;
                 break;
             }
-            case DescriptorHeapType::Sampler:
+            case DescriptorHeapType::SMP:
                 typesSize = RHINO_ARR_SIZE(SamplerTypes);
                 types = SamplerTypes;
                 break;
@@ -54,7 +54,7 @@ namespace RHINO::APIVulkan {
         for (size_t i = 0; i < typesSize; ++i) {
             switch (types[i]) {
                 case VK_DESCRIPTOR_TYPE_SAMPLER:
-                    assert(heapType == DescriptorHeapType::Sampler);
+                    assert(heapType == DescriptorHeapType::SMP);
                     maxDescriptorSize = std::max(maxDescriptorSize, descriptorProps.samplerDescriptorSize);
                     break;
                 case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:

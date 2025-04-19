@@ -19,6 +19,7 @@ namespace RHINO::APIVulkan {
     public:
         void Initialize(const char* name, DescriptorHeapType type, size_t descriptorsCount, VulkanObjectContext context) noexcept;
         VkDeviceAddress GetHeapGPUStartHandle() noexcept;
+        size_t GetDescriptorSize() noexcept;
 
     public:
         void WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept final;

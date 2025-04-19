@@ -114,7 +114,7 @@ namespace RHINO::APID3D12::Convert {
                 return D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
             case DescriptorHeapType::DSV:
                 return D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-            case DescriptorHeapType::Sampler:
+            case DescriptorHeapType::SMP:
                 return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
             default:
                 assert(0);

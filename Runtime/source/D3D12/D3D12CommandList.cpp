@@ -38,10 +38,10 @@ namespace RHINO::APID3D12 {
         m_Cmd->Dispatch(desc.dimensionsX, desc.dimensionsY, desc.dimensionsZ);
     }
     void D3D12CommandList::DispatchRays(const DispatchRaysDesc& desc) noexcept {
-        auto* d3d12PSO = static_cast<D3D12RTPSO*>(desc.pso);
+        auto* d3d12PSO = INTERPRET_AS<D3D12RTPSO*>(desc.pso);
 
         m_Cmd->SetPipelineState1(d3d12PSO->PSO);
-        SetHeap(desc.CDBSRVUAVHeap, desc.samplerHeap);
+        SetHeap(desc.CBVSRVUAVHeap, desc.CBVSRVUAVHeapOffset, desc.SMPHeap, desc.SMPHeapOffset);
 
         D3D12_DISPATCH_RAYS_DESC raysDesc{};
         const size_t recordStride = d3d12PSO->tableRecordStride;
@@ -51,10 +51,10 @@ namespace RHINO::APID3D12 {
         raysDesc.RayGenerationShaderRecord.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
         auto missStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordStride * desc.missShaderStartRecordIndex;
         raysDesc.MissShaderTable.StartAddress = missStart;
-        raysDesc.MissShaderTable.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        raysDesc.MissShaderTable.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES * desc.missShaderRecordsCount;
         auto hitGroupStart = d3d12PSO->shaderTable->GetGPUVirtualAddress() + recordStride * desc.hitGroupStartRecordIndex;
         raysDesc.HitGroupTable.StartAddress = hitGroupStart;
-        raysDesc.HitGroupTable.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        raysDesc.HitGroupTable.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES * desc.hitGroupRecordsCount;
         raysDesc.Width = desc.width;
         raysDesc.Height = desc.height;
         raysDesc.Depth = 1;
@@ -104,13 +104,13 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12CommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
-        auto d3d12Src = static_cast<D3D12Buffer*>(src);
-        auto d3d12Dst = static_cast<D3D12Buffer*>(dst);
+        auto d3d12Src = INTERPRET_AS<D3D12Buffer*>(src);
+        auto d3d12Dst = INTERPRET_AS<D3D12Buffer*>(dst);
         m_Cmd->CopyBufferRegion(d3d12Dst->buffer, dstOffset, d3d12Src->buffer, srcOffset, size);
     }
 
     void D3D12CommandList::SetComputePSO(ComputePSO* pso) noexcept {
-        auto* d3d12ComputePSO = static_cast<D3D12ComputePSO*>(pso);
+        auto* d3d12ComputePSO = INTERPRET_AS<D3D12ComputePSO*>(pso);
         m_Cmd->SetPipelineState(d3d12ComputePSO->PSO);
     }
 
@@ -119,28 +119,31 @@ namespace RHINO::APID3D12 {
         m_Cmd->SetComputeRootSignature(m_CurRootSignature->rootSignature);
     }
 
-    void D3D12CommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* samplerHeap) noexcept {
-        auto* d3d12CBVSRVUAVHeap = static_cast<D3D12DescriptorHeap*>(CBVSRVUAVHeap);
-        auto* d3d12SamplerHeap = static_cast<D3D12DescriptorHeap*>(samplerHeap);
+    void D3D12CommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset, DescriptorHeap* SMPHeap,
+                                   size_t SMPHeapOffset) noexcept {
+        auto* d3d12CBVSRVUAVHeap = INTERPRET_AS<D3D12DescriptorHeap*>(CBVSRVUAVHeap);
+        auto* d3d12SMPHeap = SMPHeap ? INTERPRET_AS<D3D12DescriptorHeap*>(SMPHeap) : nullptr;
 
-        if (!samplerHeap) {
+        if (!d3d12SMPHeap) {
             m_Cmd->SetDescriptorHeaps(1, &d3d12CBVSRVUAVHeap->GPUDescriptorHeap);
         } else {
-            ID3D12DescriptorHeap* heaps[] = {d3d12CBVSRVUAVHeap->GPUDescriptorHeap, d3d12SamplerHeap->GPUDescriptorHeap};
+            ID3D12DescriptorHeap* heaps[] = {d3d12CBVSRVUAVHeap->GPUDescriptorHeap, d3d12SMPHeap->GPUDescriptorHeap};
             m_Cmd->SetDescriptorHeaps(2, heaps);
         }
 
         for (size_t spaceIdx = 0; spaceIdx < m_CurRootSignature->spaceDescs.size(); ++spaceIdx) {
-            if (m_CurRootSignature->spaceDescs[spaceIdx].rangeDescs[0].rangeType == DescriptorRangeType::Sampler) {
-                m_Cmd->SetComputeRootDescriptorTable(spaceIdx, d3d12SamplerHeap->GPUHeapGPUStartHandle);
+            if (m_CurRootSignature->spaceDescs[spaceIdx].rangeDescs[0].rangeType == DescriptorRangeType::SMP) {
+                if (d3d12SMPHeap) {
+                    m_Cmd->SetComputeRootDescriptorTable(spaceIdx, d3d12SMPHeap->GetGPUHeapGPUHandle(SMPHeapOffset));
+                }
             } else {
-                m_Cmd->SetComputeRootDescriptorTable(spaceIdx, d3d12CBVSRVUAVHeap->GPUHeapGPUStartHandle);
+                m_Cmd->SetComputeRootDescriptorTable(spaceIdx, d3d12CBVSRVUAVHeap->GetGPUHeapGPUHandle(CBVSRVUAVHeapOffset));
             }
         }
     }
 
     void D3D12CommandList::BuildRTPSO(RTPSO* pso) noexcept {
-        auto* d3d12PSO = static_cast<D3D12RTPSO*>(pso);
+        auto* d3d12PSO = INTERPRET_AS<D3D12RTPSO*>(pso);
         assert(d3d12PSO->tableRecordStride >= D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 
         ID3D12StateObjectProperties* rtpsoInfo;
@@ -164,10 +167,10 @@ namespace RHINO::APID3D12 {
 
     BLAS* D3D12CommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                       const char* name) noexcept {
-        auto* indexBuffer = static_cast<D3D12Buffer*>(desc.indexBuffer);
-        auto* vertexBuffer = static_cast<D3D12Buffer*>(desc.vertexBuffer);
-        auto* transform = static_cast<D3D12Buffer*>(desc.transformBuffer);
-        auto* scratch = static_cast<D3D12Buffer*>(scratchBuffer);
+        auto* indexBuffer = INTERPRET_AS<D3D12Buffer*>(desc.indexBuffer);
+        auto* vertexBuffer = INTERPRET_AS<D3D12Buffer*>(desc.vertexBuffer);
+        auto* transform = desc.transformBuffer ? INTERPRET_AS<D3D12Buffer*>(desc.transformBuffer) : nullptr;
+        auto* scratch = INTERPRET_AS<D3D12Buffer*>(scratchBuffer);
 
         auto result = new D3D12BLAS{};
 
@@ -236,7 +239,7 @@ namespace RHINO::APID3D12 {
 
     TLAS* D3D12CommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                       const char* name) noexcept {
-        auto* scratch = static_cast<D3D12Buffer*>(scratchBuffer);
+        auto* scratch = INTERPRET_AS<D3D12Buffer*>(scratchBuffer);
 
         auto result = new D3D12TLAS{};
 
@@ -249,7 +252,7 @@ namespace RHINO::APID3D12 {
         blasInstancesCPU->Map(0, nullptr, reinterpret_cast<void**>(&mappedData));
         for (size_t i = 0; i < desc.blasInstancesCount; ++i) {
             const BLASInstanceDesc& instanceDesc = desc.blasInstances[i];
-            auto* d3d12BLAS = static_cast<D3D12BLAS*>(instanceDesc.blas);
+            auto* d3d12BLAS = INTERPRET_AS<D3D12BLAS*>(instanceDesc.blas);
             D3D12_RAYTRACING_INSTANCE_DESC& mappedInstanceDesc = mappedData[i];
             mappedInstanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
             mappedInstanceDesc.InstanceID = instanceDesc.instanceID;

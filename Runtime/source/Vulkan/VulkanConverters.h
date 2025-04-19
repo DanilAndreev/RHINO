@@ -20,7 +20,7 @@ namespace RHINO::APIVulkan::Convert {
                 return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             case DescriptorType::Texture3DUAV:
                 return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            case DescriptorType::Sampler:
+            case DescriptorType::SMP:
                 return VK_DESCRIPTOR_TYPE_SAMPLER;
             default:
                 assert(0);

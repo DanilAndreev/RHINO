@@ -131,7 +131,7 @@ namespace RHINO::APIVulkan {
 
             // Fill binding to highest bind slot with sampler / mutable descriptor desc.
             VkMutableDescriptorTypeListEXT fillMutTypeList;
-            if (spaceDesc.spaceType == DescriptorHeapType::Sampler) {
+            if (spaceDesc.spaceType == DescriptorHeapType::SMP) {
                 for (uint32_t i = 0; i < bindings.size(); ++i) {
                     bindings[i] = VkDescriptorSetLayoutBinding{i, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
                                                                VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
@@ -156,7 +156,7 @@ namespace RHINO::APIVulkan {
             mutableDescriptorTypeCreateInfoExt.pMutableDescriptorTypeLists = mutableDescriptorTypeLists.data();
 
             VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-            setLayoutCreateInfo.pNext = spaceDesc.spaceType == DescriptorHeapType::Sampler ? nullptr : &mutableDescriptorTypeCreateInfoExt;
+            setLayoutCreateInfo.pNext = spaceDesc.spaceType == DescriptorHeapType::SMP ? nullptr : &mutableDescriptorTypeCreateInfoExt;
             setLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
             // setLayoutCreateInfo.flags = isSamplerSpace ? 0 : VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
             setLayoutCreateInfo.bindingCount = bindings.size();

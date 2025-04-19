@@ -80,7 +80,7 @@ namespace RHINO::APID3D12 {
                     case DescriptorRangeType::CBV:
                         rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
                         break;
-                    case DescriptorRangeType::Sampler:
+                    case DescriptorRangeType::SMP:
                         rangeDesc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
                         break;
                 }

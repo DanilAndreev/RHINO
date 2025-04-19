@@ -14,7 +14,8 @@ namespace RHINO::APIVulkan {
         void SetRootSignature(RootSignature* rootSignature) noexcept final;
         void CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept final;
         void SetComputePSO(ComputePSO* pso) noexcept final;
-        void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept final;
+        void SetHeap(DescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset, DescriptorHeap* SMPHeap,
+                     size_t SMPHeapOffset) noexcept final;
         void Dispatch(const DispatchDesc& desc) noexcept final;
         void DispatchRays(const DispatchRaysDesc& desc) noexcept final;
         void Draw() noexcept final;

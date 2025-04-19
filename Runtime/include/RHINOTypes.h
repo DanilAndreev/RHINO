@@ -66,7 +66,7 @@ namespace RHINO {
         SRV_CBV_UAV,
         RTV,
         DSV,
-        Sampler,
+        SMP,
         Count,
     };
 
@@ -78,11 +78,11 @@ namespace RHINO {
         Texture2DUAV,
         Texture3DSRV,
         Texture3DUAV,
-        Sampler,
+        SMP,
         Count,
     };
 
-    enum class DescriptorRangeType { CBV, SRV, UAV, Sampler };
+    enum class DescriptorRangeType { CBV, SRV, UAV, SMP };
 
     enum class RTShaderTableRecordType {
         RayGeneration = 0,
@@ -290,9 +290,13 @@ namespace RHINO {
         size_t height = 0;
         size_t rayGenerationShaderRecordIndex = 0;
         size_t missShaderStartRecordIndex = 0;
+        size_t missShaderRecordsCount = 0;
         size_t hitGroupStartRecordIndex = 0;
-        DescriptorHeap* CDBSRVUAVHeap = nullptr;
-        DescriptorHeap* samplerHeap = nullptr;
+        size_t hitGroupRecordsCount = 0;
+        DescriptorHeap* CBVSRVUAVHeap = nullptr;
+        size_t CBVSRVUAVHeapOffset = 0;
+        DescriptorHeap* SMPHeap = nullptr;
+        size_t SMPHeapOffset = 0;
     };
 
     struct ASPrebuildInfo {
@@ -351,7 +355,15 @@ namespace RHINO {
         virtual void SetComputePSO(ComputePSO* pso) noexcept = 0;
 
         virtual void SetRootSignature(RootSignature* rootSignature) noexcept = 0;
-        virtual void SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept = 0;
+        /**
+         *
+         * @param CBVSRVUAVHeap - CBV_SRV_UAV Descriptor heap.
+         * @param CBVSRVUAVHeapOffset - Offset in CBV_SRV_UAV Descriptor Heap in descriptors
+         * @param SMPHeap - Sampler Descriptor Heap
+         * @param SMPHeapOffset - Offset in Sampler Descriptor Heap in descriptors
+         */
+        virtual void SetHeap(DescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset, DescriptorHeap* SMPHeap,
+                             size_t SMPHeapOffset) noexcept = 0;
 
     public:
         virtual void BuildRTPSO(RTPSO* pso) noexcept = 0;

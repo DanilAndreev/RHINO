@@ -7,7 +7,7 @@
 namespace RHINO::APID3D12 {
     void D3D12DescriptorHeap::WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept {
         //TODO: check that desc.size %  desc.bufferStructuredStride = 0 and desc.bufferOffset %  desc.bufferStructuredStride
-        auto* d3d12Buffer = static_cast<D3D12Buffer*>(desc.buffer);
+        auto* d3d12Buffer = INTERPRET_AS<D3D12Buffer*>(desc.buffer);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -23,7 +23,7 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
     void D3D12DescriptorHeap::WriteUAV(const WriteBufferDescriptorDesc& desc) noexcept {
-        auto* d3d12Buffer = static_cast<D3D12Buffer*>(desc.buffer);
+        auto* d3d12Buffer = INTERPRET_AS<D3D12Buffer*>(desc.buffer);
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
         uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -39,7 +39,7 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
     void D3D12DescriptorHeap::WriteCBV(const WriteBufferDescriptorDesc& desc) noexcept {
-        auto* d3d12Buffer = static_cast<D3D12Buffer*>(desc.buffer);
+        auto* d3d12Buffer = INTERPRET_AS<D3D12Buffer*>(desc.buffer);
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
         cbvDesc.SizeInBytes = RHINO_CEIL_TO_MULTIPLE_OF(desc.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
@@ -51,7 +51,7 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
     void D3D12DescriptorHeap::WriteSRV(const WriteTexture2DDescriptorDesc& desc) noexcept {
-        auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
+        auto* d3d12Texture = INTERPRET_AS<D3D12Texture2D*>(desc.texture);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -65,7 +65,7 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
     void D3D12DescriptorHeap::WriteUAV(const WriteTexture2DDescriptorDesc& desc) noexcept {
-        auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
+        auto* d3d12Texture = INTERPRET_AS<D3D12Texture2D*>(desc.texture);
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
         uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
@@ -78,7 +78,7 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
     void D3D12DescriptorHeap::WriteSRV(const WriteTexture3DDescriptorDesc& desc) noexcept {
-        auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
+        auto* d3d12Texture = INTERPRET_AS<D3D12Texture2D*>(desc.texture);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
@@ -92,7 +92,7 @@ namespace RHINO::APID3D12 {
         device->CopyDescriptorsSimple(1, GPUHeapCPUHandle, CPUHeapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
     void D3D12DescriptorHeap::WriteUAV(const WriteTexture3DDescriptorDesc& desc) noexcept {
-        auto* d3d12Texture = static_cast<D3D12Texture2D*>(desc.texture);
+        auto* d3d12Texture = INTERPRET_AS<D3D12Texture2D*>(desc.texture);
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
         uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
@@ -106,7 +106,7 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12DescriptorHeap::WriteSRV(const WriteTLASDescriptorDesc& desc) noexcept {
-        auto* d3d12TLAS = static_cast<D3D12TLAS*>(desc.tlas);
+        auto* d3d12TLAS = INTERPRET_AS<D3D12TLAS*>(desc.tlas);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
@@ -120,7 +120,7 @@ namespace RHINO::APID3D12 {
     }
 
     void D3D12DescriptorHeap::WriteSMP(Sampler* sampler, size_t offsetInHeap) noexcept {
-        auto* d3d12Sampler = static_cast<D3D12Sampler*>(sampler);
+        auto* d3d12Sampler = INTERPRET_AS<D3D12Sampler*>(sampler);
 
         D3D12_SAMPLER_DESC smpDesc{};
         smpDesc.Filter = Convert::ToD3D12Filter(d3d12Sampler->samplerDesc.textureFilter);

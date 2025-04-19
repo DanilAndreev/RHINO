@@ -53,8 +53,8 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::CopyBuffer(Buffer* src, Buffer* dst, size_t srcOffset, size_t dstOffset, size_t size) noexcept {
-        auto* vulkanSrc = static_cast<VulkanBuffer*>(src);
-        auto* vulkanDst = static_cast<VulkanBuffer*>(dst);
+        auto* vulkanSrc = INTERPRET_AS<VulkanBuffer*>(src);
+        auto* vulkanDst = INTERPRET_AS<VulkanBuffer*>(dst);
         VkBufferCopy region{};
         region.size = size;
         region.srcOffset = srcOffset;
@@ -63,34 +63,37 @@ namespace RHINO::APIVulkan {
     }
 
     void VulkanCommandList::SetComputePSO(ComputePSO* pso) noexcept {
-        auto* vulkanPSO = static_cast<VulkanComputePSO*>(pso);
+        auto* vulkanPSO = INTERPRET_AS<VulkanComputePSO*>(pso);
         vkCmdBindPipeline(m_Cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vulkanPSO->PSO);
     }
 
-    void VulkanCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, DescriptorHeap* SamplerHeap) noexcept {
+    void VulkanCommandList::SetHeap(DescriptorHeap* CBVSRVUAVHeap, size_t CBVSRVUAVHeapOffset, DescriptorHeap* SMPHeap,
+                                    size_t SMPHeapOffset) noexcept {
         VkDescriptorBufferBindingInfoEXT bindings[2] = {};
-        auto* vulkanCBVSRVUAVHeap = static_cast<VulkanDescriptorHeap*>(CBVSRVUAVHeap);
+        auto* vulkanCBVSRVUAVHeap = INTERPRET_AS<VulkanDescriptorHeap*>(CBVSRVUAVHeap);
         VkDescriptorBufferBindingInfoEXT bindingCBVSRVUAV{VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT};
-        bindingCBVSRVUAV.address = vulkanCBVSRVUAVHeap->GetHeapGPUStartHandle();
+        const auto CBVSRVUAVHeapOffsetInBytes = CBVSRVUAVHeapOffset * vulkanCBVSRVUAVHeap->GetDescriptorSize();
+        bindingCBVSRVUAV.address = vulkanCBVSRVUAVHeap->GetHeapGPUStartHandle() + CBVSRVUAVHeapOffsetInBytes;
         bindingCBVSRVUAV.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
         bindings[0] = bindingCBVSRVUAV;
-        if (SamplerHeap) {
-            auto* vulkanSamplerHeap = static_cast<VulkanDescriptorHeap*>(SamplerHeap);
+        if (SMPHeap) {
+            auto* vulkanSamplerHeap = INTERPRET_AS<VulkanDescriptorHeap*>(SMPHeap);
             VkDescriptorBufferBindingInfoEXT bindingSampler{VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT};
-            bindingSampler.address = vulkanSamplerHeap->GetHeapGPUStartHandle();
+            const auto SMPHeapOffsetInBytes = SMPHeapOffset * vulkanSamplerHeap->GetDescriptorSize();
+            bindingSampler.address = vulkanSamplerHeap->GetHeapGPUStartHandle() + SMPHeapOffsetInBytes;
             bindingSampler.usage = VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
             bindings[1] = bindingSampler;
         }
-        EXT::vkCmdBindDescriptorBuffersEXT(m_Cmd, SamplerHeap ? 2 : 1, bindings);
+        EXT::vkCmdBindDescriptorBuffersEXT(m_Cmd, SMPHeap ? 2 : 1, bindings);
     }
 
     void VulkanCommandList::Dispatch(const DispatchDesc& desc) noexcept {
         for (auto [space, spaceInfo] : m_RootSignature->heapOffsetsInDescriptorsBySpace) {
-            uint32_t bufferIndex = spaceInfo.first == DescriptorHeapType::Sampler ? 1 : 0;
+            uint32_t bufferIndex = spaceInfo.first == DescriptorHeapType::SMP ? 1 : 0;
             VkDeviceSize offset = spaceInfo.second;
             switch (spaceInfo.first) {
-                case DescriptorHeapType::Sampler:
-                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::Sampler, m_DescriptorProps);
+                case DescriptorHeapType::SMP:
+                    offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SMP, m_DescriptorProps);
                 break;
                 default:
                     offset *= CalculateDescriptorHandleIncrementSize(DescriptorHeapType::SRV_CBV_UAV, m_DescriptorProps);
@@ -179,10 +182,10 @@ namespace RHINO::APIVulkan {
 
     BLAS* VulkanCommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                        const char* name) noexcept {
-        auto* indexBuffer = static_cast<VulkanBuffer*>(desc.indexBuffer);
-        auto* vertexBuffer = static_cast<VulkanBuffer*>(desc.vertexBuffer);
-        auto* transform = static_cast<VulkanBuffer*>(desc.transformBuffer);
-        auto* scratch = static_cast<VulkanBuffer*>(scratchBuffer);
+        auto* indexBuffer = INTERPRET_AS<VulkanBuffer*>(desc.indexBuffer);
+        auto* vertexBuffer = INTERPRET_AS<VulkanBuffer*>(desc.vertexBuffer);
+        auto* transform = INTERPRET_AS<VulkanBuffer*>(desc.transformBuffer);
+        auto* scratch = INTERPRET_AS<VulkanBuffer*>(scratchBuffer);
 
         auto result = new VulkanBLAS{};
 
@@ -238,7 +241,7 @@ namespace RHINO::APIVulkan {
 
     TLAS* VulkanCommandList::BuildTLAS(const TLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                        const char* name) noexcept {
-        auto* scratch = static_cast<VulkanBuffer*>(scratchBuffer);
+        auto* scratch = INTERPRET_AS<VulkanBuffer*>(scratchBuffer);
 
         auto result = new VulkanTLAS{};
 

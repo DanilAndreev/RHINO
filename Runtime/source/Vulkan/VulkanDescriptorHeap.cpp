@@ -27,7 +27,7 @@ namespace RHINO::APIVulkan {
         VkBufferCreateInfo heapCreateInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         heapCreateInfo.flags = 0;
         heapCreateInfo.usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        if (type == DescriptorHeapType::Sampler) {
+        if (type == DescriptorHeapType::SMP) {
             heapCreateInfo.usage |= VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT;
         }
         heapCreateInfo.size = m_HeapSize;
@@ -60,9 +60,8 @@ namespace RHINO::APIVulkan {
 
         m_ImageViewPerDescriptor.resize(descriptorsCount);
     }
-    VkDeviceAddress VulkanDescriptorHeap::GetHeapGPUStartHandle() noexcept {
-        return m_HeapGPUStartHandle;
-    }
+    VkDeviceAddress VulkanDescriptorHeap::GetHeapGPUStartHandle() noexcept { return m_HeapGPUStartHandle; }
+    size_t VulkanDescriptorHeap::GetDescriptorSize() noexcept { return m_DescriptorHandleIncrementSize; }
 
     void VulkanDescriptorHeap::WriteSRV(const WriteBufferDescriptorDesc& desc) noexcept {
         InvalidateSlot(desc.offsetInHeap);
