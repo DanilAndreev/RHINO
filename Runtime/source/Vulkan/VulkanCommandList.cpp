@@ -182,23 +182,35 @@ namespace RHINO::APIVulkan {
 
     BLAS* VulkanCommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                        const char* name) noexcept {
-        auto* indexBuffer = INTERPRET_AS<VulkanBuffer*>(desc.indexBuffer);
-        auto* vertexBuffer = INTERPRET_AS<VulkanBuffer*>(desc.vertexBuffer);
-        auto* transform = INTERPRET_AS<VulkanBuffer*>(desc.transformBuffer);
         auto* scratch = INTERPRET_AS<VulkanBuffer*>(scratchBuffer);
 
         auto result = new VulkanBLAS{};
 
         VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
-        asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        asGeom.geometry.triangles.indexType = Convert::ToVkIndexType(desc.indexFormat);
-        asGeom.geometry.triangles.indexData = {indexBuffer->deviceAddress + desc.indexBufferStartOffset};
-        asGeom.geometry.triangles.vertexStride = desc.vertexStride;
-        asGeom.geometry.triangles.vertexFormat = Convert::ToVkFormat(desc.vertexFormat);
-        asGeom.geometry.triangles.vertexData = {vertexBuffer->deviceAddress + desc.vertexBufferStartOffset};
-        asGeom.geometry.triangles.maxVertex = desc.vertexCount;
-        asGeom.geometry.triangles.transformData = {transform->deviceAddress + desc.transformBufferStartOffset};
+        asGeom.flags = Convert::ToVkGeometryFlags(desc.flags);
+        if (desc.type == BLASPrimitiveType::Procedural) {
+            asGeom.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
+            auto* AABBsBuffer = INTERPRET_AS<VulkanBuffer*>(desc.procedural.AABBsBuffer);
+            asGeom.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+            asGeom.geometry.aabbs.pNext = nullptr;
+            asGeom.geometry.aabbs.data = {AABBsBuffer->deviceAddress};
+            asGeom.geometry.aabbs.stride = desc.procedural.AABBsStrideInBytes;
+        } else {
+            asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            const auto& tDesc = desc.triangles;
+            auto* indexBuffer = INTERPRET_AS<VulkanBuffer*>(tDesc.indexBuffer);
+            auto* vertexBuffer = INTERPRET_AS<VulkanBuffer*>(tDesc.vertexBuffer);
+            auto* transform = tDesc.transformBuffer ? INTERPRET_AS<VulkanBuffer*>(tDesc.transformBuffer) : nullptr;
+            asGeom.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+            asGeom.geometry.triangles.pNext = nullptr;
+            asGeom.geometry.triangles.indexType = Convert::ToVkIndexType(tDesc.indexFormat);
+            asGeom.geometry.triangles.indexData = {indexBuffer->deviceAddress + tDesc.indexBufferStartOffset};
+            asGeom.geometry.triangles.vertexStride = tDesc.vertexStride;
+            asGeom.geometry.triangles.vertexFormat = Convert::ToVkFormat(tDesc.vertexFormat);
+            asGeom.geometry.triangles.vertexData = {vertexBuffer->deviceAddress + tDesc.vertexBufferStartOffset};
+            asGeom.geometry.triangles.maxVertex = tDesc.vertexCount;
+            asGeom.geometry.triangles.transformData = {transform ? transform->deviceAddress + tDesc.transformBufferStartOffset : 0};
+        }
 
         VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
         buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;

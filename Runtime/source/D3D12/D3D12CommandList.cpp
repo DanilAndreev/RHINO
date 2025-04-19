@@ -167,23 +167,34 @@ namespace RHINO::APID3D12 {
 
     BLAS* D3D12CommandList::BuildBLAS(const BLASDesc& desc, Buffer* scratchBuffer, size_t scratchBufferStartOffset,
                                       const char* name) noexcept {
-        auto* indexBuffer = INTERPRET_AS<D3D12Buffer*>(desc.indexBuffer);
-        auto* vertexBuffer = INTERPRET_AS<D3D12Buffer*>(desc.vertexBuffer);
-        auto* transform = desc.transformBuffer ? INTERPRET_AS<D3D12Buffer*>(desc.transformBuffer) : nullptr;
         auto* scratch = INTERPRET_AS<D3D12Buffer*>(scratchBuffer);
 
         auto result = new D3D12BLAS{};
 
-        D3D12_GPU_VIRTUAL_ADDRESS trnsfrmAddr = transform ? transform->buffer->GetGPUVirtualAddress() + desc.transformBufferStartOffset : 0;
-        D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES};
-        geometryDesc.Triangles.IndexBuffer = indexBuffer->buffer->GetGPUVirtualAddress() + desc.indexBufferStartOffset;
-        geometryDesc.Triangles.IndexCount = desc.indexCount;
-        geometryDesc.Triangles.IndexFormat = Convert::ToDXGIFormat(desc.indexFormat);
-        geometryDesc.Triangles.Transform3x4 = trnsfrmAddr;
-        geometryDesc.Triangles.VertexFormat = Convert::ToDXGIFormat(desc.vertexFormat);
-        geometryDesc.Triangles.VertexCount = desc.vertexCount;
-        geometryDesc.Triangles.VertexBuffer.StartAddress = vertexBuffer->buffer->GetGPUVirtualAddress() + desc.vertexBufferStartOffset;
-        geometryDesc.Triangles.VertexBuffer.StrideInBytes = desc.vertexStride;
+        D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
+        geometryDesc.Flags = Convert::ToD3D12RayTracingGeometryFlags(desc.flags);
+        if (desc.type == BLASPrimitiveType::Procedural) {
+            geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+            auto* AABBsBuffer = INTERPRET_AS<D3D12Buffer*>(desc.procedural.AABBsBuffer);
+            geometryDesc.AABBs.AABBs.StartAddress = AABBsBuffer->buffer->GetGPUVirtualAddress();
+            geometryDesc.AABBs.AABBs.StrideInBytes = desc.procedural.AABBsStrideInBytes;
+            geometryDesc.AABBs.AABBCount = desc.procedural.AABBCount;
+        } else {
+            geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+            const auto& tDesc = desc.triangles;
+            auto* indexBuffer = INTERPRET_AS<D3D12Buffer*>(tDesc.indexBuffer);
+            auto* vertexBuffer = INTERPRET_AS<D3D12Buffer*>(tDesc.vertexBuffer);
+            auto* transform = tDesc.transformBuffer ? INTERPRET_AS<D3D12Buffer*>(tDesc.transformBuffer) : nullptr;
+            D3D12_GPU_VIRTUAL_ADDRESS tfAddr = transform ? transform->buffer->GetGPUVirtualAddress() + tDesc.transformBufferStartOffset : 0;
+            geometryDesc.Triangles.IndexBuffer = indexBuffer->buffer->GetGPUVirtualAddress() + tDesc.indexBufferStartOffset;
+            geometryDesc.Triangles.IndexCount = tDesc.indexCount;
+            geometryDesc.Triangles.IndexFormat = Convert::ToDXGIFormat(tDesc.indexFormat);
+            geometryDesc.Triangles.Transform3x4 = tfAddr;
+            geometryDesc.Triangles.VertexFormat = Convert::ToDXGIFormat(tDesc.vertexFormat);
+            geometryDesc.Triangles.VertexCount = tDesc.vertexCount;
+            geometryDesc.Triangles.VertexBuffer.StartAddress = vertexBuffer->buffer->GetGPUVirtualAddress() + tDesc.vertexBufferStartOffset;
+            geometryDesc.Triangles.VertexBuffer.StrideInBytes = tDesc.vertexStride;
+        }
 
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
         inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
@@ -228,6 +239,7 @@ namespace RHINO::APID3D12 {
         buildDesc.ScratchAccelerationStructureData = scratch->buffer->GetGPUVirtualAddress() + scratchBufferStartOffset;
 
         //TODO: retrieve compacted size and repack
+
         // D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC postBuildInfoDesc = {};
         // postBuildInfoDesc.DestBuffer = postBuildDataBuffer;
         // postBuildInfoDesc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE;

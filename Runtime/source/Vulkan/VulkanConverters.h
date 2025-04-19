@@ -5,7 +5,7 @@
 #include "VulkanBackendTypes.h"
 
 namespace RHINO::APIVulkan::Convert {
-    inline VkDescriptorType ToVkDescriptorType(DescriptorType type) noexcept {
+    inline VkDescriptorType ToVkDescriptorType(const DescriptorType type) noexcept {
         switch (type) {
             case DescriptorType::BufferCBV:
                 return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -28,7 +28,7 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
-    inline VkBufferUsageFlags ToVkBufferUsage(ResourceUsage usage) noexcept {
+    inline VkBufferUsageFlags ToVkBufferUsage(const ResourceUsage usage) noexcept {
         VkBufferUsageFlags result = 0;
         if (bool(usage & ResourceUsage::VertexBuffer)) {
             result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -57,7 +57,7 @@ namespace RHINO::APIVulkan::Convert {
         return result;
     }
 
-    inline VkImageUsageFlags ToVkImageUsage(ResourceUsage usage) noexcept {
+    inline VkImageUsageFlags ToVkImageUsage(const ResourceUsage usage) noexcept {
         VkImageUsageFlags result = 0;
         if (bool(usage & ResourceUsage::ShaderResource)) {
             result |= VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -74,7 +74,7 @@ namespace RHINO::APIVulkan::Convert {
         return result;
     }
 
-    inline VkFormat ToVkFormat(TextureFormat format) noexcept {
+    inline VkFormat ToVkFormat(const TextureFormat format) noexcept {
         switch (format) {
             case TextureFormat::R8G8B8A8_UNORM:
                 return VK_FORMAT_R8G8B8A8_UNORM;
@@ -102,7 +102,7 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
-    inline VkAccessFlags ToVulkanResourceState(ResourceState state) noexcept {
+    inline VkAccessFlags ToVulkanResourceState(const ResourceState state) noexcept {
         // TODO: possibly refactor to use common read/write flags VK_ACCESS_MEMORY_READ_BIT and VK_ACCESS_MEMORY_WRITE_BIT
 
         switch (state) {
@@ -132,7 +132,7 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
-    inline VkIndexType ToVkIndexType(IndexFormat format) noexcept {
+    inline VkIndexType ToVkIndexType(const IndexFormat format) noexcept {
         switch (format) {
             case IndexFormat::R32_UINT:
                 return VK_INDEX_TYPE_UINT32;
@@ -144,7 +144,7 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
-    inline VkCompareOp ToVkCompareOp(ComparisonFunction func) noexcept {
+    inline VkCompareOp ToVkCompareOp(const ComparisonFunction func) noexcept {
         switch (func) {
             case ComparisonFunction::Never:
                 return VK_COMPARE_OP_NEVER;
@@ -168,7 +168,7 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
-    inline VkSamplerAddressMode ToVkSamplerAddressMode(TextureAddressMode mode) noexcept {
+    inline VkSamplerAddressMode ToVkSamplerAddressMode(const TextureAddressMode mode) noexcept {
         switch (mode) {
             case TextureAddressMode::Wrap:
                 return VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -186,7 +186,7 @@ namespace RHINO::APIVulkan::Convert {
         }
     }
 
-    inline VkBorderColor ToVkBorderColor(BorderColor color) noexcept {
+    inline VkBorderColor ToVkBorderColor(const BorderColor color) noexcept {
         switch (color) {
             case BorderColor::TransparentBlack:
                 return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
@@ -206,7 +206,7 @@ namespace RHINO::APIVulkan::Convert {
         VkSamplerMipmapMode mip;
     };
 
-    inline VulkanMinMagMipFilters ToMTLMinMagMipFilter(TextureFilter filter) noexcept {
+    inline VulkanMinMagMipFilters ToMTLMinMagMipFilter(const TextureFilter filter) noexcept {
         switch (filter) {
             case TextureFilter::MinMagMipPoint:
             case TextureFilter::ComparisonMinMagMipPoint:
@@ -240,6 +240,14 @@ namespace RHINO::APIVulkan::Convert {
                 assert(0);
                 return {VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST};
         }
+    }
+
+    inline VkGeometryFlagsKHR ToVkGeometryFlags(const GeometryFlags flags) noexcept {
+        VkGeometryFlagsKHR result = 0;
+        if (static_cast<bool>(flags & GeometryFlags::Opaque)) {
+            result |= VK_GEOMETRY_OPAQUE_BIT_KHR;
+        }
+        return result;
     }
 } // namespace RHINO::APIVulkan::Convert
 

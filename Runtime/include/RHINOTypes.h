@@ -304,7 +304,17 @@ namespace RHINO {
         size_t MaxASSizeInBytes = 0;
     };
 
-    struct BLASDesc {
+    enum class BLASPrimitiveType {
+        Triangles,
+        Procedural,
+    };
+
+    enum class GeometryFlags : uint32_t {
+        None = 0x0,
+        Opaque = 0x1,
+    };
+
+    struct BLASTrianglesGeometryDesc {
         Buffer* indexBuffer = nullptr;
         size_t indexBufferStartOffset = 0;
         size_t indexCount = 0;
@@ -317,6 +327,31 @@ namespace RHINO {
         // Just one tranform value.
         Buffer* transformBuffer = nullptr;
         size_t transformBufferStartOffset = 0;
+    };
+
+    struct RayTracingAABB {
+        float minX = 0.0f;
+        float minY = 0.0f;
+        float minZ = 0.0f;
+        float maxX = 0.0f;
+        float maxY = 0.0f;
+        float maxZ = 0.0f;
+    };
+
+    struct BLASProceduralPrimitiveDesc {
+        // GPU Buffer containing RayTracingAABB structures
+        Buffer* AABBsBuffer = nullptr;
+        size_t AABBsStrideInBytes = 0;
+        size_t AABBCount = 0;
+    };
+
+    struct BLASDesc {
+        BLASPrimitiveType type = BLASPrimitiveType::Triangles;
+        GeometryFlags flags = GeometryFlags::None;
+        union {
+            BLASTrianglesGeometryDesc triangles;
+            BLASProceduralPrimitiveDesc procedural;
+        };
     };
 
     struct BLASInstanceDesc {
@@ -432,3 +467,4 @@ namespace RHINO {
 } // namespace RHINO
 
 RHINO_DECLARE_BITMASK_ENUM(RHINO::ResourceUsage);
+RHINO_DECLARE_BITMASK_ENUM(RHINO::GeometryFlags);

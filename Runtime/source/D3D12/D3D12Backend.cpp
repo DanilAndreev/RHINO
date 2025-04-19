@@ -389,16 +389,24 @@ namespace RHINO::APID3D12 {
         // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-getraytracingaccelerationstructureprebuildinfo
         constexpr D3D12_GPU_VIRTUAL_ADDRESS dummyNotNullPointer = 0x1;
 
-        D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
-        geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-        geometryDesc.Triangles.IndexBuffer = dummyNotNullPointer;
-        geometryDesc.Triangles.IndexCount = desc.indexCount;
-        geometryDesc.Triangles.IndexFormat = Convert::ToDXGIFormat(desc.indexFormat);
-        geometryDesc.Triangles.Transform3x4 = 0;
-        geometryDesc.Triangles.VertexFormat = Convert::ToDXGIFormat(desc.vertexFormat);
-        geometryDesc.Triangles.VertexCount = desc.vertexCount;
-        geometryDesc.Triangles.VertexBuffer.StartAddress = dummyNotNullPointer;
-        geometryDesc.Triangles.VertexBuffer.StrideInBytes = desc.vertexStride;
+        D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc{};
+        if (desc.type == BLASPrimitiveType::Procedural) {
+            geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+            geometryDesc.AABBs.AABBs.StartAddress = dummyNotNullPointer;
+            geometryDesc.AABBs.AABBs.StrideInBytes = desc.procedural.AABBsStrideInBytes;
+            geometryDesc.AABBs.AABBCount = desc.procedural.AABBCount;
+        } else {
+            geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+            geometryDesc.Triangles.IndexBuffer = dummyNotNullPointer;
+            geometryDesc.Triangles.IndexCount = desc.triangles.indexCount;
+            geometryDesc.Triangles.IndexFormat = Convert::ToDXGIFormat(desc.triangles.indexFormat);
+            geometryDesc.Triangles.Transform3x4 = 0;
+            geometryDesc.Triangles.VertexFormat = Convert::ToDXGIFormat(desc.triangles.vertexFormat);
+            geometryDesc.Triangles.VertexCount = desc.triangles.vertexCount;
+            geometryDesc.Triangles.VertexBuffer.StartAddress = dummyNotNullPointer;
+            geometryDesc.Triangles.VertexBuffer.StrideInBytes = desc.triangles.vertexStride;
+        }
+
 
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputsDesc = {};
         inputsDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;

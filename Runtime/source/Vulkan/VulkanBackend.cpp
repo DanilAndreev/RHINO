@@ -561,14 +561,28 @@ namespace RHINO::APIVulkan {
 
         VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
         asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        asGeom.geometry.triangles.indexType = Convert::ToVkIndexType(desc.indexFormat);
-        asGeom.geometry.triangles.indexData = constDummyAddr;
-        asGeom.geometry.triangles.vertexStride = desc.vertexStride;
-        asGeom.geometry.triangles.vertexFormat = Convert::ToVkFormat(desc.vertexFormat);
-        asGeom.geometry.triangles.vertexData = constDummyAddr;
-        asGeom.geometry.triangles.maxVertex = desc.vertexCount;
-        asGeom.geometry.triangles.transformData = constDummyAddr;
+        if (desc.type == BLASPrimitiveType::Procedural) {
+            asGeom.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
+            asGeom.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+            asGeom.geometry.aabbs.pNext = nullptr;
+            asGeom.geometry.aabbs.data = constDummyAddr;
+            asGeom.geometry.aabbs.stride = desc.procedural.AABBsStrideInBytes;
+        } else {
+            asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            asGeom.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+            asGeom.geometry.triangles.pNext = nullptr;
+            asGeom.geometry.triangles.indexType = Convert::ToVkIndexType(desc.triangles.indexFormat);
+            asGeom.geometry.triangles.indexData = constDummyAddr;
+            asGeom.geometry.triangles.vertexStride = desc.triangles.vertexStride;
+            asGeom.geometry.triangles.vertexFormat = Convert::ToVkFormat(desc.triangles.vertexFormat);
+            asGeom.geometry.triangles.vertexData = constDummyAddr;
+            asGeom.geometry.triangles.maxVertex = desc.triangles.vertexCount;
+            asGeom.geometry.triangles.transformData = constDummyAddr;
+        }
+
+
+
+
 
         VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
         buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;

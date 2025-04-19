@@ -5,7 +5,7 @@
 #include "RHINOTypes.h"
 
 namespace RHINO::APID3D12::Convert {
-    inline DXGI_FORMAT ToDXGIFormat(IndexFormat format) noexcept {
+    inline DXGI_FORMAT ToDXGIFormat(const IndexFormat format) noexcept {
         switch (format) {
             case IndexFormat::R32_UINT:
                 return DXGI_FORMAT_R32_UINT;
@@ -17,7 +17,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline DXGI_FORMAT ToDXGIFormat(TextureFormat format) noexcept {
+    inline DXGI_FORMAT ToDXGIFormat(const TextureFormat format) noexcept {
         switch (format) {
             case TextureFormat::R8G8B8A8_UNORM:
                 return DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -45,7 +45,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline D3D12_RESOURCE_BARRIER_TYPE ToD3D12ResourceBarrierType(ResourceBarrierType type) noexcept {
+    inline D3D12_RESOURCE_BARRIER_TYPE ToD3D12ResourceBarrierType(const ResourceBarrierType type) noexcept {
         switch (type) {
             case ResourceBarrierType::UAV:
                 return D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -57,7 +57,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline D3D12_RESOURCE_STATES ToD3D12ResourceState(ResourceState state) noexcept {
+    inline D3D12_RESOURCE_STATES ToD3D12ResourceState(const ResourceState state) noexcept {
         switch (state) {
             case ResourceState::Common:
                 return D3D12_RESOURCE_STATE_COMMON;
@@ -85,7 +85,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-        static D3D12_HEAP_TYPE ToD3D12HeapType(ResourceHeapType value) noexcept {
+        static D3D12_HEAP_TYPE ToD3D12HeapType(const ResourceHeapType value) noexcept {
         switch (value) {
             case ResourceHeapType::Default:
                 return D3D12_HEAP_TYPE_DEFAULT;
@@ -99,14 +99,14 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline D3D12_RESOURCE_FLAGS ToD3D12ResourceFlags(ResourceUsage value) noexcept {
+    inline D3D12_RESOURCE_FLAGS ToD3D12ResourceFlags(const ResourceUsage value) noexcept {
         D3D12_RESOURCE_FLAGS nativeFlags = D3D12_RESOURCE_FLAG_NONE;
         if (bool(value & ResourceUsage::UnorderedAccess))
             nativeFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         return nativeFlags;
     }
 
-    inline D3D12_DESCRIPTOR_HEAP_TYPE ToD3D12DescriptorHeapType(DescriptorHeapType type) noexcept {
+    inline D3D12_DESCRIPTOR_HEAP_TYPE ToD3D12DescriptorHeapType(const DescriptorHeapType type) noexcept {
         switch (type) {
             case DescriptorHeapType::SRV_CBV_UAV:
                 return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -122,7 +122,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline D3D12_TEXTURE_ADDRESS_MODE ToD3D12TextureAddressMode(TextureAddressMode mode) noexcept {
+    inline D3D12_TEXTURE_ADDRESS_MODE ToD3D12TextureAddressMode(const TextureAddressMode mode) noexcept {
         switch (mode) {
             case TextureAddressMode::Wrap:
                 return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -140,7 +140,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline D3D12_COMPARISON_FUNC ToD3D12ComparisonFunc(ComparisonFunction func) noexcept {
+    inline D3D12_COMPARISON_FUNC ToD3D12ComparisonFunc(const ComparisonFunction func) noexcept {
         switch (func) {
             case ComparisonFunction::Never:
                 return D3D12_COMPARISON_FUNC_NEVER;
@@ -164,7 +164,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline D3D12_FILTER ToD3D12Filter(TextureFilter filter) noexcept {
+    inline D3D12_FILTER ToD3D12Filter(const TextureFilter filter) noexcept {
         switch (filter) {
             case TextureFilter::MinMagMipPoint:
                 return D3D12_FILTER_MIN_MAG_MIP_POINT;
@@ -209,7 +209,7 @@ namespace RHINO::APID3D12::Convert {
         }
     }
 
-    inline void ToD3D12BorderColor(BorderColor color, float outVar[4]) {
+    inline void ToD3D12BorderColor(const BorderColor color, float outVar[4]) {
         switch (color) {
             case BorderColor::TransparentBlack:
                 outVar[0] = 0.0f;
@@ -237,6 +237,14 @@ namespace RHINO::APID3D12::Convert {
                 outVar[3] = 0.0f;
                 return;
         }
+    }
+
+    inline D3D12_RAYTRACING_GEOMETRY_FLAGS ToD3D12RayTracingGeometryFlags(const GeometryFlags flags) noexcept {
+        D3D12_RAYTRACING_GEOMETRY_FLAGS result = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+        if (static_cast<bool>(flags & GeometryFlags::Opaque)) {
+            result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+        }
+        return result;
     }
 
 } // namespace RHINO::APID3D12::Convert
